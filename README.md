@@ -19,29 +19,6 @@ import (
 
 	"github.com/RedisLabs/redisearch-go/redisearch"
 )
-func TestClient(t *testing.T) {
-
-	c := redisearch.NewClient("localhost:6379", "testung")
-
-	sc := redisearch.NewSchema(redisearch.DefaultOptions).
-		AddField(redisearch.NewTextField("foo"))
-	c.Drop()
-	if err := c.CreateIndex(sc); err != nil {
-		t.Fatal(err)
-	}
-
-	docs := make([]redisearch.Document, 100)
-	for i := 0; i < 100; i++ {
-		docs[i] = redisearch.NewDocument(fmt.Sprintf("doc%d", i), float32(i)/float32(100)).Set("foo", "hello world")
-	}
-
-	if err := c.Index(docs, redisearch.DefaultIndexingOptions); err != nil {
-		t.Fatal(err)
-	}
-
-	docs, total, err := c.Search(redisearch.NewQuery("hello world"))
-	fmt.Println(docs, total, err)
-}
 
 func ExampleClient() {
 
