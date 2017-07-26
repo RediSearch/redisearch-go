@@ -126,7 +126,7 @@ func (q *Query) SetFlags(flags Flag) *Query {
 	return q
 }
 
-func (q *Query) SetInKeys(keys []string) *Query {
+func (q *Query) SetInKeys(keys ...string) *Query {
 	q.InKeys = keys
 	return q
 }
@@ -135,7 +135,7 @@ func (q *Query) SetSortBy(field string, ascending bool) *Query {
 	q.SortBy = &SortingKey{Field: field, Ascending: ascending}
 	return q
 }
-func (q *Query) SetReturnFields(fields []string) *Query {
+func (q *Query) SetReturnFields(fields ...string) *Query {
 	q.ReturnFields = fields
 	return q
 }

@@ -7,6 +7,8 @@ import (
 
 	"time"
 
+	"log"
+
 	"github.com/garyburd/redigo/redis"
 )
 
@@ -243,7 +245,7 @@ func loadDocument(arr []interface{}, idIdx, scoreIdx, payloadIdx, fieldsIdx int)
 
 // Search searches the index for the given query, and returns documents,
 // the total number of results, or an error if something went wrong
-func (i *Client) Search(q Query) (docs []Document, total int, err error) {
+func (i *Client) Search(q *Query) (docs []Document, total int, err error) {
 	conn := i.pool.Get()
 	defer conn.Close()
 
@@ -279,11 +281,13 @@ func (i *Client) Search(q Query) (docs []Document, total int, err error) {
 		skip++
 	}
 
-	if len(res) > skip+1 {
+	if len(res) > skip {
 		for i := 1; i < len(res); i += skip {
 
 			if d, e := loadDocument(res, i, scoreIdx, payloadIdx, fieldsIdx); e == nil {
 				docs = append(docs, d)
+			} else {
+				log.Print("Error parsing doc: ", e)
 			}
 		}
 	}

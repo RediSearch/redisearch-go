@@ -1,14 +1,24 @@
-package redisearch_test
+# RediSearch Go Client
+
+Go client for [RediSearch](http://redisearch.io), based on redigo.
+
+# Installing 
+
+```sh
+go get github.com/RedisLabs/redisearch-go/redisearch
+```
+
+# Usage Example
+
+```go
 
 import (
 	"fmt"
 	"log"
-	"testing"
 	"time"
 
 	"github.com/RedisLabs/redisearch-go/redisearch"
 )
-
 func TestClient(t *testing.T) {
 
 	c := redisearch.NewClient("localhost:6379", "testung")
@@ -73,3 +83,4 @@ func ExampleClient() {
 	fmt.Println(docs[0].Id, docs[0].Properties["title"], total, err)
 	// Output: doc1 Hello world 1 <nil>
 }
+```
