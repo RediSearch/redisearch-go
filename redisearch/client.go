@@ -156,7 +156,7 @@ var DefaultIndexingOptions = IndexingOptions{
 }
 
 // Index indexes multiple documents on the index, with optional Options passed to options
-func (i *Client) Index(docs []Document, opts IndexingOptions) error {
+func (i *Client) IndexOptions(opts IndexingOptions, docs ...Document) error {
 
 	conn := i.pool.Get()
 	defer conn.Close()
@@ -241,6 +241,10 @@ func loadDocument(arr []interface{}, idIdx, scoreIdx, payloadIdx, fieldsIdx int)
 	}
 
 	return doc, nil
+}
+
+func (i *Client) Index(docs ...Document) error {
+	return i.IndexOptions(DefaultIndexingOptions, docs...)
 }
 
 // Search searches the index for the given query, and returns documents,
