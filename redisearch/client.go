@@ -40,9 +40,7 @@ var DefaultOptions = Options{
 // Cleint is an interface to redisearch's redis commands
 type Client struct {
 	pool *redis.Pool
-
-	schema *Schema
-	name   string
+	name string
 }
 
 var maxConns = 500
@@ -55,8 +53,7 @@ func NewClient(addr, name string) *Client {
 			// TODO: Add timeouts. and 2 separate pools for indexing and querying, with different timeouts
 			return redis.Dial("tcp", addr)
 		}, maxConns),
-		schema: nil,
-		name:   name,
+		name: name,
 	}
 
 	ret.pool.TestOnBorrow = func(c redis.Conn, t time.Time) (err error) {
@@ -73,7 +70,6 @@ func NewClient(addr, name string) *Client {
 
 // CreateIndex configues the index and creates it on redis
 func (i *Client) CreateIndex(s *Schema) error {
-	i.schema = s
 	args := redis.Args{i.name}
 	// Set flags based on options
 	if s.Options.NoFieldFlags {
@@ -93,7 +89,7 @@ func (i *Client) CreateIndex(s *Schema) error {
 	}
 
 	args = append(args, "SCHEMA")
-	for _, f := range i.schema.Fields {
+	for _, f := range s.Fields {
 
 		switch f.Type {
 		case TextField:
