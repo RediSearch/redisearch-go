@@ -152,15 +152,16 @@ var DefaultIndexingOptions = IndexingOptions{
 }
 
 // Index indexes multiple documents on the index, with optional Options passed to options
-func (i *Client) IndexOptions(opts IndexingOptions, docs ...Document) error {
+func (i *Client) IndexOptions(opts IndexingOptions, docs ...Document) (errors map[int]error) {
 
 	conn := i.pool.Get()
 	defer conn.Close()
 
 	n := 0
+	errors = make(map[int]error)
 
-	for _, doc := range docs {
-		args := make(redis.Args, 0, len(i.schema.Fields)*2+6)
+	for ii, doc := range docs {
+		args := make(redis.Args, 0, 6+len(doc.Properties))
 		args = append(args, i.name, doc.Id, doc.Score)
 		// apply options
 		if opts.NoSave {
@@ -184,23 +185,29 @@ func (i *Client) IndexOptions(opts IndexingOptions, docs ...Document) error {
 		}
 
 		if err := conn.Send("FT.ADD", args...); err != nil {
-			return err
+			errors[ii] = err
+			return
 		}
 		n++
 	}
 
 	if err := conn.Flush(); err != nil {
-		return err
+		errors[-1] = err
+		return
 	}
 
 	for n > 0 {
 		if _, err := conn.Receive(); err != nil {
-			return err
+			errors[n-1] = err
 		}
 		n--
 	}
 
-	return nil
+	if len(errors) == 0 {
+		return nil
+	}
+
+	return
 }
 
 // convert the result from a redis query to a proper Document object
@@ -239,7 +246,7 @@ func loadDocument(arr []interface{}, idIdx, scoreIdx, payloadIdx, fieldsIdx int)
 	return doc, nil
 }
 
-func (i *Client) Index(docs ...Document) error {
+func (i *Client) Index(docs ...Document) map[int]error {
 	return i.IndexOptions(DefaultIndexingOptions, docs...)
 }
 
