@@ -108,7 +108,9 @@ func (i *Client) CreateIndex(s *Schema) error {
 				if opts.Sortable {
 					args = append(args, "SORTABLE")
 				}
-
+				if opts.NoStem {
+					args = append(args, "NOSTEM")
+				}
 			}
 
 		case NumericField:

@@ -32,6 +32,7 @@ type Field struct {
 type TextFieldOptions struct {
 	Weight   float32
 	Sortable bool
+	NoStem   bool
 }
 
 // NumericFieldOptions Options for numeric fields
