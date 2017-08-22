@@ -39,6 +39,13 @@ func TestClient(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Test it again
+	if err := c.IndexOptions(redisearch.DefaultIndexingOptions, docs...); err == nil {
+		t.Fatal("Expected error for duplicate document")
+	} else if len(err) != 100 {
+		t.Fatal("Not enough errors received")
+	}
+
 	docs, total, err := c.Search(redisearch.NewQuery("hello world"))
 	fmt.Println(docs, total, err)
 }

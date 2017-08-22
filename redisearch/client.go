@@ -148,6 +148,16 @@ type IndexingOptions struct {
 	Replace  bool
 }
 
+// MultiError Represents one or more errors
+type MultiError map[int]error
+
+func (e MultiError) Error() string {
+	for _, err := range e {
+		return err.Error()
+	}
+	return ""
+}
+
 // DefaultIndexingOptions are the default options for document indexing
 var DefaultIndexingOptions = IndexingOptions{
 	Language: "",
@@ -156,7 +166,7 @@ var DefaultIndexingOptions = IndexingOptions{
 }
 
 // Index indexes multiple documents on the index, with optional Options passed to options
-func (i *Client) IndexOptions(opts IndexingOptions, docs ...Document) (errors map[int]error) {
+func (i *Client) IndexOptions(opts IndexingOptions, docs ...Document) (errors MultiError) {
 
 	conn := i.pool.Get()
 	defer conn.Close()
