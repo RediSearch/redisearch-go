@@ -62,6 +62,20 @@ func TestClient(t *testing.T) {
 	fmt.Println(docs, total, err)
 }
 
+func TestInfo(t *testing.T) {
+	c := createClient("testung")
+
+	sc := redisearch.NewSchema(redisearch.DefaultOptions).
+		AddField(redisearch.NewTextField("foo")).
+		AddField(redisearch.NewSortableNumericField("bar"))
+	c.Drop()
+	assert.Nil(t, c.CreateIndex(sc))
+
+	info, err := c.Info()
+	assert.Nil(t, err)
+	fmt.Printf("%v\n", info)
+}
+
 func TestNumeric(t *testing.T) {
 	c := createClient("testung")
 
