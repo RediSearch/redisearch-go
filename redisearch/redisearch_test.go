@@ -54,6 +54,7 @@ func TestClient(t *testing.T) {
 	}
 
 	docs, total, err := c.Search(redisearch.NewQuery("hello world"))
+
 	assert.Nil(t, err)
 	assert.Equal(t, 100, total)
 	assert.Equal(t, 10, len(docs))
