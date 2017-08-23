@@ -3,15 +3,25 @@ package redisearch_test
 import (
 	"fmt"
 	"log"
+	"os"
 	"testing"
 	"time"
 
 	"github.com/RedisLabs/redisearch-go/redisearch"
 )
 
+func createClient(indexName string) *redisearch.Client {
+	value, exists := os.LookupEnv("REDISEARCH_TEST_HOST")
+	host := "localhost:6379"
+	if exists && value != "" {
+		host = value
+	}
+	return redisearch.NewClient(host, indexName)
+}
+
 func TestClient(t *testing.T) {
 
-	c := redisearch.NewClient("localhost:6379", "testung")
+	c := createClient("testung")
 
 	sc := redisearch.NewSchema(redisearch.DefaultOptions).
 		AddField(redisearch.NewTextField("foo"))
@@ -25,8 +35,15 @@ func TestClient(t *testing.T) {
 		docs[i] = redisearch.NewDocument(fmt.Sprintf("doc%d", i), float32(i)/float32(100)).Set("foo", "hello world")
 	}
 
-	if err := c.Index(docs, redisearch.DefaultIndexingOptions); err != nil {
+	if err := c.IndexOptions(redisearch.DefaultIndexingOptions, docs...); err != nil {
 		t.Fatal(err)
+	}
+
+	// Test it again
+	if err := c.IndexOptions(redisearch.DefaultIndexingOptions, docs...); err == nil {
+		t.Fatal("Expected error for duplicate document")
+	} else if len(err) != 100 {
+		t.Fatal("Not enough errors received")
 	}
 
 	docs, total, err := c.Search(redisearch.NewQuery("hello world"))
@@ -37,7 +54,7 @@ func ExampleClient() {
 
 	// Create a client. By default a client is schemaless
 	// unless a schema is provided when creating the index
-	c := redisearch.NewClient("localhost:6379", "myIndex")
+	c := createClient("myIndex")
 
 	// Create a schema
 	sc := redisearch.NewSchema(redisearch.DefaultOptions).
@@ -60,8 +77,7 @@ func ExampleClient() {
 		Set("date", time.Now().Unix())
 
 	// Index the document. The API accepts multiple documents at a time
-	if err := c.Index([]redisearch.Document{doc},
-		redisearch.DefaultIndexingOptions); err != nil {
+	if err := c.IndexOptions(redisearch.DefaultIndexingOptions, doc); err != nil {
 		log.Fatal(err)
 	}
 
