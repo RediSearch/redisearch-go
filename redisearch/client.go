@@ -148,16 +148,6 @@ type IndexingOptions struct {
 	Replace  bool
 }
 
-// MultiError Represents one or more errors
-type MultiError map[int]error
-
-func (e MultiError) Error() string {
-	for _, err := range e {
-		return err.Error()
-	}
-	return ""
-}
-
 // DefaultIndexingOptions are the default options for document indexing
 var DefaultIndexingOptions = IndexingOptions{
 	Language: "",
@@ -166,13 +156,13 @@ var DefaultIndexingOptions = IndexingOptions{
 }
 
 // Index indexes multiple documents on the index, with optional Options passed to options
-func (i *Client) IndexOptions(opts IndexingOptions, docs ...Document) (errors MultiError) {
+func (i *Client) IndexOptions(opts IndexingOptions, docs ...Document) error {
 
 	conn := i.pool.Get()
 	defer conn.Close()
 
 	n := 0
-	errors = make(map[int]error)
+	var merr MultiError
 
 	for ii, doc := range docs {
 		args := make(redis.Args, 0, 6+len(doc.Properties))
@@ -199,29 +189,35 @@ func (i *Client) IndexOptions(opts IndexingOptions, docs ...Document) (errors Mu
 		}
 
 		if err := conn.Send("FT.ADD", args...); err != nil {
-			errors[ii] = err
-			return
+			if merr == nil {
+				merr = NewMultiError(len(docs))
+			}
+			merr[ii] = err
+
+			return merr
 		}
 		n++
 	}
 
 	if err := conn.Flush(); err != nil {
-		errors[-1] = err
-		return
+		return err
 	}
 
 	for n > 0 {
 		if _, err := conn.Receive(); err != nil {
-			errors[n-1] = err
+			if merr == nil {
+				merr = NewMultiError(len(docs))
+			}
+			merr[n-1] = err
 		}
 		n--
 	}
 
-	if len(errors) == 0 {
+	if merr == nil {
 		return nil
 	}
 
-	return
+	return merr
 }
 
 // convert the result from a redis query to a proper Document object
@@ -260,7 +256,7 @@ func loadDocument(arr []interface{}, idIdx, scoreIdx, payloadIdx, fieldsIdx int)
 	return doc, nil
 }
 
-func (i *Client) Index(docs ...Document) map[int]error {
+func (i *Client) Index(docs ...Document) error {
 	return i.IndexOptions(DefaultIndexingOptions, docs...)
 }
 
