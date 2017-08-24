@@ -392,14 +392,31 @@ func (info *IndexInfo) loadSchema(values []interface{}, options []string) {
 		// if !isArr {
 		// 	panic("Value is not an array of strings!")
 		// }
-		spec, err := redis.Strings(specTmp, nil)
+		rawSpec, err := redis.Values(specTmp, nil)
 		if err != nil {
-			panic(err)
+			log.Printf("Warning: Couldn't read schema. %s\n", err.Error())
+			continue
+		}
+		spec := make([]string, 0)
+
+		// Convert all to string, if not already string
+		for _, elem := range rawSpec {
+			s, isString := elem.(string)
+			if !isString {
+				s, err = redis.String(elem, err)
+				if err != nil {
+					log.Printf("Warning: Couldn't read schema. %s\n", err.Error())
+					continue
+				}
+			}
+			spec = append(spec, s)
 		}
 		// Name, Type,
 		if len(spec) < 3 {
-			panic("Invalid spec")
+			log.Printf("Invalid spec")
+			continue
 		}
+
 		var options []string
 		if len(spec) > 3 {
 			options = spec[3:]
