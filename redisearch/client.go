@@ -7,8 +7,6 @@ import (
 	"strconv"
 	"strings"
 
-	"time"
-
 	"log"
 
 	"github.com/garyburd/redigo/redis"
@@ -41,33 +39,30 @@ var DefaultOptions = Options{
 
 // Cleint is an interface to redisearch's redis commands
 type Client struct {
-	pool *redis.Pool
+	pool ConnPool
 	name string
 }
 
 var maxConns = 500
 
-// NewClient creates a new client connecting to the redis host, and using the given name as key prefix
+// NewClient creates a new client connecting to the redis host, and using the given name as key prefix.
+// Addr can be a single host:port pair, or a comma separated list of host:port,host:port...
+// In the case of multiple hosts we create a multi-pool and select connections at random
 func NewClient(addr, name string) *Client {
 
+	addrs := strings.Split(addr, ",")
+	var pool ConnPool
+	if len(addrs) == 1 {
+		pool = NewSingleHostPool(addrs[0])
+	} else {
+		pool = NewMultiHostPool(addrs)
+	}
 	ret := &Client{
-		pool: redis.NewPool(func() (redis.Conn, error) {
-			// TODO: Add timeouts. and 2 separate pools for indexing and querying, with different timeouts
-			return redis.Dial("tcp", addr)
-		}, maxConns),
+		pool: pool,
 		name: name,
 	}
 
-	ret.pool.TestOnBorrow = func(c redis.Conn, t time.Time) (err error) {
-		if time.Since(t) > time.Second {
-			_, err = c.Do("PING")
-		}
-		return err
-	}
-	//ret.pool.MaxActive = ret.pool.MaxIdle
-
 	return ret
-
 }
 
 // CreateIndex configues the index and creates it on redis
