@@ -52,11 +52,13 @@ func (d *Document) EstimateSize() (sz int) {
 		sz += len(d.Payload)
 	}
 	for k, v := range d.Properties {
-		sz := len(k)
+		sz += len(k)
 		switch s := v.(type) {
 		case string:
 			sz += len(s)
 		case []byte:
+			sz += len(s)
+		case []rune:
 			sz += len(s)
 		}
 
