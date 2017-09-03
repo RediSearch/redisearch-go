@@ -44,3 +44,22 @@ func (l DocumentList) Less(i, j int) bool { return l[i].Score > l[j].Score } //r
 func (l DocumentList) Sort() {
 	sort.Sort(l)
 }
+
+func (d *Document) EstimateSize() (sz int) {
+
+	sz = len(d.Id)
+	if d.Payload != nil {
+		sz += len(d.Payload)
+	}
+	for k, v := range d.Properties {
+		sz := len(k)
+		switch s := v.(type) {
+		case string:
+			sz += len(s)
+		case []byte:
+			sz += len(s)
+		}
+
+	}
+	return
+}
