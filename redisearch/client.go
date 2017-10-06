@@ -145,6 +145,7 @@ type IndexingOptions struct {
 	Language string
 	NoSave   bool
 	Replace  bool
+	Partial  bool
 }
 
 // DefaultIndexingOptions are the default options for document indexing
@@ -152,6 +153,7 @@ var DefaultIndexingOptions = IndexingOptions{
 	Language: "",
 	NoSave:   false,
 	Replace:  false,
+	Partial:  false,
 }
 
 // Index indexes multiple documents on the index, with optional Options passed to options
@@ -173,8 +175,16 @@ func (i *Client) IndexOptions(opts IndexingOptions, docs ...Document) error {
 		if opts.Language != "" {
 			args = append(args, "LANGUAGE", opts.Language)
 		}
+
+		if opts.Partial {
+			opts.Replace = true
+		}
+
 		if opts.Replace {
 			args = append(args, "REPLACE")
+			if opts.Partial {
+				args = append(args, "PARTIAL")
+			}
 		}
 
 		if doc.Payload != nil {
