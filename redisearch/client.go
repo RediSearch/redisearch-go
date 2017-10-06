@@ -320,6 +320,17 @@ func (i *Client) Search(q *Query) (docs []Document, total int, err error) {
 	return
 }
 
+// Explain Return a textual string explaining the query
+func (i *Client) Explain(q *Query) (string, error) {
+	conn := i.pool.Get()
+	defer conn.Close()
+
+	args := redis.Args{i.name}
+	args = append(args, q.serialize()...)
+
+	return redis.String(conn.Do("FT.EXPLAIN", args...))
+}
+
 // Drop the  Currentl just flushes the DB - note that this will delete EVERYTHING on the redis instance
 func (i *Client) Drop() error {
 	conn := i.pool.Get()

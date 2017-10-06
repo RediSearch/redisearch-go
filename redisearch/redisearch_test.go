@@ -118,6 +118,11 @@ func TestNumeric(t *testing.T) {
 	assert.Equal(t, "doc49", docs[9].Id)
 	fmt.Println(docs)
 
+	// Try "Explain"
+	explain, err := c.Explain(redisearch.NewQuery("hello world @bar:[40 90]"))
+	assert.Nil(t, err)
+	assert.NotNil(t, explain)
+	fmt.Println(explain)
 }
 
 func TestNoIndex(t *testing.T) {
