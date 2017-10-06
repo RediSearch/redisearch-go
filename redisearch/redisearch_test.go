@@ -126,39 +126,6 @@ func TestNumeric(t *testing.T) {
 }
 
 func TestNoIndex(t *testing.T) {
-	/**
-		 *     def testNoIndex(self):
-	        client = Client('idx', port=self.server.port)
-	        try:
-	            client.drop_index()
-	        except:
-	            pass
-
-	        client.create_index(
-	            (TextField('f1', no_index=True, sortable=True), TextField('f2')))
-
-	        client.add_document('doc1', f1='MarkZZ', f2='MarkZZ')
-	        client.add_document('doc2', f1='MarkAA', f2='MarkAA')
-
-	        res = client.search(Query('@f1:Mark*'))
-	        self.assertEqual(0, res.total)
-
-	        res = client.search(Query('@f2:Mark*'))
-	        self.assertEqual(2, res.total)
-
-	        res = client.search(Query('@f2:Mark*').sort_by('f1', asc=False))
-	        self.assertEqual(2, res.total)
-	        self.assertEqual('doc1', res.docs[0].id)
-
-	        res = client.search(Query('@f2:Mark*').sort_by('f1', asc=True))
-	        self.assertEqual('doc2', res.docs[0].id)
-
-	        # Ensure exception is raised for non-indexable, non-sortable fields
-	        self.assertRaises(Exception, TextField,
-	                          'name', no_index=True, sortable=False)
-
-	*/
-
 	c := createClient("testung")
 	c.Drop()
 
