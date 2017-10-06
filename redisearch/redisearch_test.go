@@ -120,6 +120,78 @@ func TestNumeric(t *testing.T) {
 
 }
 
+func TestNoIndex(t *testing.T) {
+	/**
+		 *     def testNoIndex(self):
+	        client = Client('idx', port=self.server.port)
+	        try:
+	            client.drop_index()
+	        except:
+	            pass
+
+	        client.create_index(
+	            (TextField('f1', no_index=True, sortable=True), TextField('f2')))
+
+	        client.add_document('doc1', f1='MarkZZ', f2='MarkZZ')
+	        client.add_document('doc2', f1='MarkAA', f2='MarkAA')
+
+	        res = client.search(Query('@f1:Mark*'))
+	        self.assertEqual(0, res.total)
+
+	        res = client.search(Query('@f2:Mark*'))
+	        self.assertEqual(2, res.total)
+
+	        res = client.search(Query('@f2:Mark*').sort_by('f1', asc=False))
+	        self.assertEqual(2, res.total)
+	        self.assertEqual('doc1', res.docs[0].id)
+
+	        res = client.search(Query('@f2:Mark*').sort_by('f1', asc=True))
+	        self.assertEqual('doc2', res.docs[0].id)
+
+	        # Ensure exception is raised for non-indexable, non-sortable fields
+	        self.assertRaises(Exception, TextField,
+	                          'name', no_index=True, sortable=False)
+
+	*/
+
+	c := createClient("testung")
+	c.Drop()
+
+	sc := redisearch.NewSchema(redisearch.DefaultOptions).
+		AddField(redisearch.NewTextFieldOptions("f1", redisearch.TextFieldOptions{Sortable: true, NoIndex: true, Weight: 1.0})).
+		AddField(redisearch.NewTextField("f2"))
+
+	err := c.CreateIndex(sc)
+	assert.Nil(t, err)
+
+	props := make(map[string]interface{})
+	props["f1"] = "MarkZZ"
+	props["f2"] = "MarkZZ"
+
+	err = c.Index(redisearch.Document{Id: "doc1", Properties: props})
+	assert.Nil(t, err)
+
+	props["f1"] = "MarkAA"
+	props["f2"] = "MarkAA"
+	err = c.Index(redisearch.Document{Id: "doc2", Properties: props})
+	assert.Nil(t, err)
+
+	_, total, err := c.Search(redisearch.NewQuery("@f1:Mark*"))
+	assert.Nil(t, err)
+	assert.Equal(t, 0, total)
+
+	_, total, err = c.Search(redisearch.NewQuery("@f2:Mark*"))
+	assert.Equal(t, 2, total)
+
+	docs, total, err := c.Search(redisearch.NewQuery("@f2:Mark*").SetSortBy("f1", false))
+	assert.Equal(t, 2, total)
+	assert.Equal(t, "doc1", docs[0].Id)
+
+	docs, total, err = c.Search(redisearch.NewQuery("@f2:Mark*").SetSortBy("f2", true))
+	assert.Equal(t, 2, total)
+	assert.Equal(t, "doc2", docs[0].Id)
+}
+
 func ExampleClient() {
 
 	// Create a client. By default a client is schemaless

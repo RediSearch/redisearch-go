@@ -106,6 +106,10 @@ func (i *Client) CreateIndex(s *Schema) error {
 				if opts.NoStem {
 					args = append(args, "NOSTEM")
 				}
+
+				if opts.NoIndex {
+					args = append(args, "NOINDEX")
+				}
 			}
 
 		case NumericField:
@@ -119,10 +123,10 @@ func (i *Client) CreateIndex(s *Schema) error {
 				if opts.Sortable {
 					args = append(args, "SORTABLE")
 				}
-
+				if opts.NoIndex {
+					args = append(args, "NOINDEX")
+				}
 			}
-		case NoIndexField:
-			continue
 
 		default:
 			return fmt.Errorf("Unsupported field type %v", f.Type)
