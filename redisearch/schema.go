@@ -15,9 +15,6 @@ const (
 
 	// ValueField as-as short text value to be hashed and indexed
 	ValueField
-
-	// NoIndexField A field that shuold not be indexed
-	NoIndexField
 )
 
 // Field represents a single field's Schema
@@ -33,11 +30,13 @@ type TextFieldOptions struct {
 	Weight   float32
 	Sortable bool
 	NoStem   bool
+	NoIndex  bool
 }
 
 // NumericFieldOptions Options for numeric fields
 type NumericFieldOptions struct {
 	Sortable bool
+	NoIndex  bool
 }
 
 // NewTextField creates a new text field with the given weight
@@ -71,6 +70,13 @@ func NewNumericField(name string) Field {
 		Name: name,
 		Type: NumericField,
 	}
+}
+
+// NewNumericFieldOptions defines a numeric field with additional options
+func NewNumericFieldOptions(name string, options NumericFieldOptions) Field {
+	f := NewNumericField(name)
+	f.Options = options
+	return f
 }
 
 // NewSortableNumericField creates a new numeric field with the given name and a sortable flag

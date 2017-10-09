@@ -118,6 +118,50 @@ func TestNumeric(t *testing.T) {
 	assert.Equal(t, "doc49", docs[9].Id)
 	fmt.Println(docs)
 
+	// Try "Explain"
+	explain, err := c.Explain(redisearch.NewQuery("hello world @bar:[40 90]"))
+	assert.Nil(t, err)
+	assert.NotNil(t, explain)
+	fmt.Println(explain)
+}
+
+func TestNoIndex(t *testing.T) {
+	c := createClient("testung")
+	c.Drop()
+
+	sc := redisearch.NewSchema(redisearch.DefaultOptions).
+		AddField(redisearch.NewTextFieldOptions("f1", redisearch.TextFieldOptions{Sortable: true, NoIndex: true, Weight: 1.0})).
+		AddField(redisearch.NewTextField("f2"))
+
+	err := c.CreateIndex(sc)
+	assert.Nil(t, err)
+
+	props := make(map[string]interface{})
+	props["f1"] = "MarkZZ"
+	props["f2"] = "MarkZZ"
+
+	err = c.Index(redisearch.Document{Id: "doc1", Properties: props})
+	assert.Nil(t, err)
+
+	props["f1"] = "MarkAA"
+	props["f2"] = "MarkAA"
+	err = c.Index(redisearch.Document{Id: "doc2", Properties: props})
+	assert.Nil(t, err)
+
+	_, total, err := c.Search(redisearch.NewQuery("@f1:Mark*"))
+	assert.Nil(t, err)
+	assert.Equal(t, 0, total)
+
+	_, total, err = c.Search(redisearch.NewQuery("@f2:Mark*"))
+	assert.Equal(t, 2, total)
+
+	docs, total, err := c.Search(redisearch.NewQuery("@f2:Mark*").SetSortBy("f1", false))
+	assert.Equal(t, 2, total)
+	assert.Equal(t, "doc1", docs[0].Id)
+
+	docs, total, err = c.Search(redisearch.NewQuery("@f2:Mark*").SetSortBy("f2", true))
+	assert.Equal(t, 2, total)
+	assert.Equal(t, "doc2", docs[0].Id)
 }
 
 func ExampleClient() {

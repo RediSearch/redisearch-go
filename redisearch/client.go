@@ -106,6 +106,10 @@ func (i *Client) CreateIndex(s *Schema) error {
 				if opts.NoStem {
 					args = append(args, "NOSTEM")
 				}
+
+				if opts.NoIndex {
+					args = append(args, "NOINDEX")
+				}
 			}
 
 		case NumericField:
@@ -119,10 +123,10 @@ func (i *Client) CreateIndex(s *Schema) error {
 				if opts.Sortable {
 					args = append(args, "SORTABLE")
 				}
-
+				if opts.NoIndex {
+					args = append(args, "NOINDEX")
+				}
 			}
-		case NoIndexField:
-			continue
 
 		default:
 			return fmt.Errorf("Unsupported field type %v", f.Type)
@@ -141,6 +145,7 @@ type IndexingOptions struct {
 	Language string
 	NoSave   bool
 	Replace  bool
+	Partial  bool
 }
 
 // DefaultIndexingOptions are the default options for document indexing
@@ -148,6 +153,7 @@ var DefaultIndexingOptions = IndexingOptions{
 	Language: "",
 	NoSave:   false,
 	Replace:  false,
+	Partial:  false,
 }
 
 // Index indexes multiple documents on the index, with optional Options passed to options
@@ -169,8 +175,16 @@ func (i *Client) IndexOptions(opts IndexingOptions, docs ...Document) error {
 		if opts.Language != "" {
 			args = append(args, "LANGUAGE", opts.Language)
 		}
+
+		if opts.Partial {
+			opts.Replace = true
+		}
+
 		if opts.Replace {
 			args = append(args, "REPLACE")
+			if opts.Partial {
+				args = append(args, "PARTIAL")
+			}
 		}
 
 		if doc.Payload != nil {
@@ -304,6 +318,17 @@ func (i *Client) Search(q *Query) (docs []Document, total int, err error) {
 		}
 	}
 	return
+}
+
+// Explain Return a textual string explaining the query
+func (i *Client) Explain(q *Query) (string, error) {
+	conn := i.pool.Get()
+	defer conn.Close()
+
+	args := redis.Args{i.name}
+	args = append(args, q.serialize()...)
+
+	return redis.String(conn.Do("FT.EXPLAIN", args...))
 }
 
 // Drop the  Currentl just flushes the DB - note that this will delete EVERYTHING on the redis instance
