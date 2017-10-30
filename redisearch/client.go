@@ -37,7 +37,7 @@ var DefaultOptions = Options{
 	Stopwords:       nil,
 }
 
-// Cleint is an interface to redisearch's redis commands
+// Client is an interface to redisearch's redis commands
 type Client struct {
 	pool ConnPool
 	name string
@@ -156,7 +156,7 @@ var DefaultIndexingOptions = IndexingOptions{
 	Partial:  false,
 }
 
-// Index indexes multiple documents on the index, with optional Options passed to options
+// IndexOptions indexes multiple documents on the index, with optional Options passed to options
 func (i *Client) IndexOptions(opts IndexingOptions, docs ...Document) error {
 
 	conn := i.pool.Get()
@@ -265,6 +265,7 @@ func loadDocument(arr []interface{}, idIdx, scoreIdx, payloadIdx, fieldsIdx int)
 	return doc, nil
 }
 
+// Index indexes a list of documents with the default options
 func (i *Client) Index(docs ...Document) error {
 	return i.IndexOptions(DefaultIndexingOptions, docs...)
 }

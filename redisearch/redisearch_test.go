@@ -164,6 +164,99 @@ func TestNoIndex(t *testing.T) {
 	assert.Equal(t, "doc2", docs[0].Id)
 }
 
+func TestHighlight(t *testing.T) {
+	c := createClient("testung")
+
+	sc := redisearch.NewSchema(redisearch.DefaultOptions).
+		AddField(redisearch.NewTextField("foo")).
+		AddField(redisearch.NewTextField("bar"))
+	c.Drop()
+	assert.Nil(t, c.CreateIndex(sc))
+
+	docs := make([]redisearch.Document, 100)
+	for i := 0; i < 100; i++ {
+		docs[i] = redisearch.NewDocument(fmt.Sprintf("doc%d", i), 1).Set("foo", "hello world").Set("bar", "hello world foo bar baz")
+	}
+	c.Index(docs...)
+
+	q := redisearch.NewQuery("hello").Highlight([]string{"foo"}, "[", "]")
+	docs, _, err := c.Search(q)
+	assert.Nil(t, err)
+
+	assert.Equal(t, 10, len(docs))
+	for _, d := range docs {
+		assert.Equal(t, "[hello] world", d.Properties["foo"])
+		assert.Equal(t, "hello world foo bar baz", d.Properties["bar"])
+	}
+
+	q = redisearch.NewQuery("hello world baz").Highlight([]string{"foo", "bar"}, "{", "}")
+	docs, _, err = c.Search(q)
+	assert.Nil(t, err)
+
+	assert.Equal(t, 10, len(docs))
+	for _, d := range docs {
+		assert.Equal(t, "{hello} {world}", d.Properties["foo"])
+		assert.Equal(t, "{hello} {world} foo bar {baz}", d.Properties["bar"])
+	}
+
+	// test RETURN contradicting HIGHLIGHT
+	q = redisearch.NewQuery("hello").Highlight([]string{"foo"}, "[", "]").SetReturnFields("bar")
+	docs, _, err = c.Search(q)
+	assert.Nil(t, err)
+
+	assert.Equal(t, 10, len(docs))
+	for _, d := range docs {
+		assert.Equal(t, nil, d.Properties["foo"])
+		assert.Equal(t, "hello world foo bar baz", d.Properties["bar"])
+	}
+
+	c.Drop()
+}
+
+func TestSammurize(t *testing.T) {
+	c := createClient("testung")
+
+	sc := redisearch.NewSchema(redisearch.DefaultOptions).
+		AddField(redisearch.NewTextField("foo")).
+		AddField(redisearch.NewTextField("bar"))
+	c.Drop()
+	assert.Nil(t, c.CreateIndex(sc))
+
+	docs := make([]redisearch.Document, 10)
+	for i := 0; i < 10; i++ {
+		docs[i] = redisearch.NewDocument(fmt.Sprintf("doc%d", i), 1).
+			Set("foo", "There are two sub-commands commands used for highlighting. One is HIGHLIGHT which surrounds matching text with an open and/or close tag; and the other is SUMMARIZE which splits a field into contextual fragments surrounding the found terms. It is possible to summarize a field, highlight a field, or perform both actions in the same query.").Set("bar", "hello world foo bar baz")
+	}
+	c.Index(docs...)
+
+	q := redisearch.NewQuery("commands fragments fields").Summarize("foo")
+	docs, _, err := c.Search(q)
+	assert.Nil(t, err)
+
+	assert.Equal(t, 10, len(docs))
+	for _, d := range docs {
+		assert.Equal(t, "sub-commands commands used... field into contextual fragments surrounding the found terms. It is possible to summarize a field, highlight a field... ", d.Properties["foo"])
+		assert.Equal(t, "hello world foo bar baz", d.Properties["bar"])
+	}
+
+	q = redisearch.NewQuery("commands fragments fields").
+		Highlight([]string{"foo"}, "[", "]").
+		SummarizeOptions(redisearch.SummaryOptions{
+			Fields:       []string{"foo"},
+			Separator:    "\r\n",
+			FragmentLen:  10,
+			NumFragments: 5},
+		)
+	docs, _, err = c.Search(q)
+	assert.Nil(t, err)
+
+	assert.Equal(t, 10, len(docs))
+	for _, d := range docs {
+		assert.Equal(t, "are two sub-[commands] [commands] used for highlighting. One is\r\na [field] into contextual [fragments] surrounding the found terms. It is possible to summarize a [field], highlight a [field], or\r\n", d.Properties["foo"])
+		assert.Equal(t, "hello world foo bar baz", d.Properties["bar"])
+	}
+}
+
 func ExampleClient() {
 
 	// Create a client. By default a client is schemaless
