@@ -127,7 +127,18 @@ func (i *Client) CreateIndex(s *Schema) error {
 					args = append(args, "NOINDEX")
 				}
 			}
-
+		case TagField:
+			args = append(args, f.Name, "TAG")
+			if f.Options != nil {
+				opts, ok := f.Options.(TagFieldOptions)
+				if !ok {
+					return errors.New("Invalid tag field options type")
+				}
+				args = append(args, "SEPARATOR", fmt.Sprintf("%c", opts.Separator))
+				if opts.NoIndex {
+					args = append(args, "NOINDEX")
+				}
+			}
 		default:
 			return fmt.Errorf("Unsupported field type %v", f.Type)
 		}

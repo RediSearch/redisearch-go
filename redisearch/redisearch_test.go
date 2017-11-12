@@ -235,7 +235,7 @@ func TestSammurize(t *testing.T) {
 
 	assert.Equal(t, 10, len(docs))
 	for _, d := range docs {
-		assert.Equal(t, "sub-commands commands used... field into contextual fragments surrounding the found terms. It is possible to summarize a field, highlight a field... ", d.Properties["foo"])
+		assert.Equal(t, "are two sub-commands commands used for highlighting. One is HIGHLIGHT which surrounds... other is SUMMARIZE which splits a field into contextual fragments surrounding the found terms. It is possible to summarize a field, highlight a field, or perform both actions in the... ", d.Properties["foo"])
 		assert.Equal(t, "hello world foo bar baz", d.Properties["bar"])
 	}
 
@@ -257,6 +257,54 @@ func TestSammurize(t *testing.T) {
 	}
 }
 
+func TestTags(t *testing.T) {
+	c := createClient("myIndex")
+
+	// Create a schema
+	sc := redisearch.NewSchema(redisearch.DefaultOptions).
+		AddField(redisearch.NewTextField("title")).
+		AddField(redisearch.NewTagFieldOptions("tags", redisearch.TagFieldOptions{Separator: ';'})).
+		AddField(redisearch.NewTagField("tags2"))
+
+	// Drop an existing index. If the index does not exist an error is returned
+	c.Drop()
+
+	// Create the index with the given schema
+	if err := c.CreateIndex(sc); err != nil {
+		log.Fatal(err)
+	}
+
+	// Create a document with an id and given score
+	doc := redisearch.NewDocument("doc1", 1.0)
+	doc.Set("title", "Hello world").
+		Set("tags", "foo bar;bar,baz;  hello world").
+		Set("tags2", "foo bar;bar,baz;  hello world")
+
+	// Index the document. The API accepts multiple documents at a time
+	if err := c.IndexOptions(redisearch.DefaultIndexingOptions, doc); err != nil {
+		log.Fatal(err)
+	}
+
+	assertNumResults := func(q string, n int) {
+		// Searching with limit and sorting
+		_, total, err := c.Search(redisearch.NewQuery(q))
+		assert.Nil(t, err)
+
+		assert.Equal(t, n, total)
+	}
+
+	assertNumResults("foo bar", 0)
+	assertNumResults("@tags:{foo bar}", 1)
+	assertNumResults("@tags:{foo\\ bar}", 1)
+	assertNumResults("@tags:{bar}", 0)
+
+	assertNumResults("@tags2:{foo\\ bar\\;bar}", 1)
+	assertNumResults("@tags:{bar\\,baz}", 1)
+	assertNumResults("@tags:{hello world}", 1)
+	assertNumResults("@tags:{hello world} @tags2:{foo\\ bar\\;bar}", 1)
+	assertNumResults("hello world", 1)
+
+}
 func ExampleClient() {
 
 	// Create a client. By default a client is schemaless

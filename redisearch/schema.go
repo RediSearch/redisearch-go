@@ -13,8 +13,8 @@ const (
 	// GeoField geo-indexed point field
 	GeoField
 
-	// ValueField as-as short text value to be hashed and indexed
-	ValueField
+	// TagField is a field used for compact indexing of comma separated values
+	TagField
 )
 
 // Field represents a single field's Schema
@@ -31,6 +31,13 @@ type TextFieldOptions struct {
 	Sortable bool
 	NoStem   bool
 	NoIndex  bool
+}
+
+// TagFieldOptions options for indexing tag fields
+type TagFieldOptions struct {
+	// Separator is the custom separator between tags. defaults to comma (,)
+	Separator byte
+	NoIndex   bool
 }
 
 // NumericFieldOptions Options for numeric fields
@@ -62,6 +69,24 @@ func NewSortableTextField(name string, weight float32) Field {
 		Sortable: true,
 	})
 
+}
+
+// NewTagField creates a new text field with default options (separator: ,)
+func NewTagField(name string) Field {
+	return Field{
+		Name:    name,
+		Type:    TagField,
+		Options: TagFieldOptions{Separator: ',', NoIndex: false},
+	}
+}
+
+// NewTagFieldOptions creates a new tag field with the given options
+func NewTagFieldOptions(name string, opts TagFieldOptions) Field {
+	return Field{
+		Name:    name,
+		Type:    TagField,
+		Options: opts,
+	}
 }
 
 // NewNumericField creates a new numeric field with the given name
