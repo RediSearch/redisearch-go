@@ -1,6 +1,6 @@
 // Package redisearch provides a Go client for the RediSearch search engine.
 //
-// For the full documentation of RediSearch, see http://redisearch.io
+// For the full documentation of RediSearch, see [http://redisearch.io](http://redisearch.io)
 //
 // Example Usage
 //
