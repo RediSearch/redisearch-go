@@ -40,7 +40,6 @@ var DefaultOptions = Options{
 // Client is an interface to redisearch's redis commands
 type Client struct {
 	pool ConnPool
-	name string
 }
 
 var maxConns = 500
@@ -48,7 +47,7 @@ var maxConns = 500
 // NewClient creates a new client connecting to the redis host, and using the given name as key prefix.
 // Addr can be a single host:port pair, or a comma separated list of host:port,host:port...
 // In the case of multiple hosts we create a multi-pool and select connections at random
-func NewClient(addr, name string) *Client {
+func NewClient(addr string) *Client {
 
 	addrs := strings.Split(addr, ",")
 	var pool ConnPool
@@ -59,15 +58,14 @@ func NewClient(addr, name string) *Client {
 	}
 	ret := &Client{
 		pool: pool,
-		name: name,
 	}
 
 	return ret
 }
 
 // CreateIndex configues the index and creates it on redis
-func (i *Client) CreateIndex(s *Schema) error {
-	args := redis.Args{i.name}
+func (i *Client) CreateIndex(index string, s *Schema) error {
+	args := redis.Args{index}
 	// Set flags based on options
 	if s.Options.NoFieldFlags {
 		args = append(args, "NOFIELDS")
@@ -168,7 +166,7 @@ var DefaultIndexingOptions = IndexingOptions{
 }
 
 // IndexOptions indexes multiple documents on the index, with optional Options passed to options
-func (i *Client) IndexOptions(opts IndexingOptions, docs ...Document) error {
+func (i *Client) IndexOptions(index string, opts IndexingOptions, docs ...Document) error {
 
 	conn := i.pool.Get()
 	defer conn.Close()
@@ -178,7 +176,7 @@ func (i *Client) IndexOptions(opts IndexingOptions, docs ...Document) error {
 
 	for ii, doc := range docs {
 		args := make(redis.Args, 0, 6+len(doc.Properties))
-		args = append(args, i.name, doc.Id, doc.Score)
+		args = append(args, index, doc.Id, doc.Score)
 		// apply options
 		if opts.NoSave {
 			args = append(args, "NOSAVE")
@@ -277,17 +275,17 @@ func loadDocument(arr []interface{}, idIdx, scoreIdx, payloadIdx, fieldsIdx int)
 }
 
 // Index indexes a list of documents with the default options
-func (i *Client) Index(docs ...Document) error {
-	return i.IndexOptions(DefaultIndexingOptions, docs...)
+func (i *Client) Index(index string, docs ...Document) error {
+	return i.IndexOptions(index, DefaultIndexingOptions, docs...)
 }
 
 // Search searches the index for the given query, and returns documents,
 // the total number of results, or an error if something went wrong
-func (i *Client) Search(q *Query) (docs []Document, total int, err error) {
+func (i *Client) Search(index string, q *Query) (docs []Document, total int, err error) {
 	conn := i.pool.Get()
 	defer conn.Close()
 
-	args := redis.Args{i.name}
+	args := redis.Args{index}
 	args = append(args, q.serialize()...)
 
 	res, err := redis.Values(conn.Do("FT.SEARCH", args...))
@@ -333,22 +331,22 @@ func (i *Client) Search(q *Query) (docs []Document, total int, err error) {
 }
 
 // Explain Return a textual string explaining the query
-func (i *Client) Explain(q *Query) (string, error) {
+func (i *Client) Explain(index string, q *Query) (string, error) {
 	conn := i.pool.Get()
 	defer conn.Close()
 
-	args := redis.Args{i.name}
+	args := redis.Args{index}
 	args = append(args, q.serialize()...)
 
 	return redis.String(conn.Do("FT.EXPLAIN", args...))
 }
 
 // Drop the  Currentl just flushes the DB - note that this will delete EVERYTHING on the redis instance
-func (i *Client) Drop() error {
+func (i *Client) Drop(index string) error {
 	conn := i.pool.Get()
 	defer conn.Close()
 
-	_, err := conn.Do("FT.DROP", i.name)
+	_, err := conn.Do("FT.DROP", index)
 	return err
 
 }
@@ -485,11 +483,11 @@ func (info *IndexInfo) loadSchema(values []interface{}, options []string) {
 
 // Info - Get information about the index. This can also be used to check if the
 // index exists
-func (i *Client) Info() (*IndexInfo, error) {
+func (i *Client) Info(index string) (*IndexInfo, error) {
 	conn := i.pool.Get()
 	defer conn.Close()
 
-	res, err := redis.Values(conn.Do("FT.INFO", i.name))
+	res, err := redis.Values(conn.Do("FT.INFO", index))
 	if err != nil {
 		return nil, err
 	}
