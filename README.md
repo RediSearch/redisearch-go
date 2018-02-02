@@ -1,11 +1,11 @@
 # RediSearch Go Client
 
-Go client for [RediSearch](http://redisearch.io), based on redigo.
+Go client for [RediSearch](http://redisearch.io), based on redisearch library.
 
 # Installing 
 
 ```sh
-go get github.com/RedisLabs/redisearch-go/redisearch
+go get github.com/kink80/redisearch-go/redisearch
 ```
 
 # Usage Example
@@ -17,14 +17,15 @@ import (
 	"log"
 	"time"
 
-	"github.com/RedisLabs/redisearch-go/redisearch"
+	"github.com/kink80/redisearch-go/redisearch"
 )
 
 func ExampleClient() {
 
 	// Create a client. By default a client is schemaless
 	// unless a schema is provided when creating the index
-	c := redisearch.NewClient("localhost:6379", "myIndex")
+	c := redisearch.NewClient("localhost:6379")
+	index := "myIndex"
 
 	// Create a schema
 	sc := redisearch.NewSchema(redisearch.DefaultOptions).
@@ -33,10 +34,10 @@ func ExampleClient() {
 		AddField(redisearch.NewNumericField("date"))
 
 	// Drop an existing index. If the index does not exist an error is returned
-	c.Drop()
+	c.Drop(index)
 
 	// Create the index with the given schema
-	if err := c.CreateIndex(sc); err != nil {
+	if err := c.CreateIndex(index, sc); err != nil {
 		log.Fatal(err)
 	}
 
@@ -47,13 +48,13 @@ func ExampleClient() {
 		Set("date", time.Now().Unix())
 
 	// Index the document. The API accepts multiple documents at a time
-	if err := c.Index([]redisearch.Document{doc},
+	if err := c.Index(index, []redisearch.Document{doc},
 		redisearch.DefaultIndexingOptions); err != nil {
 		log.Fatal(err)
 	}
 
 	// Searching with limit and sorting
-	docs, total, err := c.Search(redisearch.NewQuery("hello world").
+	docs, total, err := c.Search(index, redisearch.NewQuery("hello world").
 		Limit(0, 2).
 		SetReturnFields("title"))
 
