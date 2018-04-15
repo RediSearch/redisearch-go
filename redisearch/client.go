@@ -98,13 +98,15 @@ func (i *Client) CreateIndex(s *Schema) error {
 					return errors.New("Invalid text field options type")
 				}
 
-				args = append(args, "WEIGHT", opts.Weight)
-
-				if opts.Sortable {
-					args = append(args, "SORTABLE")
+				if opts.Weight != 0 && opts.Weight != 1 {
+					args = append(args, "WEIGHT", opts.Weight)
 				}
 				if opts.NoStem {
 					args = append(args, "NOSTEM")
+				}
+
+				if opts.Sortable {
+					args = append(args, "SORTABLE")
 				}
 
 				if opts.NoIndex {
