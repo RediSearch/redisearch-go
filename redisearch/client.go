@@ -136,7 +136,13 @@ func (i *Client) CreateIndex(s *Schema) error {
 				if !ok {
 					return errors.New("Invalid tag field options type")
 				}
-				args = append(args, "SEPARATOR", fmt.Sprintf("%c", opts.Separator))
+				if opts.Separator != 0 {
+					args = append(args, "SEPARATOR", fmt.Sprintf("%c", opts.Separator))
+
+				}
+				if opts.Sortable {
+					args = append(args, "SORTABLE")
+				}
 				if opts.NoIndex {
 					args = append(args, "NOINDEX")
 				}

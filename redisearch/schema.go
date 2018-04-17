@@ -38,6 +38,7 @@ type TagFieldOptions struct {
 	// Separator is the custom separator between tags. defaults to comma (,)
 	Separator byte
 	NoIndex   bool
+	Sortable  bool
 }
 
 // NumericFieldOptions Options for numeric fields
