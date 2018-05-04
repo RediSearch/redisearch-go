@@ -42,8 +42,8 @@ func (a *Autocompleter) AddTerms(terms ...Suggestion) error {
 	for _, term := range terms {
 
 		args := redis.Args{a.name, term.Term, term.Score}
-		if payload := term.Payload; payload != "" {
-			args = append(args, "PAYLOAD", payload)
+		if term.Payload != "" {
+			args = append(args, "PAYLOAD", term.Payload)
 		}
 
 		if err := conn.Send("FT.SUGADD", args...); err != nil {
@@ -66,19 +66,55 @@ func (a *Autocompleter) AddTerms(terms ...Suggestion) error {
 // Suggest gets completion suggestions from the Autocompleter dictionary to the given prefix.
 // If fuzzy is set, we also complete for prefixes that are in 1 Levenshten distance from the
 // given prefix
-func (a *Autocompleter) Suggest(prefix string, num int, fuzzy, withPayloads bool) ([]Suggestion, error) {
+func (a *Autocompleter) Suggest(prefix string, num int, fuzzy bool) ([]Suggestion, error) {
 	conn := a.pool.Get()
 	defer conn.Close()
-
-	inc := 2
 
 	args := redis.Args{a.name, prefix, "MAX", num, "WITHSCORES"}
 	if fuzzy {
 		args = append(args, "FUZZY")
 	}
-	if withPayloads {
+	vals, err := redis.Strings(conn.Do("FT.SUGGET", args...))
+	if err != nil {
+		return nil, err
+	}
+
+	ret := make([]Suggestion, 0, len(vals)/2)
+	for i := 0; i < len(vals); i += 2 {
+
+		score, err := strconv.ParseFloat(vals[i+1], 64)
+		if err != nil {
+			continue
+		}
+		ret = append(ret, Suggestion{Term: vals[i], Score: score})
+
+	}
+
+	return ret, nil
+
+}
+
+// SuggestOpts gets completion suggestions from the Autocompleter dictionary to the given prefix.
+// SuggestOptions are passed allowing you specify if the returned values contain a payload, and scores.
+// If SuggestOptions.Fuzzy is set, we also complete for prefixes that are in 1 Levenshten distance from the
+// given prefix
+func (a *Autocompleter) SuggestOpts(prefix string, opts SuggestOptions) ([]Suggestion, error) {
+	conn := a.pool.Get()
+	defer conn.Close()
+
+	inc := 1
+
+	args := redis.Args{a.name, prefix, "MAX", opts.Num}
+	if opts.Fuzzy {
+		args = append(args, "FUZZY")
+	}
+	if opts.WithScores {
+		args = append(args, "WITHSCORES")
+		inc++
+	}
+	if opts.WithPayloads {
 		args = append(args, "WITHPAYLOADS")
-		inc = 3
+		inc++
 	}
 	vals, err := redis.Strings(conn.Do("FT.SUGGET", args...))
 	if err != nil {
@@ -88,14 +124,16 @@ func (a *Autocompleter) Suggest(prefix string, num int, fuzzy, withPayloads bool
 	ret := make([]Suggestion, 0, len(vals)/inc)
 	for i := 0; i < len(vals); i += inc {
 
-		score, err := strconv.ParseFloat(vals[i+1], 64)
-		if err != nil {
-			continue
+		suggestion := Suggestion{Term: vals[i]}
+		if opts.WithScores {
+			score, err := strconv.ParseFloat(vals[i+1], 64)
+			if err != nil {
+				continue
+			}
+			suggestion.Score = score
 		}
-
-		suggestion := Suggestion{Term: vals[i], Score: score}
-		if withPayloads {
-			suggestion.Payload = vals[i+2]
+		if opts.WithPayloads {
+			suggestion.Payload = vals[i+(inc-1)]
 		}
 		ret = append(ret, suggestion)
 
