@@ -66,6 +66,8 @@ func (a *Autocompleter) AddTerms(terms ...Suggestion) error {
 // Suggest gets completion suggestions from the Autocompleter dictionary to the given prefix.
 // If fuzzy is set, we also complete for prefixes that are in 1 Levenshten distance from the
 // given prefix
+//
+// Deprecated: Please use SuggestOpts() instead
 func (a *Autocompleter) Suggest(prefix string, num int, fuzzy bool) ([]Suggestion, error) {
 	conn := a.pool.Get()
 	defer conn.Close()
