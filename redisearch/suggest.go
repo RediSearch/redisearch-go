@@ -9,6 +9,14 @@ type Suggestion struct {
 	Payload string
 }
 
+// SuggestOptions are options which are passed when recieving suggestions from the Autocompleter
+type SuggestOptions struct {
+	Num          int
+	Fuzzy        bool
+	WithPayloads bool
+	WithScores   bool
+}
+
 // SuggestionList is a sortable list of suggestions returned from an engine
 type SuggestionList []Suggestion
 

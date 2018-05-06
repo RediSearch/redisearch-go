@@ -40,7 +40,13 @@ func (a *Autocompleter) AddTerms(terms ...Suggestion) error {
 
 	i := 0
 	for _, term := range terms {
-		if err := conn.Send("FT.SUGADD", a.name, term.Term, term.Score); err != nil {
+
+		args := redis.Args{a.name, term.Term, term.Score}
+		if term.Payload != "" {
+			args = append(args, "PAYLOAD", term.Payload)
+		}
+
+		if err := conn.Send("FT.SUGADD", args...); err != nil {
 			return err
 		}
 		i++
@@ -60,6 +66,8 @@ func (a *Autocompleter) AddTerms(terms ...Suggestion) error {
 // Suggest gets completion suggestions from the Autocompleter dictionary to the given prefix.
 // If fuzzy is set, we also complete for prefixes that are in 1 Levenshten distance from the
 // given prefix
+//
+// Deprecated: Please use SuggestOpts() instead
 func (a *Autocompleter) Suggest(prefix string, num int, fuzzy bool) ([]Suggestion, error) {
 	conn := a.pool.Get()
 	defer conn.Close()
@@ -81,6 +89,55 @@ func (a *Autocompleter) Suggest(prefix string, num int, fuzzy bool) ([]Suggestio
 			continue
 		}
 		ret = append(ret, Suggestion{Term: vals[i], Score: score})
+
+	}
+
+	return ret, nil
+
+}
+
+// SuggestOpts gets completion suggestions from the Autocompleter dictionary to the given prefix.
+// SuggestOptions are passed allowing you specify if the returned values contain a payload, and scores.
+// If SuggestOptions.Fuzzy is set, we also complete for prefixes that are in 1 Levenshten distance from the
+// given prefix
+func (a *Autocompleter) SuggestOpts(prefix string, opts SuggestOptions) ([]Suggestion, error) {
+	conn := a.pool.Get()
+	defer conn.Close()
+
+	inc := 1
+
+	args := redis.Args{a.name, prefix, "MAX", opts.Num}
+	if opts.Fuzzy {
+		args = append(args, "FUZZY")
+	}
+	if opts.WithScores {
+		args = append(args, "WITHSCORES")
+		inc++
+	}
+	if opts.WithPayloads {
+		args = append(args, "WITHPAYLOADS")
+		inc++
+	}
+	vals, err := redis.Strings(conn.Do("FT.SUGGET", args...))
+	if err != nil {
+		return nil, err
+	}
+
+	ret := make([]Suggestion, 0, len(vals)/inc)
+	for i := 0; i < len(vals); i += inc {
+
+		suggestion := Suggestion{Term: vals[i]}
+		if opts.WithScores {
+			score, err := strconv.ParseFloat(vals[i+1], 64)
+			if err != nil {
+				continue
+			}
+			suggestion.Score = score
+		}
+		if opts.WithPayloads {
+			suggestion.Payload = vals[i+(inc-1)]
+		}
+		ret = append(ret, suggestion)
 
 	}
 
