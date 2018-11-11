@@ -47,8 +47,7 @@ func ExampleClient() {
 		Set("date", time.Now().Unix())
 
 	// Index the document. The API accepts multiple documents at a time
-	if err := c.Index([]redisearch.Document{doc},
-		redisearch.DefaultIndexingOptions); err != nil {
+	if err := c.Index([]redisearch.Document{doc}...); err != nil {
 		log.Fatal(err)
 	}
 
