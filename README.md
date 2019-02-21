@@ -2,6 +2,7 @@
 [![CircleCI](https://circleci.com/gh/RediSearch/redisearch-go/tree/master.svg?style=svg)](https://circleci.com/gh/RediSearch/redisearch-go/tree/master)
 [![GitHub issues](https://img.shields.io/github/release/RediSearch/redisearch-go.svg)](https://github.com/RediSearch/redisearch-go/releases/latest)
 [![Codecov](https://codecov.io/gh/RediSearch/redisearch-go/branch/master/graph/badge.svg)](https://codecov.io/gh/RediSearch/redisearch-go)
+[![Go Report Card](https://goreportcard.com/badge/github.com/RediSearch/redisearch-go)](https://goreportcard.com/report/github.com/RediSearch/redisearch-go)
 [![GoDoc](https://godoc.org/github.com/RediSearch/redisearch-go?status.svg)](https://godoc.org/github.com/RediSearch/redisearch-go)
 
 
