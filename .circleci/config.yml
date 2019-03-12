@@ -9,7 +9,7 @@ jobs:
       - image: circleci/golang:1.9
       - image: redislabs/redisearch:edge
         port: 6379:6379
-      - image: redislabs/redisearch:last
+      - image: redislabs/redisearch:latest
         port: 6379:6380
 
     working_directory: /go/src/github.com/RediSearch/redisearch-go
