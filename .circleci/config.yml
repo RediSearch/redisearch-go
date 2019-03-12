@@ -7,7 +7,7 @@ jobs:
     docker:
       # specify the version
       - image: circleci/golang:1.9
-      - image: redislabs/redisearch:latest
+      - image: redislabs/redisearch:edge
 
     working_directory: /go/src/github.com/RediSearch/redisearch-go
     steps:
