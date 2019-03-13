@@ -15,7 +15,7 @@ jobs:
       - run: go test -v ./... -race -coverprofile=coverage.txt -covermode=atomic
       - run: bash <(curl -s https://codecov.io/bash) -t ${CODECOV_TOKEN}
 
-  build_edge: # test with redisearch:edge 
+  build_nightly: # test nightly with redisearch:edge 
     docker:
       - image: circleci/golang:1.9
       - image: redislabs/redisearch:edge
@@ -24,8 +24,7 @@ jobs:
     steps:
       - checkout
       - run: go get -v -t -d ./...
-      - run: go test -v ./... -race -coverprofile=coverage.txt -covermode=atomic
-      - run: bash <(curl -s https://codecov.io/bash) -t ${CODECOV_TOKEN}
+      - run: go test -v ./... -race #no need for codecov on nightly
 
 workflows:
   version: 2
