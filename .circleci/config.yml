@@ -40,4 +40,4 @@ workflows:
               only:
                 - master
     jobs:
-      - build_edge
+      - build_nightly
