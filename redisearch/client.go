@@ -268,14 +268,20 @@ func loadDocument(arr []interface{}, idIdx, scoreIdx, payloadIdx, fieldsIdx int)
 	if fieldsIdx > 0 {
 		lst := arr[idIdx+fieldsIdx].([]interface{})
 		for i := 0; i < len(lst); i += 2 {
-			prop := string(lst[i].([]byte))
+			var prop string
+			switch lst[i].(type) {
+			case []byte:
+				prop = string(lst[i].([]byte))
+			default:
+				prop = lst[i].(string)
+			}
+			
 			var val interface{}
 			switch v := lst[i+1].(type) {
 			case []byte:
 				val = string(v)
 			default:
 				val = v
-
 			}
 			doc = doc.Set(prop, val)
 		}
