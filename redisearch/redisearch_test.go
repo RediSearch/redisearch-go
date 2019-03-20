@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/RedisLabs/redisearch-go/redisearch"
+	"github.com/redisearch/redisearch-go/redisearch"
 	"github.com/stretchr/testify/assert"
 )
 
