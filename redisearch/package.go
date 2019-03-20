@@ -6,7 +6,7 @@
 //
 //```go
 //  import (
-//    "github.com/redisearch/redisearch-go/redisearch"
+//    "github.com/RediSearch/redisearch-go/redisearch"
 //    "log"
 //    "fmt"
 //  )

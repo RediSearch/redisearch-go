@@ -13,7 +13,7 @@ Go client for [RediSearch](http://redisearch.io), based on redigo.
 # Installing 
 
 ```sh
-go get github.com/redisearch/redisearch-go/redisearch
+go get github.com/RediSearch/redisearch-go/redisearch
 ```
 
 # Usage Example
@@ -25,7 +25,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/redisearch/redisearch-go/redisearch"
+	"github.com/RediSearch/redisearch-go/redisearch"
 )
 
 func ExampleClient() {
