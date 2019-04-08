@@ -171,9 +171,6 @@ func TestNoIndex(t *testing.T) {
 	docs, total, err = c.Search(redisearch.NewQuery("@f2:Mark*").SetSortBy("f1", true))
 	assert.Equal(t, 2, total)
 	assert.Equal(t, "doc2", docs[0].Id)
-	
-	_, _, err = c.Search(redisearch.NewQuery("@f2:Mark*").SetSortBy("f2", true))
-	assert.NotNil(t, err)
 }
 
 func TestHighlight(t *testing.T) {
