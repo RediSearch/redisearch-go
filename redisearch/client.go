@@ -367,13 +367,18 @@ func (i *Client) Drop() error {
 
 }
 
-// Delete the document from the index
-func (i *Client) Delete(docId string) error {
+// Delete the document from the index, optionally delete the actual document
+func (i *Client) Delete(docId string, deleteDocument bool) (err error) {
 	conn := i.pool.Get()
 	defer conn.Close()
 
-	_, err := conn.Do("FT.DEL", i.name, docId)
-	return err
+	if deleteDocument {
+		_, err = conn.Do("FT.DEL", i.name, docId)
+	} else {
+		_, err = conn.Do("FT.DEL", i.name, docId, "DD")
+	}
+
+	return
 }
 
 // IndexInfo - Structure showing information about an existing index
