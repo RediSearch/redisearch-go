@@ -275,7 +275,7 @@ func loadDocument(arr []interface{}, idIdx, scoreIdx, payloadIdx, fieldsIdx int)
 			default:
 				prop = lst[i].(string)
 			}
-			
+
 			var val interface{}
 			switch v := lst[i+1].(type) {
 			case []byte:
@@ -365,6 +365,20 @@ func (i *Client) Drop() error {
 	_, err := conn.Do("FT.DROP", i.name)
 	return err
 
+}
+
+// Delete the document from the index, optionally delete the actual document
+func (i *Client) Delete(docId string, deleteDocument bool) (err error) {
+	conn := i.pool.Get()
+	defer conn.Close()
+
+	if deleteDocument {
+		_, err = conn.Do("FT.DEL", i.name, docId)
+	} else {
+		_, err = conn.Do("FT.DEL", i.name, docId, "DD")
+	}
+
+	return
 }
 
 // IndexInfo - Structure showing information about an existing index

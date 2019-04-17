@@ -347,7 +347,44 @@ func TestSuggest(t *testing.T) {
 		assert.Contains(t, suggestion.Payload, "bar")
 		assert.NotZero(t, suggestion.Score)
 	}
+}
 
+func TestDelete(t *testing.T) {
+	c := createClient("testung")
+
+	sc := redisearch.NewSchema(redisearch.DefaultOptions).
+		AddField(redisearch.NewTextField("foo"))
+
+	err := c.Drop()
+	assert.Nil(t, err)
+	assert.Nil(t, c.CreateIndex(sc))
+
+	var info *redisearch.IndexInfo
+
+	// validate that the index is empty
+	info, err = c.Info()
+	assert.Nil(t, err)
+	assert.Equal(t, uint64(0), info.DocCount)
+
+	doc := redisearch.NewDocument("doc1", 1.0)
+	doc.Set("foo", "Hello world")
+
+	err = c.IndexOptions(redisearch.DefaultIndexingOptions, doc)
+	assert.Nil(t, err)
+
+	// now we should have 1 document (id = doc1)
+	info, err = c.Info()
+	assert.Nil(t, err)
+	assert.Equal(t, uint64(1), info.DocCount)
+
+	// delete the document from the index
+	err = c.Delete("doc1", true)
+	assert.Nil(t, err)
+
+	// validate that the index is empty again
+	info, err = c.Info()
+	assert.Nil(t, err)
+	assert.Equal(t, uint64(0), info.DocCount)
 }
 
 func ExampleClient() {
