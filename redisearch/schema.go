@@ -47,6 +47,11 @@ type NumericFieldOptions struct {
 	NoIndex  bool
 }
 
+// GeoFieldOptions Options for geo fields
+type GeoFieldOptions struct {
+	NoIndex bool
+}
+
 // NewTextField creates a new text field with the given weight
 func NewTextField(name string) Field {
 	return Field{
@@ -111,6 +116,22 @@ func NewSortableNumericField(name string) Field {
 	f.Options = NumericFieldOptions{
 		Sortable: true,
 	}
+	return f
+}
+
+// NewGeoField creates a new geo field with the given name
+func NewGeoField(name string) Field {
+	return Field{
+		Name:    name,
+		Type:    GeoField,
+		Options: nil,
+	}
+}
+
+// NewGeoFieldOptions creates a new geo field with the given name and additional options
+func NewGeoFieldOptions(name string, options GeoFieldOptions) Field {
+	f := NewGeoField(name)
+	f.Options = options
 	return f
 }
 

@@ -147,6 +147,17 @@ func (i *Client) CreateIndex(s *Schema) error {
 					args = append(args, "NOINDEX")
 				}
 			}
+		case GeoField:
+			args = append(args, f.Name, "GEO")
+			if f.Options != nil {
+				opts, ok := f.Options.(GeoFieldOptions)
+				if !ok {
+					return errors.New("Invalid geo field options type")
+				}
+				if opts.NoIndex {
+					args = append(args, "NOINDEX")
+				}
+			}
 		default:
 			return fmt.Errorf("Unsupported field type %v", f.Type)
 		}

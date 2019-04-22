@@ -397,7 +397,8 @@ func ExampleClient() {
 	sc := redisearch.NewSchema(redisearch.DefaultOptions).
 		AddField(redisearch.NewTextField("body")).
 		AddField(redisearch.NewTextFieldOptions("title", redisearch.TextFieldOptions{Weight: 5.0, Sortable: true})).
-		AddField(redisearch.NewNumericField("date"))
+		AddField(redisearch.NewNumericField("date")).
+		AddField(redisearch.NewGeoField("location"))
 
 	// Drop an existing index. If the index does not exist an error is returned
 	c.Drop()
@@ -411,7 +412,8 @@ func ExampleClient() {
 	doc := redisearch.NewDocument("doc1", 1.0)
 	doc.Set("title", "Hello world").
 		Set("body", "foo bar").
-		Set("date", time.Now().Unix())
+		Set("date", time.Now().Unix()).
+		Set("location", "-122.083855,37.386051")
 
 	// Index the document. The API accepts multiple documents at a time
 	if err := c.IndexOptions(redisearch.DefaultIndexingOptions, doc); err != nil {
