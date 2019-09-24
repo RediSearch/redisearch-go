@@ -346,6 +346,22 @@ func (i *Client) Search(q *Query) (docs []Document, total int, err error) {
 	return
 }
 
+
+// Aggregate
+func (i *Client) Aggregate(q *AggregateQuery, ) ( err error) {
+	conn := i.pool.Get()
+	defer conn.Close()
+
+	args := redis.Args{i.name}
+	args = append(args, q.serialize()...)
+
+	_, err = redis.Values(conn.Do("FT.AGGREGATE", args...))
+	if err != nil {
+		return
+	}
+	return
+}
+
 // Explain Return a textual string explaining the query
 func (i *Client) Explain(q *Query) (string, error) {
 	conn := i.pool.Get()
