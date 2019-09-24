@@ -30,23 +30,25 @@ func NewSpellCheckOptions(distance int) *SpellCheckOptions {
 }
 
 // SetDistance Sets the the maximal Levenshtein distance for spelling suggestions (default: 1, max: 4)
-func (s *SpellCheckOptions) SetDistance(distance int) (err error) {
+func (s *SpellCheckOptions) SetDistance(distance int) (*SpellCheckOptions, error) {
 	if distance < 1 || distance > 4 {
-		return fmt.Errorf("The maximal Levenshtein distance for spelling suggestions should be between [1,4]. Got %d", distance)
+		return s, fmt.Errorf("The maximal Levenshtein distance for spelling suggestions should be between [1,4]. Got %d", distance)
 	} else {
 		s.Distance = distance
 	}
-	return nil
+	return s, nil
 }
 
 // AddExclusionDict adds a custom dictionary named {dictname} to the exclusion list
-func (s *SpellCheckOptions) AddExclusionDict(dictname string) {
+func (s *SpellCheckOptions) AddExclusionDict(dictname string) *SpellCheckOptions {
 	s.ExclusionDicts = append(s.ExclusionDicts, dictname)
+	return s
 }
 
 // AddInclusionDict adds a custom dictionary named {dictname} to the inclusion list
-func (s *SpellCheckOptions) AddInclusionDict(dictname string) {
+func (s *SpellCheckOptions) AddInclusionDict(dictname string) *SpellCheckOptions {
 	s.InclusionDicts = append(s.InclusionDicts, dictname)
+	return s
 }
 
 func (s SpellCheckOptions) serialize() redis.Args {
@@ -113,7 +115,7 @@ func loadMisspelledTerm(arr []interface{}, termIdx, suggIdx int) (missT Misspell
 	missT = NewMisspelledTerm(term)
 	lst, err := redis.Values(arr[suggIdx], err)
 	if err != nil {
-		return MisspelledTerm{}, fmt.Errorf("Could not ge the array of suggestions for spelling corrections on term %s. Error: %s", term, err)
+		return MisspelledTerm{}, fmt.Errorf("Could not get the array of suggestions for spelling corrections on term %s. Error: %s", term, err)
 	}
 	for i := 0; i < len(lst); i++ {
 		innerLst, err := redis.Values(lst[i], err)
