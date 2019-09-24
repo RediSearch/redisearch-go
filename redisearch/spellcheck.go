@@ -113,12 +113,12 @@ func loadMisspelledTerm(arr []interface{}, termIdx, suggIdx int) (missT Misspell
 	missT = NewMisspelledTerm(term)
 	lst, err := redis.Values(arr[suggIdx], err)
 	if err != nil {
-		return MisspelledTerm{}, fmt.Errorf("Could not the array of suggestions for spelling corrections on term %s. Error: %s", term, err)
+		return MisspelledTerm{}, fmt.Errorf("Could not ge the array of suggestions for spelling corrections on term %s. Error: %s", term, err)
 	}
 	for i := 0; i < len(lst); i++ {
 		innerLst, err := redis.Values(lst[i], err)
 		if err != nil {
-			return MisspelledTerm{}, fmt.Errorf("Could not the inner array of suggestions for spelling corrections on term %s. Error: %s", term, err)
+			return MisspelledTerm{}, fmt.Errorf("Could not get the inner array of suggestions for spelling corrections on term %s. Error: %s", term, err)
 		}
 		score, err := redis.Float64(innerLst[0], err)
 		if err != nil {
@@ -126,7 +126,7 @@ func loadMisspelledTerm(arr []interface{}, termIdx, suggIdx int) (missT Misspell
 		}
 		suggestion, err := redis.String(innerLst[1], err)
 		if err != nil {
-			return MisspelledTerm{}, fmt.Errorf("Could not parse suggestion : %s", err)
+			return MisspelledTerm{}, fmt.Errorf("Could not parse suggestion: %s", err)
 		}
 		missT.MisspelledSuggestionList = append(missT.MisspelledSuggestionList, NewMisspelledSuggestion(suggestion, float32(score)))
 	}
