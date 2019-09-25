@@ -1,7 +1,6 @@
 package redisearch
 
-// Sort direction
-type DirString string
+import "github.com/garyburd/redigo/redis"
 
 // GroupByReducers
 type GroupByReducers string
@@ -42,27 +41,22 @@ const (
 
 	// GroupByReducerRandomSample is an alias for GROUPBY reducer RANDOM_SAMPLE
 	GroupByReducerRandomSample = GroupByReducers("RANDOM_SAMPLE")
-
-	// SortDirectionAsc is an alias for Sort Direction ascending
-	SortDirectionAsc = DirString("ASC")
-
-	// SortDirectionDesc is an alias for Sort Direction descending
-	SortDirectionDesc = DirString("DESC")
 )
 
 // Reducer represents an index schema Schema, or how the index would
 // treat documents sent to it.
 type Reducer struct {
-	Name          GroupByReducers
-	Alias         string
-	SortDirection DirString
+	Name  GroupByReducers
+	Alias string
+	Args  []string
 }
 
 // NewReducer creates a new Reducer object
-func NewReducer(name GroupByReducers) *Reducer {
+func NewReducer(name GroupByReducers, args []string) *Reducer {
 	return &Reducer{
-		Name:          name,
-		SortDirection: SortDirectionAsc,
+		Name:  name,
+		Alias: "",
+		Args:  args,
 	}
 }
 
@@ -71,12 +65,21 @@ func (r *Reducer) SetName(reducer GroupByReducers) *Reducer {
 	return r
 }
 
+func (r *Reducer) SetArgs(args []string) *Reducer {
+	r.Args = args
+	return r
+}
+
 func (r *Reducer) SetAlias(a string) *Reducer {
 	r.Alias = a
 	return r
 }
 
-func (r *Reducer) SetSortDirection(dir DirString) *Reducer {
-	r.SortDirection = dir
-	return r
+func (r Reducer) Serialize() redis.Args {
+	ret := len(r.Args)
+	args := redis.Args{"REDUCE", r.Name, ret, r.Args}
+	if r.Alias != "" {
+		args = append(args, "AS", r.Alias)
+	}
+	return args
 }

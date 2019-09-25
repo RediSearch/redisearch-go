@@ -346,16 +346,15 @@ func (i *Client) Search(q *Query) (docs []Document, total int, err error) {
 	return
 }
 
-
 // Aggregate
-func (i *Client) Aggregate(q *AggregateQuery, ) ( err error) {
+func (i *Client) Aggregate( q *AggregateQuery ) ( aggregateReply []interface{}, err error) {
 	conn := i.pool.Get()
 	defer conn.Close()
 
 	args := redis.Args{i.name}
-	args = append(args, q.serialize()...)
+	args = append(args, q.Serialize()...)
 
-	_, err = redis.Values(conn.Do("FT.AGGREGATE", args...))
+	aggregateReply, err = redis.Values(conn.Do("FT.AGGREGATE", args...))
 	if err != nil {
 		return
 	}

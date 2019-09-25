@@ -36,6 +36,23 @@ type SortingKey struct {
 	Ascending bool
 }
 
+func NewSortingKeyDir(field string, ascending bool) *SortingKey {
+	return &SortingKey{
+		Field: field,
+		Ascending: ascending,
+	}
+}
+
+func (s SortingKey) Serialize() redis.Args {
+	args := redis.Args{ s.Field }
+	if s.Ascending {
+		args = args.Add("ASC")
+	} else {
+		args = args.Add("DESC")
+	}
+	return args
+}
+
 // HighlightOptions represents the options to higlight specific document fields.
 // See http://redisearch.io/Highlight/
 type HighlightOptions struct {
@@ -78,6 +95,18 @@ type Paging struct {
 	Num    int
 }
 
+func NewPaging(offset int, num int) *Paging {
+	return &Paging{
+		Offset: offset,
+		Num: num,
+	}
+}
+
+func (p Paging) serialize() redis.Args {
+	args := redis.Args{"LIMIT", p.Offset, p.Num}
+	return args
+}
+
 // NewQuery creates a new query for a given index with the given search term.
 // For currently the index parameter is ignored
 func NewQuery(raw string) *Query {
@@ -90,7 +119,7 @@ func NewQuery(raw string) *Query {
 
 func (q Query) serialize() redis.Args {
 
-	args := redis.Args{q.Raw, "LIMIT", q.Paging.Offset, q.Paging.Num}
+	args := redis.Args{q.Raw}.AddFlat(q.Paging.serialize())
 	if q.Flags&QueryVerbatim != 0 {
 		args = args.Add("VERBATIM")
 	}
@@ -128,12 +157,7 @@ func (q Query) serialize() redis.Args {
 	}
 
 	if q.SortBy != nil {
-		args = args.Add("SORTBY", q.SortBy.Field)
-		if q.SortBy.Ascending {
-			args = args.Add("ASC")
-		} else {
-			args = args.Add("DESC")
-		}
+		args = args.Add("SORTBY").AddFlat( q.SortBy.Serialize() )
 	}
 
 	if q.HighlightOpts != nil {

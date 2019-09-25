@@ -134,6 +134,54 @@ func TestNumeric(t *testing.T) {
 	fmt.Println(explain)
 }
 
+func TestAggregateQuery(t *testing.T) {
+	c := createClient("pages-meta-idx1")
+
+	sc := redisearch.NewSchema(redisearch.DefaultOptions).
+		AddField(redisearch.NewTextFieldOptions("TITLE",redisearch.TextFieldOptions{Sortable: true})).
+		AddField(redisearch.NewTagFieldOptions("NAMESPACE", redisearch.TagFieldOptions{Sortable:true})).
+		AddField(redisearch.NewSortableNumericField("ID")).
+		AddField(redisearch.NewSortableNumericField("PARENT_REVISION_ID")).
+		AddField(redisearch.NewSortableNumericField("CURRENT_REVISION_TIMESTAMP")).
+		AddField(redisearch.NewSortableNumericField("CURRENT_REVISION_ID")).
+		AddField(redisearch.NewTextFieldOptions("CURRENT_REVISION_EDITOR_USERNAME",redisearch.TextFieldOptions{NoStem:true})).
+		AddField(redisearch.NewTextField("CURRENT_REVISION_EDITOR_IP")).
+		AddField(redisearch.NewSortableNumericField("CURRENT_REVISION_EDITOR_USERID")).
+		AddField(redisearch.NewTextField("CURRENT_REVISION_EDITOR_COMMENT")).
+		AddField(redisearch.NewSortableNumericField("CURRENT_REVISION_CONTENT_LENGTH"))
+	c.Drop()
+	assert.Nil(t, c.CreateIndex(sc))
+
+	docs := make([]redisearch.Document, 0)
+	docs = append(docs, redisearch.NewDocument(fmt.Sprintf("pages-meta-idx1-%d", 1), 1).
+		Set("NAMESPACE", "1").
+		Set("ID", 1).
+		Set("CURRENT_REVISION_TIMESTAMP", 1540378169).
+		Set("CURRENT_REVISION_EDITOR_USERNAME", "Narky Blert").
+		Set("CURRENT_REVISION_CONTENT_LENGTH", 2),
+	)
+	docs = append(docs, redisearch.NewDocument(fmt.Sprintf("pages-meta-idx1-%d", 2), 1).
+		Set("NAMESPACE", "0").
+		Set("ID", 2).
+		Set("CURRENT_REVISION_TIMESTAMP", 1447349117).
+		Set("CURRENT_REVISION_EDITOR_USERNAME", "CZmarlin").
+		Set("CURRENT_REVISION_CONTENT_LENGTH", 50),
+	)
+	docs = append(docs, redisearch.NewDocument(fmt.Sprintf("pages-meta-idx1-%d", 3), 1).
+		Set("NAMESPACE", "0").
+		Set("ID", 3).
+		Set("CURRENT_REVISION_TIMESTAMP", 1427349117).
+		Set("CURRENT_REVISION_EDITOR_USERNAME", "CZmarlin").
+		Set("CURRENT_REVISION_CONTENT_LENGTH", 50),
+	)
+
+	c.Index(docs...)
+
+	info, err := c.Info()
+	assert.Nil(t, err)
+	fmt.Printf("%v\n", info)
+}
+
 func TestNoIndex(t *testing.T) {
 	c := createClient("testung")
 	c.Drop()
