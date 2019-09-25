@@ -60,6 +60,15 @@ func NewReducer(name GroupByReducers, args []string) *Reducer {
 	}
 }
 
+// NewReducer creates a new Reducer object
+func NewReducerAlias(name GroupByReducers, args []string, alias string ) *Reducer {
+	return &Reducer{
+		Name:  name,
+		Alias: alias,
+		Args:  args,
+	}
+}
+
 func (r *Reducer) SetName(reducer GroupByReducers) *Reducer {
 	r.Name = reducer
 	return r
@@ -77,7 +86,7 @@ func (r *Reducer) SetAlias(a string) *Reducer {
 
 func (r Reducer) Serialize() redis.Args {
 	ret := len(r.Args)
-	args := redis.Args{"REDUCE", r.Name, ret, r.Args}
+	args := redis.Args{"REDUCE", r.Name, ret}.AddFlat(r.Args)
 	if r.Alias != "" {
 		args = append(args, "AS", r.Alias)
 	}

@@ -43,7 +43,7 @@ func NewGroupByFields(fields []string) *GroupBy {
 	}
 }
 
-func (g *GroupBy) AddGroupByReducer(reducer Reducer) *GroupBy {
+func (g *GroupBy) Reduce(reducer Reducer) *GroupBy {
 	g.Reducers = append(g.Reducers, reducer)
 	return g
 }
@@ -55,9 +55,12 @@ func (g *GroupBy) Limit(offset int, num int) *GroupBy {
 
 func (g GroupBy) Serialize() redis.Args {
 	ret := len(g.Fields)
-	args := redis.Args{"GROUPBY", ret, g.Fields}
+	args := redis.Args{"GROUPBY", ret}.AddFlat(g.Fields)
 	for _, reducer := range g.Reducers {
 		args = args.AddFlat(reducer.Serialize())
+	}
+	if g.Paging != nil {
+		args = args.AddFlat(g.Paging.serialize())
 	}
 	return args
 }
@@ -72,6 +75,7 @@ type AggregateQuery struct {
 	Max              int
 	WithSchema       bool
 	Verbatim         bool
+	Filters []string
 	//Cursor
 
 }
@@ -86,6 +90,7 @@ func NewAggregateQuery() *AggregateQuery {
 		Max:              0,
 		WithSchema:       false,
 		Verbatim:         false,
+		Filters: make([]string, 0),
 		//Cursor:  make([]interface{}, 0),
 
 	}
@@ -121,7 +126,7 @@ func (a *AggregateQuery) Apply(expression Projection) *AggregateQuery {
 func (a *AggregateQuery) Limit(offset int, num int) *AggregateQuery {
 	ngroups := len(a.Groups)
 	if ngroups > 0 {
-		a.Groups[ngroups-1].Limit(offset, num)
+		a.Groups[ngroups-1] = *a.Groups[ngroups-1].Limit(offset, num)
 	} else {
 		a.Paging = NewPaging(offset, num)
 	}
@@ -137,6 +142,35 @@ func (a *AggregateQuery) SortBy(sortby SortingKey) *AggregateQuery {
 	a.SortByProperties = append(a.SortByProperties, sortby)
 	return a
 }
+
+//Specify filters to filter the results using predicates relating to values in the result set.
+func (a *AggregateQuery) Filter(expression string) *AggregateQuery {
+	a.Filters = append(a.Filters, expression)
+	return a
+}
+
+//Serialize order is defined as follows:
+//{query_string:string}
+//[WITHSCHEMA] [VERBATIM]
+//[LOAD {nargs:integer} {property:string} ...]
+//[GROUPBY
+//{nargs:integer} {property:string} ...
+//REDUCE
+//{FUNC:string}
+//{nargs:integer} {arg:string} ...
+//[AS {name:string}]
+//...
+//] ...
+//[SORTBY
+//{nargs:integer} {string} ...
+//[MAX {num:integer}] ...
+//] ...
+//[APPLY
+//{EXPR:string}
+//AS {name:string}
+//] ...
+//[FILTER {EXPR:string}] ...
+//[LIMIT {offset:integer} {num:integer} ] ...
 
 func (q AggregateQuery) Serialize() redis.Args {
 	args := redis.Args{}
@@ -172,9 +206,11 @@ func (q AggregateQuery) Serialize() redis.Args {
 			args = args.Add("MAX", q.Max)
 		}
 	}
-
+	for _, filter := range q.Filters {
+		args = args.Add("FILTER",filter)
+	}
 	if q.Paging != nil {
-		args = args.Add(q.Paging.serialize())
+		args = args.AddFlat(q.Paging.serialize())
 	}
 
 	return args
