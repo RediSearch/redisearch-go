@@ -73,7 +73,8 @@ type AggregateQuery struct {
 	Max           int
 	WithSchema    bool
 	Verbatim      bool
-	//Cursor
+	// TODO: add cursor
+	// TODO: add load fields
 
 }
 
@@ -102,7 +103,7 @@ func (a *AggregateQuery) SetMax(value int) *AggregateQuery {
 	return a
 }
 
-//Specify one projection expression to add to each result
+//Adds a APPLY clause to the aggregate plan
 func (a *AggregateQuery) Apply(expression Projection) *AggregateQuery {
 	a.AggregatePlan = a.AggregatePlan.AddFlat(expression.Serialize())
 	return a
@@ -114,11 +115,13 @@ func (a *AggregateQuery) Limit(offset int, num int) *AggregateQuery {
 	return a
 }
 
+//Adds a GROUPBY clause to the aggregate plan
 func (a *AggregateQuery) GroupBy(group GroupBy) *AggregateQuery {
 	a.AggregatePlan = a.AggregatePlan.AddFlat(group.Serialize())
 	return a
 }
 
+//Adds a SORTBY clause to the aggregate plan
 func (a *AggregateQuery) SortBy(SortByProperties []SortingKey) *AggregateQuery {
 	nsort := len(SortByProperties)
 	if nsort > 0 {
@@ -139,29 +142,6 @@ func (a *AggregateQuery) Filter(expression string) *AggregateQuery {
 	//a.Filters = append(a.Filters, expression)
 	return a
 }
-
-//Serialize order is defined as follows:
-//{query_string:string}
-//[WITHSCHEMA] [VERBATIM]
-//[LOAD {nargs:integer} {property:string} ...]
-//[GROUPBY
-//{nargs:integer} {property:string} ...
-//REDUCE
-//{FUNC:string}
-//{nargs:integer} {arg:string} ...
-//[AS {name:string}]
-//...
-//] ...
-//[SORTBY
-//{nargs:integer} {string} ...
-//[MAX {num:integer}] ...
-//] ...
-//[APPLY
-//{EXPR:string}
-//AS {name:string}
-//] ...
-//[FILTER {EXPR:string}] ...
-//[LIMIT {offset:integer} {num:integer} ] ...
 
 func (q AggregateQuery) Serialize() redis.Args {
 	args := redis.Args{}

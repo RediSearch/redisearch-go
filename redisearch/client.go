@@ -347,17 +347,31 @@ func (i *Client) Search(q *Query) (docs []Document, total int, err error) {
 }
 
 // Aggregate
-func (i *Client) Aggregate( q *AggregateQuery ) ( aggregateReply []interface{}, err error) {
+func (i *Client) Aggregate( q *AggregateQuery ) ( aggregateReply [][]string, total int, err error) {
 	conn := i.pool.Get()
 	defer conn.Close()
 
 	args := redis.Args{i.name}
 	args = append(args, q.Serialize()...)
 
-	aggregateReply, err = redis.Values(conn.Do("FT.AGGREGATE", args...))
+	res, err := redis.Values(conn.Do("FT.AGGREGATE", args...))
 	if err != nil {
 		return
 	}
+
+	if total, err = redis.Int(res[0], nil); err != nil {
+		return
+	}
+
+	aggregateReply = make([][]string, 0, len(res)-1)
+	for i := 1; i < len(res); i ++ {
+		if d, e := redis.Strings(res[i], nil ); e == nil {
+			aggregateReply = append(aggregateReply, d)
+		} else {
+			log.Print("Error parsing Aggregate Reply: ", e)
+		}
+	}
+
 	return
 }
 

@@ -504,7 +504,7 @@ func TestAggregateQuery(t *testing.T) {
 		SortBy( []redisearch.SortingKey{ *redisearch.NewSortingKeyDir("@day", false ) } ).
 		Apply( *redisearch.NewProjection("timefmt(@day)", "day"  ) )
 
-	resq1, err := c.Aggregate(q1)
+	resq1,_,  err := c.Aggregate(q1)
 	assert.Nil(t, err)
 	fmt.Printf("%v\n", resq1)
 
@@ -517,7 +517,7 @@ func TestAggregateQuery(t *testing.T) {
 		SortBy( []redisearch.SortingKey{ *redisearch.NewSortingKeyDir("@hour", false ) } ).
 		Apply( *redisearch.NewProjection("timefmt(@hour)", "hour"  ) )
 
-	resq2, err := c.Aggregate(q2)
+	resq2,_,  err := c.Aggregate(q2)
 	assert.Nil(t, err)
 	fmt.Printf("%v\n", resq2)
 
@@ -530,7 +530,7 @@ func TestAggregateQuery(t *testing.T) {
 		SortBy( []redisearch.SortingKey{ *redisearch.NewSortingKeyDir("@hour", false ) } ).
 		Apply( *redisearch.NewProjection("timefmt(@hour)", "hour"  ) )
 
-	resq3, err := c.Aggregate(q3)
+	resq3,_,  err := c.Aggregate(q3)
 	assert.Nil(t, err)
 	fmt.Printf("%v\n", resq3)
 
@@ -544,7 +544,7 @@ func TestAggregateQuery(t *testing.T) {
 		SortBy( []redisearch.SortingKey{ *redisearch.NewSortingKeyDir("@fiveMinutes", true ), *redisearch.NewSortingKeyDir("@CURRENT_REVISION_EDITOR_USERNAME", false )  } ).
 		Apply( *redisearch.NewProjection("timefmt(@fiveMinutes)", "fiveMinutes"  ) )
 
-	resq4, err := c.Aggregate(q4)
+	resq4,_,  err := c.Aggregate(q4)
 	assert.Nil(t, err)
 	fmt.Printf("%v\n", resq4)
 
@@ -556,7 +556,7 @@ func TestAggregateQuery(t *testing.T) {
 		SortBy( []redisearch.SortingKey{ *redisearch.NewSortingKeyDir("@num_contributions", true ) } ).
 		Limit(0,10 )
 
-	resq5, err := c.Aggregate(q5)
+	resq5,_,  err := c.Aggregate(q5)
 	assert.Nil(t, err)
 	fmt.Printf("%v\n", resq5)
 
@@ -568,7 +568,7 @@ func TestAggregateQuery(t *testing.T) {
 		SortBy( []redisearch.SortingKey{ *redisearch.NewSortingKeyDir("@NAMESPACE", true ), *redisearch.NewSortingKeyDir("@num_contributions", true ) } ).
 		Limit(0,10 )
 
-	resq6, err := c.Aggregate(q6)
+	_, resq6, err := c.Aggregate(q6)
 	assert.Nil(t, err)
 	fmt.Printf("%v\n", resq6)
 
@@ -579,7 +579,7 @@ func TestAggregateQuery(t *testing.T) {
 		SortBy( []redisearch.SortingKey{ *redisearch.NewSortingKeyDir("@avg_rcl", false ) } ).
 		Limit(0,10 )
 
-	resq7, err := c.Aggregate(q7)
+	resq7, _, err := c.Aggregate(q7)
 	assert.Nil(t, err)
 	fmt.Printf("%v\n", resq7)
 
@@ -592,7 +592,7 @@ func TestAggregateQuery(t *testing.T) {
 		Apply( *redisearch.NewProjection("@num_contributions / @num_distinct_editors", "avg_num_contributions_by_editor"  ) ).
 		SortBy( []redisearch.SortingKey{ *redisearch.NewSortingKeyDir("@year", true )  } )
 
-	resq8, err := c.Aggregate(q8)
+	resq8, _, err := c.Aggregate(q8)
 	assert.Nil(t, err)
 	fmt.Printf("%v\n", resq8)
 }
