@@ -103,7 +103,12 @@ func NewPaging(offset int, num int) *Paging {
 }
 
 func (p Paging) serialize() redis.Args {
-	args := redis.Args{"LIMIT", p.Offset, p.Num}
+	args := redis.Args{}
+	// only serialize something if it's different than the default
+	// The default is 0 10
+	if p.Offset != DefaultOffset && p.Num != DefaultNum {
+		args = args.Add("LIMIT", p.Offset, p.Num)
+	}
 	return args
 }
 
@@ -195,6 +200,7 @@ func (q Query) serialize() redis.Args {
 // }
 
 // Limit sets the paging offset and limit for the query
+// you can use LIMIT 0 0 to count the number of documents in the resultset without actually returning them
 func (q *Query) Limit(offset, num int) *Query {
 	q.Paging.Offset = offset
 	q.Paging.Num = num

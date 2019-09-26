@@ -3,3 +3,4 @@
 !**/*.go
 !.gitignore
 !.circleci/config.yml
+!/tests/*.bz2

@@ -88,6 +88,11 @@ func NewAggregateQuery() *AggregateQuery {
 	}
 }
 
+func (a *AggregateQuery) SetQuery(query *Query) *AggregateQuery {
+	a.Query = query
+	return a
+}
+
 func (a *AggregateQuery) SetWithSchema(value bool) *AggregateQuery {
 	a.WithSchema = value
 	return a
