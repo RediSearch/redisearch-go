@@ -4,14 +4,14 @@ import "github.com/garyburd/redigo/redis"
 
 // Projection
 type Projection struct {
-	Alias      string
 	Expression string
+	Alias      string
 }
 
-func NewProjection(alias string, expression string) *Projection {
+func NewProjection(expression string, alias string) *Projection {
 	return &Projection{
-		Alias:      alias,
 		Expression: expression,
+		Alias:      alias,
 	}
 }
 
@@ -67,32 +67,23 @@ func (g GroupBy) Serialize() redis.Args {
 
 // AggregateQuery
 type AggregateQuery struct {
-	Query            *Query
-	Groups           []GroupBy
-	Projections      []Projection
-	Paging           *Paging
-	SortByProperties []SortingKey
-	Max              int
-	WithSchema       bool
-	Verbatim         bool
-	Filters []string
+	Query         *Query
+	AggregatePlan redis.Args
+	Paging        *Paging
+	Max           int
+	WithSchema    bool
+	Verbatim      bool
 	//Cursor
 
 }
 
 func NewAggregateQuery() *AggregateQuery {
 	return &AggregateQuery{
-		Query:            nil,
-		Groups:           make([]GroupBy, 0),
-		Projections:      make([]Projection, 0),
-		Paging:           nil,
-		SortByProperties: make([]SortingKey, 0),
-		Max:              0,
-		WithSchema:       false,
-		Verbatim:         false,
-		Filters: make([]string, 0),
-		//Cursor:  make([]interface{}, 0),
-
+		Query:      nil,
+		Paging:     nil,
+		Max:        0,
+		WithSchema: false,
+		Verbatim:   false,
 	}
 }
 
@@ -113,39 +104,39 @@ func (a *AggregateQuery) SetMax(value int) *AggregateQuery {
 
 //Specify one projection expression to add to each result
 func (a *AggregateQuery) Apply(expression Projection) *AggregateQuery {
-	a.Projections = append(a.Projections, expression)
+	a.AggregatePlan = a.AggregatePlan.AddFlat(expression.Serialize())
 	return a
 }
 
-//Sets the limit for the most recent group or query.
-//If no group has been defined yet (via `GroupBy()`) then this sets
-//the limit for the initial pool of results from the query. Otherwise,
-//this limits the number of items operated on from the previous group.
-//Setting a limit on the initial search results may be useful when
-//attempting to execute an aggregation on a sample of a large data set.
+//Sets the limit for the initial pool of results from the query.
 func (a *AggregateQuery) Limit(offset int, num int) *AggregateQuery {
-	ngroups := len(a.Groups)
-	if ngroups > 0 {
-		a.Groups[ngroups-1] = *a.Groups[ngroups-1].Limit(offset, num)
-	} else {
-		a.Paging = NewPaging(offset, num)
-	}
+	a.Paging = NewPaging(offset, num)
 	return a
 }
 
 func (a *AggregateQuery) GroupBy(group GroupBy) *AggregateQuery {
-	a.Groups = append(a.Groups, group)
+	a.AggregatePlan = a.AggregatePlan.AddFlat(group.Serialize())
 	return a
 }
 
-func (a *AggregateQuery) SortBy(sortby SortingKey) *AggregateQuery {
-	a.SortByProperties = append(a.SortByProperties, sortby)
+func (a *AggregateQuery) SortBy(SortByProperties []SortingKey) *AggregateQuery {
+	nsort := len(SortByProperties)
+	if nsort > 0 {
+		a.AggregatePlan = a.AggregatePlan.Add("SORTBY", nsort*2)
+		for _, sortby := range SortByProperties {
+			a.AggregatePlan = a.AggregatePlan.AddFlat(sortby.Serialize())
+		}
+		if a.Max > 0 {
+			a.AggregatePlan = a.AggregatePlan.Add("MAX", a.Max)
+		}
+	}
 	return a
 }
 
 //Specify filters to filter the results using predicates relating to values in the result set.
 func (a *AggregateQuery) Filter(expression string) *AggregateQuery {
-	a.Filters = append(a.Filters, expression)
+	a.AggregatePlan = a.AggregatePlan.Add("FILTER", expression)
+	//a.Filters = append(a.Filters, expression)
 	return a
 }
 
@@ -179,10 +170,11 @@ func (q AggregateQuery) Serialize() redis.Args {
 	} else {
 		args = args.Add("*")
 	}
-
+	// WITHSCHEMA
 	if q.WithSchema {
 		args = args.Add("WITHSCHEMA")
 	}
+	// VERBATIM
 	if q.Verbatim {
 		args = args.Add("VERBATIM")
 	}
@@ -190,25 +182,10 @@ func (q AggregateQuery) Serialize() redis.Args {
 	// TODO: add cursor
 	// TODO: add load fields
 
-	for _, group := range q.Groups {
-		args = args.AddFlat(group.Serialize())
-	}
-	for _, projector := range q.Projections {
-		args = args.AddFlat(projector.Serialize())
-	}
-	nsort := len(q.SortByProperties)
-	if nsort > 0 {
-		args = args.Add("SORTBY", nsort*2)
-		for _, sortby := range q.SortByProperties {
-			args = args.AddFlat(sortby.Serialize())
-		}
-		if q.Max > 0 {
-			args = args.Add("MAX", q.Max)
-		}
-	}
-	for _, filter := range q.Filters {
-		args = args.Add("FILTER",filter)
-	}
+	//Add the aggregation plan with ( GROUPBY and REDUCE | SORTBY | APPLY | FILTER ).+ clauses
+	args = args.AddFlat(q.AggregatePlan)
+
+	// LIMIT
 	if q.Paging != nil {
 		args = args.AddFlat(q.Paging.serialize())
 	}

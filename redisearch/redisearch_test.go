@@ -387,6 +387,46 @@ func TestDelete(t *testing.T) {
 	assert.Equal(t, uint64(0), info.DocCount)
 }
 
+func ExampleClient() {
+
+	// Create a client. By default a client is schemaless
+	// unless a schema is provided when creating the index
+	c := createClient("myIndex")
+
+	// Create a schema
+	sc := redisearch.NewSchema(redisearch.DefaultOptions).
+		AddField(redisearch.NewTextField("body")).
+		AddField(redisearch.NewTextFieldOptions("title", redisearch.TextFieldOptions{Weight: 5.0, Sortable: true})).
+		AddField(redisearch.NewNumericField("date"))
+
+	// Drop an existing index. If the index does not exist an error is returned
+	c.Drop()
+
+	// Create the index with the given schema
+	if err := c.CreateIndex(sc); err != nil {
+		log.Fatal(err)
+	}
+
+	// Create a document with an id and given score
+	doc := redisearch.NewDocument("doc1", 1.0)
+	doc.Set("title", "Hello world").
+		Set("body", "foo bar").
+		Set("date", time.Now().Unix())
+
+	// Index the document. The API accepts multiple documents at a time
+	if err := c.IndexOptions(redisearch.DefaultIndexingOptions, doc); err != nil {
+		log.Fatal(err)
+	}
+
+	// Searching with limit and sorting
+	docs, total, err := c.Search(redisearch.NewQuery("hello world").
+		Limit(0, 2).
+		SetReturnFields("title"))
+
+	fmt.Println(docs[0].Id, docs[0].Properties["title"], total, err)
+	// Output: doc1 Hello world 1 <nil>
+}
+
 
 func TestAggregateQuery(t *testing.T) {
 	c := createClient("pages-meta-idx1")
@@ -456,45 +496,76 @@ func TestAggregateQuery(t *testing.T) {
 	c.Index(docs...)
 
 	//1) One year period, Exact Number of contributions by day, ordered chronologically
-	//q1 := redisearch.NewAggregateQuery().
-	//	Apply( *redisearch.NewProjection( "day", "@CURRENT_REVISION_TIMESTAMP - (@CURRENT_REVISION_TIMESTAMP % 86400)" )).
-	//	GroupBy( *redisearch.NewGroupBy( "@day" ).Reduce( *redisearch.NewReducerAlias( redisearch.GroupByReducerCount, []string{"@ID"} ,"num_contributions") ) ).
-	//	SortBy( *redisearch.NewSortingKeyDir("@day", false )).
-	//	SetMax( 365 ).
-	//	Apply( *redisearch.NewProjection("day", "timefmt(@day)" ) )
-	//
-	//res, err := c.Aggregate(q1)
-	//assert.Nil(t, err)
-	//fmt.Printf("%v\n", res)
+	q1 := redisearch.NewAggregateQuery().
+		SetMax( 365 ).
+		Apply( *redisearch.NewProjection( "@CURRENT_REVISION_TIMESTAMP - (@CURRENT_REVISION_TIMESTAMP % 86400)","day" )).
+		GroupBy( *redisearch.NewGroupBy( "@day" ).
+			Reduce( *redisearch.NewReducerAlias( redisearch.GroupByReducerCount, []string{"@ID"} ,"num_contributions") ) ).
+		SortBy( []redisearch.SortingKey{ *redisearch.NewSortingKeyDir("@day", false ) } ).
+		Apply( *redisearch.NewProjection("timefmt(@day)", "day"  ) )
+
+	resq1, err := c.Aggregate(q1)
+	assert.Nil(t, err)
+	fmt.Printf("%v\n", resq1)
 
 	//2) One month period, Exact Number of distinct editors contributions by hour, ordered chronologically
-	//TODO:
+	q2 := redisearch.NewAggregateQuery().
+		SetMax( 720 ).
+		Apply( *redisearch.NewProjection( "@CURRENT_REVISION_TIMESTAMP - (@CURRENT_REVISION_TIMESTAMP % 3600)","hour"  )).
+		GroupBy( *redisearch.NewGroupBy( "@hour" ).
+			Reduce( *redisearch.NewReducerAlias( redisearch.GroupByReducerCount, []string{"@CURRENT_REVISION_EDITOR_USERNAME"} ,"num_distinct_editors") ) ).
+		SortBy( []redisearch.SortingKey{ *redisearch.NewSortingKeyDir("@hour", false ) } ).
+		Apply( *redisearch.NewProjection("timefmt(@hour)", "hour"  ) )
+
+	resq2, err := c.Aggregate(q2)
+	assert.Nil(t, err)
+	fmt.Printf("%v\n", resq2)
 
 	//3) One month period, Approximate Number of distinct editors contributions by hour, ordered chronologically
-	//TODO:
+	q3 := redisearch.NewAggregateQuery().
+		SetMax( 720 ).
+		Apply( *redisearch.NewProjection( "@CURRENT_REVISION_TIMESTAMP - (@CURRENT_REVISION_TIMESTAMP % 3600)","hour"  )).
+		GroupBy( *redisearch.NewGroupBy( "@hour" ).
+			Reduce( *redisearch.NewReducerAlias( redisearch.GroupByReducerCountDistinctish, []string{"@CURRENT_REVISION_EDITOR_USERNAME"} ,"num_distinct_editors") ) ).
+		SortBy( []redisearch.SortingKey{ *redisearch.NewSortingKeyDir("@hour", false ) } ).
+		Apply( *redisearch.NewProjection("timefmt(@hour)", "hour"  ) )
+
+	resq3, err := c.Aggregate(q3)
+	assert.Nil(t, err)
+	fmt.Printf("%v\n", resq3)
 
 	//4) One day period, Approximate Number of contributions by 5minutes interval by editor username, ordered first chronologically and second alphabetically by Revision editor username
-	//TODO:
+	q4 := redisearch.NewAggregateQuery().
+		SetMax( 288 ).
+		Apply( *redisearch.NewProjection( "@CURRENT_REVISION_TIMESTAMP - (@CURRENT_REVISION_TIMESTAMP % 300)","fiveMinutes"  )).
+		GroupBy( *redisearch.NewGroupByFields( []string{"@fiveMinutes","@CURRENT_REVISION_EDITOR_USERNAME"} ).
+			Reduce( *redisearch.NewReducerAlias( redisearch.GroupByReducerCountDistinctish, []string{"@ID"} ,"num_contributions") ) ).
+		Filter( "@CURRENT_REVISION_EDITOR_USERNAME !=\"\"" ).
+		SortBy( []redisearch.SortingKey{ *redisearch.NewSortingKeyDir("@fiveMinutes", true ), *redisearch.NewSortingKeyDir("@CURRENT_REVISION_EDITOR_USERNAME", false )  } ).
+		Apply( *redisearch.NewProjection("timefmt(@fiveMinutes)", "fiveMinutes"  ) )
+
+	resq4, err := c.Aggregate(q4)
+	assert.Nil(t, err)
+	fmt.Printf("%v\n", resq4)
 
 	//5) Aproximate All time Top 10 Revision editor usernames
 	q5 := redisearch.NewAggregateQuery().
 		GroupBy( *redisearch.NewGroupBy( "@CURRENT_REVISION_EDITOR_USERNAME" ).
 			Reduce( *redisearch.NewReducerAlias( redisearch.GroupByReducerCountDistinctish, []string{"@ID"} ,"num_contributions") ) ).
-		SortBy( *redisearch.NewSortingKeyDir("@num_contributions", true )).
 		Filter( "@CURRENT_REVISION_EDITOR_USERNAME !=\"\"" ).
+		SortBy( []redisearch.SortingKey{ *redisearch.NewSortingKeyDir("@num_contributions", true ) } ).
 		Limit(0,10 )
 
-	res, err := c.Aggregate(q5)
+	resq5, err := c.Aggregate(q5)
 	assert.Nil(t, err)
-	fmt.Printf("%v\n", res)
+	fmt.Printf("%v\n", resq5)
 
 	//6) Aproximate All time Top 10 Revision editor usernames by namespace (TAG field)
 	q6 := redisearch.NewAggregateQuery().
 		GroupBy( *redisearch.NewGroupByFields( []string{"@NAMESPACE","@CURRENT_REVISION_EDITOR_USERNAME"} ).
 			Reduce( *redisearch.NewReducerAlias( redisearch.GroupByReducerCountDistinctish, []string{"@ID"} ,"num_contributions") ) ).
 		Filter( "@CURRENT_REVISION_EDITOR_USERNAME !=\"\"" ).
-		SortBy( *redisearch.NewSortingKeyDir("@NAMESPACE", true )).
-		SortBy( *redisearch.NewSortingKeyDir("@num_contributions", true )).
+		SortBy( []redisearch.SortingKey{ *redisearch.NewSortingKeyDir("@NAMESPACE", true ), *redisearch.NewSortingKeyDir("@num_contributions", true ) } ).
 		Limit(0,10 )
 
 	resq6, err := c.Aggregate(q6)
@@ -505,7 +576,7 @@ func TestAggregateQuery(t *testing.T) {
 	q7 := redisearch.NewAggregateQuery().
 		GroupBy( *redisearch.NewGroupByFields( []string{"@NAMESPACE","@CURRENT_REVISION_EDITOR_USERNAME"} ).
 			Reduce( *redisearch.NewReducerAlias( redisearch.GroupByReducerAvg, []string{"@CURRENT_REVISION_CONTENT_LENGTH"} ,"avg_rcl") ) ).
-		SortBy( *redisearch.NewSortingKeyDir("@avg_rcl", false )).
+		SortBy( []redisearch.SortingKey{ *redisearch.NewSortingKeyDir("@avg_rcl", false ) } ).
 		Limit(0,10 )
 
 	resq7, err := c.Aggregate(q7)
@@ -513,45 +584,15 @@ func TestAggregateQuery(t *testing.T) {
 	fmt.Printf("%v\n", resq7)
 
 	//8) Aproximate average number of contributions by year each editor makes
-	//TODO:
-}
+	q8 := redisearch.NewAggregateQuery().
+		Apply( *redisearch.NewProjection( "year(@CURRENT_REVISION_TIMESTAMP)","year"  )).
+		GroupBy( *redisearch.NewGroupBy( "@year" ).
+			Reduce( *redisearch.NewReducerAlias( redisearch.GroupByReducerCount, []string{"@ID"} ,"num_contributions") ).
+		    Reduce( *redisearch.NewReducerAlias( redisearch.GroupByReducerCountDistinctish, []string{"@CURRENT_REVISION_EDITOR_USERNAME"} ,"num_distinct_editors") ) ).
+		Apply( *redisearch.NewProjection("@num_contributions / @num_distinct_editors", "avg_num_contributions_by_editor"  ) ).
+		SortBy( []redisearch.SortingKey{ *redisearch.NewSortingKeyDir("@year", true )  } )
 
-func ExampleClient() {
-
-	// Create a client. By default a client is schemaless
-	// unless a schema is provided when creating the index
-	c := createClient("myIndex")
-
-	// Create a schema
-	sc := redisearch.NewSchema(redisearch.DefaultOptions).
-		AddField(redisearch.NewTextField("body")).
-		AddField(redisearch.NewTextFieldOptions("title", redisearch.TextFieldOptions{Weight: 5.0, Sortable: true})).
-		AddField(redisearch.NewNumericField("date"))
-
-	// Drop an existing index. If the index does not exist an error is returned
-	c.Drop()
-
-	// Create the index with the given schema
-	if err := c.CreateIndex(sc); err != nil {
-		log.Fatal(err)
-	}
-
-	// Create a document with an id and given score
-	doc := redisearch.NewDocument("doc1", 1.0)
-	doc.Set("title", "Hello world").
-		Set("body", "foo bar").
-		Set("date", time.Now().Unix())
-
-	// Index the document. The API accepts multiple documents at a time
-	if err := c.IndexOptions(redisearch.DefaultIndexingOptions, doc); err != nil {
-		log.Fatal(err)
-	}
-
-	// Searching with limit and sorting
-	docs, total, err := c.Search(redisearch.NewQuery("hello world").
-		Limit(0, 2).
-		SetReturnFields("title"))
-
-	fmt.Println(docs[0].Id, docs[0].Properties["title"], total, err)
-	// Output: doc1 Hello world 1 <nil>
+	resq8, err := c.Aggregate(q8)
+	assert.Nil(t, err)
+	fmt.Printf("%v\n", resq8)
 }
