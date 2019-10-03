@@ -27,20 +27,24 @@ type GroupBy struct {
 	Paging   *Paging
 }
 
-func NewGroupBy(field string) *GroupBy {
+func NewGroupBy() *GroupBy {
 	return &GroupBy{
-		Fields:   []string{field},
+		Fields:   make([]string, 0),
 		Reducers: make([]Reducer, 0),
 		Paging:   nil,
 	}
 }
 
-func NewGroupByFields(fields []string) *GroupBy {
-	return &GroupBy{
-		Fields:   fields,
-		Reducers: make([]Reducer, 0),
-		Paging:   nil,
+func (g *GroupBy) AddFields(fields interface{}) *GroupBy {
+	switch fields.(type) {
+	case string:
+		g.Fields = append(g.Fields, fields.(string))
+	case []string:
+		g.Fields = append(g.Fields, fields.([]string)...)
+	default:
+		return g
 	}
+	return g
 }
 
 func (g *GroupBy) Reduce(reducer Reducer) *GroupBy {

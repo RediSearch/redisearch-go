@@ -89,7 +89,7 @@ func TestAggregateGroupBy(t *testing.T) {
 	c := createClient("docs-games-idx1")
 
 	q1 := redisearch.NewAggregateQuery().
-		GroupBy(*redisearch.NewGroupBy("@brand").
+		GroupBy(*redisearch.NewGroupBy().AddFields("@brand").
 			Reduce(*redisearch.NewReducerAlias(redisearch.GroupByReducerCount, []string{}, "count"))).
 		SortBy([]redisearch.SortingKey{*redisearch.NewSortingKeyDir("@count", false)}).
 		Limit(0, 5)
@@ -104,7 +104,7 @@ func TestAggregateMinMax(t *testing.T) {
 	c := createClient("docs-games-idx1")
 
 	q1 := redisearch.NewAggregateQuery().SetQuery(redisearch.NewQuery("sony")).
-		GroupBy(*redisearch.NewGroupBy("@brand").
+		GroupBy(*redisearch.NewGroupBy().AddFields("@brand").
 			Reduce(*redisearch.NewReducer(redisearch.GroupByReducerCount, []string{})).
 			Reduce(*redisearch.NewReducerAlias(redisearch.GroupByReducerMin, []string{"@price"}, "minPrice"))).
 		SortBy([]redisearch.SortingKey{*redisearch.NewSortingKeyDir("@minPrice", false)})
@@ -117,7 +117,7 @@ func TestAggregateMinMax(t *testing.T) {
 	assert.Less(t, f, 89.0)
 
 	q2 := redisearch.NewAggregateQuery().SetQuery(redisearch.NewQuery("sony")).
-		GroupBy(*redisearch.NewGroupBy("@brand").
+		GroupBy(*redisearch.NewGroupBy().AddFields("@brand").
 			Reduce(*redisearch.NewReducer(redisearch.GroupByReducerCount, []string{})).
 			Reduce(*redisearch.NewReducerAlias(redisearch.GroupByReducerMax, []string{"@price"}, "maxPrice"))).
 		SortBy([]redisearch.SortingKey{*redisearch.NewSortingKeyDir("@maxPrice", false)})
@@ -135,8 +135,8 @@ func TestAggregateCountDistinct(t *testing.T) {
 	c := createClient("docs-games-idx1")
 
 	q1 := redisearch.NewAggregateQuery().
-		GroupBy(*redisearch.NewGroupBy("@brand").
-			Reduce(*redisearch.NewReducerAlias(redisearch.GroupByReducerCountDistinct, []string{"@title"}, "count_distinct(title)")).
+		GroupBy(*redisearch.NewGroupBy().AddFields("@brand").
+			Reduce(*redisearch.NewReducer(redisearch.GroupByReducerCountDistinct, []string{"@title"}).SetAlias("count_distinct(title)")).
 			Reduce(*redisearch.NewReducer(redisearch.GroupByReducerCount, []string{})))
 
 	res, _, err := c.Aggregate(q1)
@@ -150,7 +150,7 @@ func TestAggregateFilter(t *testing.T) {
 	c := createClient("docs-games-idx1")
 
 	q1 := redisearch.NewAggregateQuery().
-		GroupBy(*redisearch.NewGroupBy("@brand").
+		GroupBy(*redisearch.NewGroupBy().AddFields("@brand").
 			Reduce(*redisearch.NewReducerAlias(redisearch.GroupByReducerCount, []string{}, "count"))).
 		Filter("@count > 5")
 
@@ -234,7 +234,7 @@ func TestAggregateFTSB(t *testing.T) {
 	q1 := redisearch.NewAggregateQuery().
 		SetMax(365).
 		Apply(*redisearch.NewProjection("@CURRENT_REVISION_TIMESTAMP - (@CURRENT_REVISION_TIMESTAMP % 86400)", "day")).
-		GroupBy(*redisearch.NewGroupBy("@day").
+		GroupBy(*redisearch.NewGroupBy().AddFields("@day").
 			Reduce(*redisearch.NewReducerAlias(redisearch.GroupByReducerCount, []string{"@ID"}, "num_contributions"))).
 		SortBy([]redisearch.SortingKey{*redisearch.NewSortingKeyDir("@day", false)}).
 		Apply(*redisearch.NewProjection("timefmt(@day)", "day"))
@@ -247,7 +247,7 @@ func TestAggregateFTSB(t *testing.T) {
 	q2 := redisearch.NewAggregateQuery().
 		SetMax(720).
 		Apply(*redisearch.NewProjection("@CURRENT_REVISION_TIMESTAMP - (@CURRENT_REVISION_TIMESTAMP % 3600)", "hour")).
-		GroupBy(*redisearch.NewGroupBy("@hour").
+		GroupBy(*redisearch.NewGroupBy().AddFields("@hour").
 			Reduce(*redisearch.NewReducerAlias(redisearch.GroupByReducerCount, []string{"@CURRENT_REVISION_EDITOR_USERNAME"}, "num_distinct_editors"))).
 		SortBy([]redisearch.SortingKey{*redisearch.NewSortingKeyDir("@hour", false)}).
 		Apply(*redisearch.NewProjection("timefmt(@hour)", "hour"))
@@ -260,7 +260,7 @@ func TestAggregateFTSB(t *testing.T) {
 	q3 := redisearch.NewAggregateQuery().
 		SetMax(720).
 		Apply(*redisearch.NewProjection("@CURRENT_REVISION_TIMESTAMP - (@CURRENT_REVISION_TIMESTAMP % 3600)", "hour")).
-		GroupBy(*redisearch.NewGroupBy("@hour").
+		GroupBy(*redisearch.NewGroupBy().AddFields("@hour").
 			Reduce(*redisearch.NewReducerAlias(redisearch.GroupByReducerCountDistinctish, []string{"@CURRENT_REVISION_EDITOR_USERNAME"}, "num_distinct_editors"))).
 		SortBy([]redisearch.SortingKey{*redisearch.NewSortingKeyDir("@hour", false)}).
 		Apply(*redisearch.NewProjection("timefmt(@hour)", "hour"))
@@ -273,7 +273,7 @@ func TestAggregateFTSB(t *testing.T) {
 	q4 := redisearch.NewAggregateQuery().
 		SetMax(288).
 		Apply(*redisearch.NewProjection("@CURRENT_REVISION_TIMESTAMP - (@CURRENT_REVISION_TIMESTAMP % 300)", "fiveMinutes")).
-		GroupBy(*redisearch.NewGroupByFields([]string{"@fiveMinutes", "@CURRENT_REVISION_EDITOR_USERNAME"}).
+		GroupBy(*redisearch.NewGroupBy().AddFields([]string{"@fiveMinutes", "@CURRENT_REVISION_EDITOR_USERNAME"}).
 			Reduce(*redisearch.NewReducerAlias(redisearch.GroupByReducerCountDistinctish, []string{"@ID"}, "num_contributions"))).
 		Filter("@CURRENT_REVISION_EDITOR_USERNAME !=\"\"").
 		SortBy([]redisearch.SortingKey{*redisearch.NewSortingKeyDir("@fiveMinutes", true), *redisearch.NewSortingKeyDir("@CURRENT_REVISION_EDITOR_USERNAME", false)}).
@@ -285,7 +285,7 @@ func TestAggregateFTSB(t *testing.T) {
 
 	//5) Aproximate All time Top 10 Revision editor usernames
 	q5 := redisearch.NewAggregateQuery().
-		GroupBy(*redisearch.NewGroupBy("@CURRENT_REVISION_EDITOR_USERNAME").
+		GroupBy(*redisearch.NewGroupBy().AddFields("@CURRENT_REVISION_EDITOR_USERNAME").
 			Reduce(*redisearch.NewReducerAlias(redisearch.GroupByReducerCountDistinctish, []string{"@ID"}, "num_contributions"))).
 		Filter("@CURRENT_REVISION_EDITOR_USERNAME !=\"\"").
 		SortBy([]redisearch.SortingKey{*redisearch.NewSortingKeyDir("@num_contributions", true)}).
@@ -297,7 +297,7 @@ func TestAggregateFTSB(t *testing.T) {
 
 	//6) Aproximate All time Top 10 Revision editor usernames by namespace (TAG field)
 	q6 := redisearch.NewAggregateQuery().
-		GroupBy(*redisearch.NewGroupByFields([]string{"@NAMESPACE", "@CURRENT_REVISION_EDITOR_USERNAME"}).
+		GroupBy(*redisearch.NewGroupBy().AddFields([]string{"@NAMESPACE", "@CURRENT_REVISION_EDITOR_USERNAME"}).
 			Reduce(*redisearch.NewReducerAlias(redisearch.GroupByReducerCountDistinctish, []string{"@ID"}, "num_contributions"))).
 		Filter("@CURRENT_REVISION_EDITOR_USERNAME !=\"\"").
 		SortBy([]redisearch.SortingKey{*redisearch.NewSortingKeyDir("@NAMESPACE", true), *redisearch.NewSortingKeyDir("@num_contributions", true)}).
@@ -309,7 +309,7 @@ func TestAggregateFTSB(t *testing.T) {
 
 	//7) Top 10 editor username by average revision content
 	q7 := redisearch.NewAggregateQuery().
-		GroupBy(*redisearch.NewGroupByFields([]string{"@NAMESPACE", "@CURRENT_REVISION_EDITOR_USERNAME"}).
+		GroupBy(*redisearch.NewGroupBy().AddFields([]string{"@NAMESPACE", "@CURRENT_REVISION_EDITOR_USERNAME"}).
 			Reduce(*redisearch.NewReducerAlias(redisearch.GroupByReducerAvg, []string{"@CURRENT_REVISION_CONTENT_LENGTH"}, "avg_rcl"))).
 		SortBy([]redisearch.SortingKey{*redisearch.NewSortingKeyDir("@avg_rcl", false)}).
 		Limit(0, 10)
@@ -321,7 +321,7 @@ func TestAggregateFTSB(t *testing.T) {
 	//8) Aproximate average number of contributions by year each editor makes
 	q8 := redisearch.NewAggregateQuery().
 		Apply(*redisearch.NewProjection("year(@CURRENT_REVISION_TIMESTAMP)", "year")).
-		GroupBy(*redisearch.NewGroupBy("@year").
+		GroupBy(*redisearch.NewGroupBy().AddFields("@year").
 			Reduce(*redisearch.NewReducerAlias(redisearch.GroupByReducerCount, []string{"@ID"}, "num_contributions")).
 			Reduce(*redisearch.NewReducerAlias(redisearch.GroupByReducerCountDistinctish, []string{"@CURRENT_REVISION_EDITOR_USERNAME"}, "num_distinct_editors"))).
 		Apply(*redisearch.NewProjection("@num_contributions / @num_distinct_editors", "avg_num_contributions_by_editor")).
