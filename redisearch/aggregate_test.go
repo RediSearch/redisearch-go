@@ -96,7 +96,7 @@ func TestAggregateGroupBy(t *testing.T) {
 
 	_, count, err := c.Aggregate(q1)
 	assert.Nil(t, err)
-	assert.Equal(t, 292, count)
+	assert.Equal(t, 10, count)
 }
 
 func TestAggregateMinMax(t *testing.T) {
@@ -239,9 +239,8 @@ func TestAggregateFTSB(t *testing.T) {
 		SortBy([]redisearch.SortingKey{*redisearch.NewSortingKeyDir("@day", false)}).
 		Apply(*redisearch.NewProjection("timefmt(@day)", "day"))
 
-	resq1, _, err := c.Aggregate(q1)
+	_, _, err := c.Aggregate(q1)
 	assert.Nil(t, err)
-	fmt.Printf("%v\n", resq1)
 
 	//2) One month period, Exact Number of distinct editors contributions by hour, ordered chronologically
 	q2 := redisearch.NewAggregateQuery().
@@ -252,9 +251,8 @@ func TestAggregateFTSB(t *testing.T) {
 		SortBy([]redisearch.SortingKey{*redisearch.NewSortingKeyDir("@hour", false)}).
 		Apply(*redisearch.NewProjection("timefmt(@hour)", "hour"))
 
-	resq2, _, err := c.Aggregate(q2)
+	_, _, err = c.Aggregate(q2)
 	assert.Nil(t, err)
-	fmt.Printf("%v\n", resq2)
 
 	//3) One month period, Approximate Number of distinct editors contributions by hour, ordered chronologically
 	q3 := redisearch.NewAggregateQuery().
@@ -265,9 +263,8 @@ func TestAggregateFTSB(t *testing.T) {
 		SortBy([]redisearch.SortingKey{*redisearch.NewSortingKeyDir("@hour", false)}).
 		Apply(*redisearch.NewProjection("timefmt(@hour)", "hour"))
 
-	resq3, _, err := c.Aggregate(q3)
+	_, _, err = c.Aggregate(q3)
 	assert.Nil(t, err)
-	fmt.Printf("%v\n", resq3)
 
 	//4) One day period, Approximate Number of contributions by 5minutes interval by editor username, ordered first chronologically and second alphabetically by Revision editor username
 	q4 := redisearch.NewAggregateQuery().
@@ -279,9 +276,8 @@ func TestAggregateFTSB(t *testing.T) {
 		SortBy([]redisearch.SortingKey{*redisearch.NewSortingKeyDir("@fiveMinutes", true), *redisearch.NewSortingKeyDir("@CURRENT_REVISION_EDITOR_USERNAME", false)}).
 		Apply(*redisearch.NewProjection("timefmt(@fiveMinutes)", "fiveMinutes"))
 
-	resq4, _, err := c.Aggregate(q4)
+	_, _, err = c.Aggregate(q4)
 	assert.Nil(t, err)
-	fmt.Printf("%v\n", resq4)
 
 	//5) Aproximate All time Top 10 Revision editor usernames
 	q5 := redisearch.NewAggregateQuery().
@@ -291,9 +287,8 @@ func TestAggregateFTSB(t *testing.T) {
 		SortBy([]redisearch.SortingKey{*redisearch.NewSortingKeyDir("@num_contributions", true)}).
 		Limit(0, 10)
 
-	resq5, _, err := c.Aggregate(q5)
+	_, _, err = c.Aggregate(q5)
 	assert.Nil(t, err)
-	fmt.Printf("%v\n", resq5)
 
 	//6) Aproximate All time Top 10 Revision editor usernames by namespace (TAG field)
 	q6 := redisearch.NewAggregateQuery().
@@ -303,9 +298,8 @@ func TestAggregateFTSB(t *testing.T) {
 		SortBy([]redisearch.SortingKey{*redisearch.NewSortingKeyDir("@NAMESPACE", true), *redisearch.NewSortingKeyDir("@num_contributions", true)}).
 		Limit(0, 10)
 
-	_, resq6, err := c.Aggregate(q6)
+	_, _, err = c.Aggregate(q6)
 	assert.Nil(t, err)
-	fmt.Printf("%v\n", resq6)
 
 	//7) Top 10 editor username by average revision content
 	q7 := redisearch.NewAggregateQuery().
@@ -314,9 +308,8 @@ func TestAggregateFTSB(t *testing.T) {
 		SortBy([]redisearch.SortingKey{*redisearch.NewSortingKeyDir("@avg_rcl", false)}).
 		Limit(0, 10)
 
-	resq7, _, err := c.Aggregate(q7)
+	_, _, err = c.Aggregate(q7)
 	assert.Nil(t, err)
-	fmt.Printf("%v\n", resq7)
 
 	//8) Aproximate average number of contributions by year each editor makes
 	q8 := redisearch.NewAggregateQuery().
@@ -327,7 +320,6 @@ func TestAggregateFTSB(t *testing.T) {
 		Apply(*redisearch.NewProjection("@num_contributions / @num_distinct_editors", "avg_num_contributions_by_editor")).
 		SortBy([]redisearch.SortingKey{*redisearch.NewSortingKeyDir("@year", true)})
 
-	resq8, _, err := c.Aggregate(q8)
+	_, _, err = c.Aggregate(q8)
 	assert.Nil(t, err)
-	fmt.Printf("%v\n", resq8)
 }

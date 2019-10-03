@@ -359,11 +359,9 @@ func (i *Client) Aggregate( q *AggregateQuery ) ( aggregateReply [][]string, tot
 		return
 	}
 
-	if total, err = redis.Int(res[0], nil); err != nil {
-		return
-	}
+	total = len(res)-1
 
-	aggregateReply = make([][]string, 0, len(res)-1)
+	aggregateReply = make([][]string, 0, total)
 	for i := 1; i < len(res); i ++ {
 		if d, e := redis.Strings(res[i], nil ); e == nil {
 			aggregateReply = append(aggregateReply, d)
