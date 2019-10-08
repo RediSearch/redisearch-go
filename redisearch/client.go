@@ -358,20 +358,14 @@ func (i *Client) Aggregate( q *AggregateQuery ) ( aggregateReply [][]string, tot
 	if err != nil {
 		return
 	}
-
 	total = len(res)-1
-
-	aggregateReply = make([][]string, 0, total)
-	for i := 1; i < len(res); i ++ {
-		if d, e := redis.Strings(res[i], nil ); e == nil {
-			aggregateReply = append(aggregateReply, d)
-		} else {
-			log.Print("Error parsing Aggregate Reply: ", e)
-		}
+	if total > 1 {
+		aggregateReply = ProcessAggResponse(res[1:] )
 	}
 
 	return
 }
+
 
 // Explain Return a textual string explaining the query
 func (i *Client) Explain(q *Query) (string, error) {

@@ -8,6 +8,7 @@ import (
 	"github.com/RediSearch/redisearch-go/redisearch"
 	"github.com/stretchr/testify/assert"
 	"log"
+	"math/rand"
 	"os"
 	"strconv"
 	"strings"
@@ -163,163 +164,55 @@ func TestAggregateFilter(t *testing.T) {
 
 }
 
-func TestAggregateFTSB(t *testing.T) {
-	c := createClient("pages-meta-idx1")
+func makeAggResponseInterface(seed int64, nElements int, responseSizes []int) (res []interface{}) {
+	rand.Seed(seed)
+	nInner := len(responseSizes)
+	s := make([]interface{}, nElements)
+	for i := 0; i < nElements; i++ {
+		sIn := make([]interface{}, nInner)
+		for pos, elementSize := range responseSizes {
+			token := make([]byte, elementSize)
+			rand.Read(token)
+			sIn[pos] = string(token)
+		}
+		s[i] = sIn
+	}
+	return s
+}
 
-	sc := redisearch.NewSchema(redisearch.DefaultOptions).
-		AddField(redisearch.NewTextFieldOptions("TITLE", redisearch.TextFieldOptions{Sortable: true})).
-		AddField(redisearch.NewTagFieldOptions("NAMESPACE", redisearch.TagFieldOptions{Sortable: true})).
-		AddField(redisearch.NewSortableNumericField("ID")).
-		AddField(redisearch.NewSortableNumericField("PARENT_REVISION_ID")).
-		AddField(redisearch.NewSortableNumericField("CURRENT_REVISION_TIMESTAMP")).
-		AddField(redisearch.NewSortableNumericField("CURRENT_REVISION_ID")).
-		AddField(redisearch.NewTextFieldOptions("CURRENT_REVISION_EDITOR_USERNAME", redisearch.TextFieldOptions{NoStem: true})).
-		AddField(redisearch.NewTextField("CURRENT_REVISION_EDITOR_IP")).
-		AddField(redisearch.NewSortableNumericField("CURRENT_REVISION_EDITOR_USERID")).
-		AddField(redisearch.NewTextField("CURRENT_REVISION_EDITOR_COMMENT")).
-		AddField(redisearch.NewSortableNumericField("CURRENT_REVISION_CONTENT_LENGTH"))
-	c.Drop()
-	assert.Nil(t, c.CreateIndex(sc))
 
-	docs := make([]redisearch.Document, 0)
-	docs = append(docs, redisearch.NewDocument(fmt.Sprintf("pages-meta-idx1-%d", 1), 1).
-		Set("NAMESPACE", "1").
-		Set("ID", 1).
-		Set("CURRENT_REVISION_TIMESTAMP", 1540378169).
-		Set("CURRENT_REVISION_EDITOR_USERNAME", "Narky Blert").
-		Set("CURRENT_REVISION_CONTENT_LENGTH", 2),
-	)
-	docs = append(docs, redisearch.NewDocument(fmt.Sprintf("pages-meta-idx1-%d", 2), 1).
-		Set("NAMESPACE", "0").
-		Set("ID", 2).
-		Set("CURRENT_REVISION_TIMESTAMP", 1447349117).
-		Set("CURRENT_REVISION_EDITOR_USERNAME", "CZmarlin").
-		Set("CURRENT_REVISION_CONTENT_LENGTH", 50),
-	)
-	docs = append(docs, redisearch.NewDocument(fmt.Sprintf("pages-meta-idx1-%d", 3), 1).
-		Set("NAMESPACE", "0").
-		Set("ID", 3).
-		Set("CURRENT_REVISION_TIMESTAMP", 1427349117).
-		Set("CURRENT_REVISION_EDITOR_USERNAME", "CZmarlin").
-		Set("CURRENT_REVISION_CONTENT_LENGTH", 50),
-	)
+func benchmarkProcessAggResponseSS(res []interface{}, total int, b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		redisearch.ProcessAggResponseSS(res)
+	}
+}
 
-	docs = append(docs, redisearch.NewDocument(fmt.Sprintf("pages-meta-idx1-%d", 4), 1).
-		Set("NAMESPACE", "0").
-		Set("ID", 4).
-		Set("CURRENT_REVISION_TIMESTAMP", 1427349110).
-		Set("CURRENT_REVISION_EDITOR_USERNAME", "CZmarlin").
-		Set("CURRENT_REVISION_CONTENT_LENGTH", 10),
-	)
+func benchmarkProcessAggResponse(res []interface{}, total int, b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		redisearch.ProcessAggResponse(res)
+	}
+}
 
-	docs = append(docs, redisearch.NewDocument(fmt.Sprintf("pages-meta-idx1-%d", 5), 1).
-		Set("NAMESPACE", "0").
-		Set("ID", 5).
-		Set("CURRENT_REVISION_TIMESTAMP", 1427349130).
-		Set("CURRENT_REVISION_EDITOR_USERNAME", "Jon").
-		Set("CURRENT_REVISION_CONTENT_LENGTH", 20),
-	)
+func BenchmarkProcessAggResponse_10x4Elements(b *testing.B) {
+	res := makeAggResponseInterface(12345, 10, []int{4, 20, 20, 4})
+	b.ResetTimer()
+	benchmarkProcessAggResponse(res, 10, b)
+}
 
-	docs = append(docs, redisearch.NewDocument(fmt.Sprintf("pages-meta-idx1-%d", 6), 1).
-		Set("NAMESPACE", "0").
-		Set("ID", 6).
-		Set("CURRENT_REVISION_TIMESTAMP", 1427349130).
-		Set("CURRENT_REVISION_EDITOR_USERNAME", "Doe").
-		Set("CURRENT_REVISION_CONTENT_LENGTH", 49),
-	)
+func BenchmarkProcessAggResponseSS_10x4Elements(b *testing.B) {
+	res := makeAggResponseInterface(12345, 10, []int{4, 20, 20, 4})
+	b.ResetTimer()
+	benchmarkProcessAggResponseSS(res, 10, b)
+}
 
-	c.Index(docs...)
+func BenchmarkProcessAggResponse_100x4Elements(b *testing.B) {
+	res := makeAggResponseInterface(12345, 100, []int{4, 20, 20, 4})
+	b.ResetTimer()
+	benchmarkProcessAggResponse(res, 100, b)
+}
 
-	//1) One year period, Exact Number of contributions by day, ordered chronologically
-	q1 := redisearch.NewAggregateQuery().
-		SetMax(365).
-		Apply(*redisearch.NewProjection("@CURRENT_REVISION_TIMESTAMP - (@CURRENT_REVISION_TIMESTAMP % 86400)", "day")).
-		GroupBy(*redisearch.NewGroupBy().AddFields("@day").
-			Reduce(*redisearch.NewReducerAlias(redisearch.GroupByReducerCount, []string{"@ID"}, "num_contributions"))).
-		SortBy([]redisearch.SortingKey{*redisearch.NewSortingKeyDir("@day", false)}).
-		Apply(*redisearch.NewProjection("timefmt(@day)", "day"))
-
-	_, _, err := c.Aggregate(q1)
-	assert.Nil(t, err)
-
-	//2) One month period, Exact Number of distinct editors contributions by hour, ordered chronologically
-	q2 := redisearch.NewAggregateQuery().
-		SetMax(720).
-		Apply(*redisearch.NewProjection("@CURRENT_REVISION_TIMESTAMP - (@CURRENT_REVISION_TIMESTAMP % 3600)", "hour")).
-		GroupBy(*redisearch.NewGroupBy().AddFields("@hour").
-			Reduce(*redisearch.NewReducerAlias(redisearch.GroupByReducerCount, []string{"@CURRENT_REVISION_EDITOR_USERNAME"}, "num_distinct_editors"))).
-		SortBy([]redisearch.SortingKey{*redisearch.NewSortingKeyDir("@hour", false)}).
-		Apply(*redisearch.NewProjection("timefmt(@hour)", "hour"))
-
-	_, _, err = c.Aggregate(q2)
-	assert.Nil(t, err)
-
-	//3) One month period, Approximate Number of distinct editors contributions by hour, ordered chronologically
-	q3 := redisearch.NewAggregateQuery().
-		SetMax(720).
-		Apply(*redisearch.NewProjection("@CURRENT_REVISION_TIMESTAMP - (@CURRENT_REVISION_TIMESTAMP % 3600)", "hour")).
-		GroupBy(*redisearch.NewGroupBy().AddFields("@hour").
-			Reduce(*redisearch.NewReducerAlias(redisearch.GroupByReducerCountDistinctish, []string{"@CURRENT_REVISION_EDITOR_USERNAME"}, "num_distinct_editors"))).
-		SortBy([]redisearch.SortingKey{*redisearch.NewSortingKeyDir("@hour", false)}).
-		Apply(*redisearch.NewProjection("timefmt(@hour)", "hour"))
-
-	_, _, err = c.Aggregate(q3)
-	assert.Nil(t, err)
-
-	//4) One day period, Approximate Number of contributions by 5minutes interval by editor username, ordered first chronologically and second alphabetically by Revision editor username
-	q4 := redisearch.NewAggregateQuery().
-		SetMax(288).
-		Apply(*redisearch.NewProjection("@CURRENT_REVISION_TIMESTAMP - (@CURRENT_REVISION_TIMESTAMP % 300)", "fiveMinutes")).
-		GroupBy(*redisearch.NewGroupBy().AddFields([]string{"@fiveMinutes", "@CURRENT_REVISION_EDITOR_USERNAME"}).
-			Reduce(*redisearch.NewReducerAlias(redisearch.GroupByReducerCountDistinctish, []string{"@ID"}, "num_contributions"))).
-		Filter("@CURRENT_REVISION_EDITOR_USERNAME !=\"\"").
-		SortBy([]redisearch.SortingKey{*redisearch.NewSortingKeyDir("@fiveMinutes", true), *redisearch.NewSortingKeyDir("@CURRENT_REVISION_EDITOR_USERNAME", false)}).
-		Apply(*redisearch.NewProjection("timefmt(@fiveMinutes)", "fiveMinutes"))
-
-	_, _, err = c.Aggregate(q4)
-	assert.Nil(t, err)
-
-	//5) Aproximate All time Top 10 Revision editor usernames
-	q5 := redisearch.NewAggregateQuery().
-		GroupBy(*redisearch.NewGroupBy().AddFields("@CURRENT_REVISION_EDITOR_USERNAME").
-			Reduce(*redisearch.NewReducerAlias(redisearch.GroupByReducerCountDistinctish, []string{"@ID"}, "num_contributions"))).
-		Filter("@CURRENT_REVISION_EDITOR_USERNAME !=\"\"").
-		SortBy([]redisearch.SortingKey{*redisearch.NewSortingKeyDir("@num_contributions", true)}).
-		Limit(0, 10)
-
-	_, _, err = c.Aggregate(q5)
-	assert.Nil(t, err)
-
-	//6) Aproximate All time Top 10 Revision editor usernames by namespace (TAG field)
-	q6 := redisearch.NewAggregateQuery().
-		GroupBy(*redisearch.NewGroupBy().AddFields([]string{"@NAMESPACE", "@CURRENT_REVISION_EDITOR_USERNAME"}).
-			Reduce(*redisearch.NewReducerAlias(redisearch.GroupByReducerCountDistinctish, []string{"@ID"}, "num_contributions"))).
-		Filter("@CURRENT_REVISION_EDITOR_USERNAME !=\"\"").
-		SortBy([]redisearch.SortingKey{*redisearch.NewSortingKeyDir("@NAMESPACE", true), *redisearch.NewSortingKeyDir("@num_contributions", true)}).
-		Limit(0, 10)
-
-	_, _, err = c.Aggregate(q6)
-	assert.Nil(t, err)
-
-	//7) Top 10 editor username by average revision content
-	q7 := redisearch.NewAggregateQuery().
-		GroupBy(*redisearch.NewGroupBy().AddFields([]string{"@NAMESPACE", "@CURRENT_REVISION_EDITOR_USERNAME"}).
-			Reduce(*redisearch.NewReducerAlias(redisearch.GroupByReducerAvg, []string{"@CURRENT_REVISION_CONTENT_LENGTH"}, "avg_rcl"))).
-		SortBy([]redisearch.SortingKey{*redisearch.NewSortingKeyDir("@avg_rcl", false)}).
-		Limit(0, 10)
-
-	_, _, err = c.Aggregate(q7)
-	assert.Nil(t, err)
-
-	//8) Aproximate average number of contributions by year each editor makes
-	q8 := redisearch.NewAggregateQuery().
-		Apply(*redisearch.NewProjection("year(@CURRENT_REVISION_TIMESTAMP)", "year")).
-		GroupBy(*redisearch.NewGroupBy().AddFields("@year").
-			Reduce(*redisearch.NewReducerAlias(redisearch.GroupByReducerCount, []string{"@ID"}, "num_contributions")).
-			Reduce(*redisearch.NewReducerAlias(redisearch.GroupByReducerCountDistinctish, []string{"@CURRENT_REVISION_EDITOR_USERNAME"}, "num_distinct_editors"))).
-		Apply(*redisearch.NewProjection("@num_contributions / @num_distinct_editors", "avg_num_contributions_by_editor")).
-		SortBy([]redisearch.SortingKey{*redisearch.NewSortingKeyDir("@year", true)})
-
-	_, _, err = c.Aggregate(q8)
-	assert.Nil(t, err)
+func BenchmarkProcessAggResponseSS_100x4Elements(b *testing.B) {
+	res := makeAggResponseInterface(12345, 100, []int{4, 20, 20, 4})
+	b.ResetTimer()
+	benchmarkProcessAggResponseSS(res, 100, b)
 }

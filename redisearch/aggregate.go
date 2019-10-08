@@ -1,6 +1,11 @@
 package redisearch
 
-import "github.com/garyburd/redigo/redis"
+import (
+	"fmt"
+	"github.com/garyburd/redigo/redis"
+	"log"
+	"reflect"
+)
 
 // Projection
 type Projection struct {
@@ -175,9 +180,41 @@ func (q AggregateQuery) Serialize() redis.Args {
 	args = args.AddFlat(q.AggregatePlan)
 
 	// LIMIT
-	if q.Paging != nil {
-		args = args.AddFlat(q.Paging.serialize())
+	if !reflect.ValueOf(q.Paging).IsNil() {
+		args = args.Add("LIMIT", q.Paging.Offset, q.Paging.Num)
 	}
 
 	return args
+}
+
+func ProcessAggResponse(res []interface{}) [][]string {
+	aggregateReply := make([][]string, len(res), len(res))
+	for i := 0; i < len(res); i++ {
+		if d, e := redis.Strings(res[i], nil); e == nil {
+			aggregateReply[i] = d
+		} else {
+			log.Print("Error parsing Aggregate Reply: ", e)
+			aggregateReply[i] = nil
+		}
+	}
+	return aggregateReply
+}
+
+func ProcessAggResponseSS(res []interface{}) [][]string {
+	var lout = len(res)
+	aggregateReply := make([][]string, lout, lout)
+	for i := 0; i < lout; i++ {
+		reply := res[i].([]interface{})
+		linner := len(reply)
+		aggregateReply[i] = make([]string, linner, linner)
+		for j := 0; j < linner; j++ {
+			if reply[j] == nil {
+				log.Print(fmt.Sprintf("Error parsing Aggregate Reply on position (%d,%d)", i, j))
+			} else {
+				aggregateReply[i][j] = reply[j].(string)
+			}
+
+		}
+	}
+	return aggregateReply
 }
