@@ -4,12 +4,23 @@ import (
 	"fmt"
 	"github.com/RediSearch/redisearch-go/redisearch"
 	"log"
+	"os"
 	"testing"
 )
 
+
+func createBenchClient(indexName string) *redisearch.Client {
+	value, exists := os.LookupEnv("REDISEARCH_TEST_HOST")
+	host := "localhost:6379"
+	if exists && value != "" {
+		host = value
+	}
+	return redisearch.NewClient(host, indexName)
+}
+
 func init() {
 	/* load test data */
-	c := createClient("bench.ft.aggregate.cursor")
+	c := createBenchClient("bench.ft.aggregate.cursor")
 
 	sc := redisearch.NewSchema(redisearch.DefaultOptions).
 		AddField(redisearch.NewTextField("foo"))
@@ -38,7 +49,7 @@ func benchmarkAggregate(c *redisearch.Client, q* redisearch.AggregateQuery, b *t
 }
 
 func BenchmarkAggCursor_1(b *testing.B) {
-	c := createClient("bench.ft.aggregate.cursor")
+	c := createBenchClient("bench.ft.aggregate.cursor")
 	q:= redisearch.NewAggregateQuery().
 		SetQuery(redisearch.NewQuery("*")).
 		SetCursor(redisearch.NewCursor())

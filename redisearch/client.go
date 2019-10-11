@@ -352,56 +352,41 @@ func (i *Client) Aggregate( q *AggregateQuery ) ( aggregateReply [][]string, tot
 	defer conn.Close()
 	hasCursor := q.WithCursor
 	validCursor := ( q.Cursor.Id > 0 )
+	var res []interface{} = nil
 	if ! validCursor {
 		args := redis.Args{i.name}
 		args = append(args, q.Serialize()...)
-		res, err := redis.Values(conn.Do("FT.AGGREGATE", args...))
-		if err != nil {
-			return aggregateReply,total,err
-		}
-		// has no cursor
-		if ! hasCursor {
-			total = len(res)-1
-			if total > 1 {
-				aggregateReply = ProcessAggResponse(res[1:] )
-			}
-		// has cursor but it is first request
-		} else{
-			partialResults, err := redis.Values(res[0],err)
-			if err != nil {
-				return aggregateReply,total,err
-			}
-			q.Cursor.Id, err  = redis.Int(res[1],err)
-			if err != nil {
-				return aggregateReply,total,err
-			}
-			total = len(partialResults)-1
-			if total > 1 {
-				aggregateReply = ProcessAggResponse(partialResults[1:])
-			}
-		}
-	// has cursor and its second or later request
+		res, err = redis.Values(conn.Do("FT.AGGREGATE", args...))
 	} else {
-		args := redis.Args{"READ",i.name, q.Cursor.Id}
-		res, err := redis.Values(conn.Do("FT.CURSOR", args... ))
-		if err != nil {
-			return aggregateReply,total,err
+		args := redis.Args{"READ", i.name, q.Cursor.Id}
+		res, err = redis.Values(conn.Do("FT.CURSOR", args... ))
+	}
+	if err != nil {
+		return
+	}
+	// has no cursor
+	if ! hasCursor {
+		total = len(res)-1
+		if total > 1 {
+			aggregateReply = ProcessAggResponse(res[1:] )
 		}
+	// has cursor
+	} else {
 		partialResults, err := redis.Values(res[0],err)
 		if err != nil {
-			return aggregateReply,total,err
+			return
 		}
 		q.Cursor.Id, err  = redis.Int(res[1],err)
 		if err != nil {
-			return aggregateReply,total,err
+			return
 		}
 		total = len(partialResults)-1
 		if total > 1 {
 			aggregateReply = ProcessAggResponse(partialResults[1:])
 		}
-
 	}
-	return aggregateReply,total,err
+
+	return
 }
 
 
