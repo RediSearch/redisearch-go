@@ -372,13 +372,13 @@ func (i *Client) Aggregate( q *AggregateQuery ) ( aggregateReply [][]string, tot
 		}
 	// has cursor
 	} else {
-		partialResults, err := redis.Values(res[0],err)
+		var partialResults, err = redis.Values(res[0],nil)
 		if err != nil {
-			return
+			return aggregateReply,total,err
 		}
-		q.Cursor.Id, err  = redis.Int(res[1],err)
+		q.Cursor.Id, err = redis.Int(res[1],nil)
 		if err != nil {
-			return
+			return aggregateReply,total,err
 		}
 		total = len(partialResults)-1
 		if total > 1 {
