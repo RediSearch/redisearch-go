@@ -24,6 +24,46 @@ func (p Projection) Serialize() redis.Args {
 	args := redis.Args{"APPLY", p.Expression, "AS", p.Alias}
 	return args
 }
+// Cursor
+type Cursor struct {
+	Id   int
+	Count int
+	MaxIdle   int
+}
+
+func NewCursor() *Cursor {
+	return &Cursor{
+		Id: 0,
+		Count: 0,
+		MaxIdle: 0,
+	}
+}
+
+func (c *Cursor) SetId( id int ) *Cursor {
+	c.Id = id
+	return c
+}
+
+func (c *Cursor) SetCount( count int ) *Cursor {
+	c.Count = count
+	return c
+}
+
+func (c *Cursor) SetMaxIdle( maxIdle int ) *Cursor {
+	c.MaxIdle = maxIdle
+	return c
+}
+
+func (c Cursor) Serialize() redis.Args {
+	args := redis.Args{"WITHCURSOR"}
+	if c.Count > 0 {
+		args = args.Add("COUNT", c.Count)
+	}
+	if c.MaxIdle > 0 {
+		args = args.Add("MAXIDLE", c.MaxIdle)
+	}
+	return args
+}
 
 // GroupBy
 type GroupBy struct {
@@ -83,6 +123,8 @@ type AggregateQuery struct {
 	WithSchema    bool
 	Verbatim      bool
 	// TODO: add cursor
+	WithCursor    bool
+	Cursor *Cursor
 	// TODO: add load fields
 
 }
@@ -94,6 +136,7 @@ func NewAggregateQuery() *AggregateQuery {
 		Max:        0,
 		WithSchema: false,
 		Verbatim:   false,
+		WithCursor: false,
 	}
 }
 
@@ -114,6 +157,12 @@ func (a *AggregateQuery) SetVerbatim(value bool) *AggregateQuery {
 
 func (a *AggregateQuery) SetMax(value int) *AggregateQuery {
 	a.Max = value
+	return a
+}
+
+func (a *AggregateQuery) SetCursor( cursor *Cursor ) *AggregateQuery {
+	a.WithCursor = true
+	a.Cursor = cursor
 	return a
 }
 
@@ -166,14 +215,18 @@ func (q AggregateQuery) Serialize() redis.Args {
 	}
 	// WITHSCHEMA
 	if q.WithSchema {
-		args = args.Add("WITHSCHEMA")
+		args = args.AddFlat("WITHSCHEMA")
 	}
 	// VERBATIM
 	if q.Verbatim {
 		args = args.Add("VERBATIM")
 	}
 
-	// TODO: add cursor
+	// WITHCURSOR
+	if q.WithCursor {
+		args = args.AddFlat(q.Cursor.Serialize())
+	}
+
 	// TODO: add load fields
 
 	//Add the aggregation plan with ( GROUPBY and REDUCE | SORTBY | APPLY | FILTER ).+ clauses

@@ -350,20 +350,58 @@ func (i *Client) Search(q *Query) (docs []Document, total int, err error) {
 func (i *Client) Aggregate( q *AggregateQuery ) ( aggregateReply [][]string, total int, err error) {
 	conn := i.pool.Get()
 	defer conn.Close()
+	hasCursor := q.WithCursor
+	validCursor := ( q.Cursor.Id > 0 )
+	if ! validCursor {
+		args := redis.Args{i.name}
+		args = append(args, q.Serialize()...)
+		res, err := redis.Values(conn.Do("FT.AGGREGATE", args...))
+		if err != nil {
+			return aggregateReply,total,err
+		}
+		// has no cursor
+		if ! hasCursor {
+			total = len(res)-1
+			if total > 1 {
+				aggregateReply = ProcessAggResponse(res[1:] )
+			}
+		// has cursor but it is first request
+		} else{
+			partialResults, err := redis.Values(res[0],err)
+			if err != nil {
+				return aggregateReply,total,err
+			}
+			q.Cursor.Id, err  = redis.Int(res[1],err)
+			if err != nil {
+				return aggregateReply,total,err
+			}
+			total = len(partialResults)-1
+			if total > 1 {
+				aggregateReply = ProcessAggResponse(partialResults[1:])
+			}
+		}
+	// has cursor and its second or later request
+	} else {
+		args := redis.Args{"READ",i.name, q.Cursor.Id}
+		res, err := redis.Values(conn.Do("FT.CURSOR", args... ))
+		if err != nil {
+			return aggregateReply,total,err
+		}
+		partialResults, err := redis.Values(res[0],err)
+		if err != nil {
+			return aggregateReply,total,err
+		}
+		q.Cursor.Id, err  = redis.Int(res[1],err)
+		if err != nil {
+			return aggregateReply,total,err
+		}
+		total = len(partialResults)-1
+		if total > 1 {
+			aggregateReply = ProcessAggResponse(partialResults[1:])
+		}
 
-	args := redis.Args{i.name}
-	args = append(args, q.Serialize()...)
-
-	res, err := redis.Values(conn.Do("FT.AGGREGATE", args...))
-	if err != nil {
-		return
 	}
-	total = len(res)-1
-	if total > 1 {
-		aggregateReply = ProcessAggResponse(res[1:] )
-	}
-
-	return
+	return aggregateReply,total,err
 }
 
 
