@@ -180,7 +180,6 @@ func makeAggResponseInterface(seed int64, nElements int, responseSizes []int) (r
 	return s
 }
 
-
 func benchmarkProcessAggResponseSS(res []interface{}, total int, b *testing.B) {
 	for n := 0; n < b.N; n++ {
 		redisearch.ProcessAggResponseSS(res)

@@ -24,32 +24,33 @@ func (p Projection) Serialize() redis.Args {
 	args := redis.Args{"APPLY", p.Expression, "AS", p.Alias}
 	return args
 }
+
 // Cursor
 type Cursor struct {
-	Id   int
-	Count int
-	MaxIdle   int
+	Id      int
+	Count   int
+	MaxIdle int
 }
 
 func NewCursor() *Cursor {
 	return &Cursor{
-		Id: 0,
-		Count: 0,
+		Id:      0,
+		Count:   0,
 		MaxIdle: 0,
 	}
 }
 
-func (c *Cursor) SetId( id int ) *Cursor {
+func (c *Cursor) SetId(id int) *Cursor {
 	c.Id = id
 	return c
 }
 
-func (c *Cursor) SetCount( count int ) *Cursor {
+func (c *Cursor) SetCount(count int) *Cursor {
 	c.Count = count
 	return c
 }
 
-func (c *Cursor) SetMaxIdle( maxIdle int ) *Cursor {
+func (c *Cursor) SetMaxIdle(maxIdle int) *Cursor {
 	c.MaxIdle = maxIdle
 	return c
 }
@@ -123,8 +124,8 @@ type AggregateQuery struct {
 	WithSchema    bool
 	Verbatim      bool
 	// TODO: add cursor
-	WithCursor    bool
-	Cursor *Cursor
+	WithCursor bool
+	Cursor     *Cursor
 	// TODO: add load fields
 
 }
@@ -160,10 +161,18 @@ func (a *AggregateQuery) SetMax(value int) *AggregateQuery {
 	return a
 }
 
-func (a *AggregateQuery) SetCursor( cursor *Cursor ) *AggregateQuery {
+func (a *AggregateQuery) SetCursor(cursor *Cursor) *AggregateQuery {
 	a.WithCursor = true
 	a.Cursor = cursor
 	return a
+}
+
+func (a *AggregateQuery) CursorHasResults() (res bool) {
+	res = false
+	if !reflect.ValueOf(a.Cursor).IsNil() {
+		res = a.Cursor.Id > 0
+	}
+	return
 }
 
 //Adds a APPLY clause to the aggregate plan

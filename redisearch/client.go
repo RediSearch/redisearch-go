@@ -351,7 +351,7 @@ func (i *Client) Aggregate( q *AggregateQuery ) ( aggregateReply [][]string, tot
 	conn := i.pool.Get()
 	defer conn.Close()
 	hasCursor := q.WithCursor
-	validCursor := ( q.Cursor.Id > 0 )
+	validCursor := q.CursorHasResults()
 	var res []interface{} = nil
 	if ! validCursor {
 		args := redis.Args{i.name}
