@@ -68,7 +68,6 @@ func TestClient(t *testing.T) {
 	assert.Equal(t, 100, total)
 	assert.Equal(t, 10, len(docs))
 
-	fmt.Println(docs, total, err)
 }
 
 func TestInfo(t *testing.T) {
@@ -80,9 +79,8 @@ func TestInfo(t *testing.T) {
 	c.Drop()
 	assert.Nil(t, c.CreateIndex(sc))
 
-	info, err := c.Info()
+	_, err := c.Info()
 	assert.Nil(t, err)
-	fmt.Printf("%v\n", info)
 }
 
 func TestNumeric(t *testing.T) {
@@ -125,13 +123,11 @@ func TestNumeric(t *testing.T) {
 	assert.Nil(t, docs[0].Properties["bar"])
 	assert.Equal(t, "doc41", docs[1].Id)
 	assert.Equal(t, "doc49", docs[9].Id)
-	fmt.Println(docs)
 
 	// Try "Explain"
 	explain, err := c.Explain(redisearch.NewQuery("hello world @bar:[40 90]"))
 	assert.Nil(t, err)
 	assert.NotNil(t, explain)
-	fmt.Println(explain)
 }
 
 func TestNoIndex(t *testing.T) {
@@ -426,3 +422,5 @@ func ExampleClient() {
 	fmt.Println(docs[0].Id, docs[0].Properties["title"], total, err)
 	// Output: doc1 Hello world 1 <nil>
 }
+
+

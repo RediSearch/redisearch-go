@@ -36,6 +36,23 @@ type SortingKey struct {
 	Ascending bool
 }
 
+func NewSortingKeyDir(field string, ascending bool) *SortingKey {
+	return &SortingKey{
+		Field: field,
+		Ascending: ascending,
+	}
+}
+
+func (s SortingKey) Serialize() redis.Args {
+	args := redis.Args{ s.Field }
+	if s.Ascending {
+		args = args.Add("ASC")
+	} else {
+		args = args.Add("DESC")
+	}
+	return args
+}
+
 // HighlightOptions represents the options to higlight specific document fields.
 // See http://redisearch.io/Highlight/
 type HighlightOptions struct {
@@ -78,6 +95,23 @@ type Paging struct {
 	Num    int
 }
 
+func NewPaging(offset int, num int) *Paging {
+	return &Paging{
+		Offset: offset,
+		Num: num,
+	}
+}
+
+func (p Paging) serialize() redis.Args {
+	args := redis.Args{}
+	// only serialize something if it's different than the default
+	// The default is 0 10
+	if p.Offset != DefaultOffset && p.Num != DefaultNum {
+		args = args.Add("LIMIT", p.Offset, p.Num)
+	}
+	return args
+}
+
 // NewQuery creates a new query for a given index with the given search term.
 // For currently the index parameter is ignored
 func NewQuery(raw string) *Query {
@@ -90,7 +124,7 @@ func NewQuery(raw string) *Query {
 
 func (q Query) serialize() redis.Args {
 
-	args := redis.Args{q.Raw, "LIMIT", q.Paging.Offset, q.Paging.Num}
+	args := redis.Args{q.Raw}.AddFlat(q.Paging.serialize())
 	if q.Flags&QueryVerbatim != 0 {
 		args = args.Add("VERBATIM")
 	}
@@ -128,12 +162,7 @@ func (q Query) serialize() redis.Args {
 	}
 
 	if q.SortBy != nil {
-		args = args.Add("SORTBY", q.SortBy.Field)
-		if q.SortBy.Ascending {
-			args = args.Add("ASC")
-		} else {
-			args = args.Add("DESC")
-		}
+		args = args.Add("SORTBY").AddFlat( q.SortBy.Serialize() )
 	}
 
 	if q.HighlightOpts != nil {
@@ -171,6 +200,7 @@ func (q Query) serialize() redis.Args {
 // }
 
 // Limit sets the paging offset and limit for the query
+// you can use LIMIT 0 0 to count the number of documents in the resultset without actually returning them
 func (q *Query) Limit(offset, num int) *Query {
 	q.Paging.Offset = offset
 	q.Paging.Num = num
