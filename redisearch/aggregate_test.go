@@ -97,7 +97,7 @@ func TestAggregateGroupBy(t *testing.T) {
 
 	_, count, err := c.Aggregate(q1)
 	assert.Nil(t, err)
-	assert.Equal(t, 10, count)
+	assert.Equal(t, 5, count)
 }
 
 func TestAggregateMinMax(t *testing.T) {
