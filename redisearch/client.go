@@ -389,6 +389,49 @@ func (i *Client) SpellCheck(q *Query, s *SpellCheckOptions) (suggs []MisspelledT
 	return
 }
 
+// Aggregate
+func (i *Client) Aggregate( q *AggregateQuery ) ( aggregateReply [][]string, total int, err error) {
+	conn := i.pool.Get()
+	defer conn.Close()
+	hasCursor := q.WithCursor
+	validCursor := q.CursorHasResults()
+	var res []interface{} = nil
+	if ! validCursor {
+		args := redis.Args{i.name}
+		args = append(args, q.Serialize()...)
+		res, err = redis.Values(conn.Do("FT.AGGREGATE", args...))
+	} else {
+		args := redis.Args{"READ", i.name, q.Cursor.Id}
+		res, err = redis.Values(conn.Do("FT.CURSOR", args... ))
+	}
+	if err != nil {
+		return
+	}
+	// has no cursor
+	if ! hasCursor {
+		total = len(res)-1
+		if total > 1 {
+			aggregateReply = ProcessAggResponse(res[1:] )
+		}
+	// has cursor
+	} else {
+		var partialResults, err = redis.Values(res[0],nil)
+		if err != nil {
+			return aggregateReply,total,err
+		}
+		q.Cursor.Id, err = redis.Int(res[1],nil)
+		if err != nil {
+			return aggregateReply,total,err
+		}
+		total = len(partialResults)-1
+		if total > 1 {
+			aggregateReply = ProcessAggResponse(partialResults[1:])
+		}
+	}
+
+	return
+}
+
 // Explain Return a textual string explaining the query
 func (i *Client) Explain(q *Query) (string, error) {
 	conn := i.pool.Get()
