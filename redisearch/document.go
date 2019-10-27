@@ -2,10 +2,7 @@ package redisearch
 
 import (
 	"sort"
-	"strings"
 )
-
-const field_tokenization = ",.<>{}[]\"':;!@#$%^&*()-+=~"
 
 // Document represents a single document to be indexed or returned from a query.
 // Besides a score and id, the Properties are completely arbitrary
@@ -34,22 +31,6 @@ func (d *Document) SetPayload(payload []byte) {
 func (d Document) Set(name string, value interface{}) Document {
 	d.Properties[name] = value
 	return d
-}
-
-// All punctuation marks and whitespaces (besides underscores) separate the document and queries into tokens.
-// e.g. any character of `,.<>{}[]"':;!@#$%^&*()-+=~` will break the text into terms.
-// So the text `foo-bar.baz...bag` will be tokenized into `[foo, bar, baz, bag]`
-// Escaping separators in both queries and documents is done by prepending a backslash to any separator.
-// e.g. the text `hello\-world hello-world` will be tokenized as `[hello-world, hello, world]`.
-// **NOTE** that in most languages you will need an extra backslash when formatting the document or query,
-// to signify an actual backslash, so the actual text in redis-cli for example, will be entered as `hello\\-world`.
-// Underscores (`_`) are not used as separators in either document or query.
-// So the text `hello_world` will remain as is after tokenization.
-func EscapeTextFileString(value string) (string) {
-	for _, char := range field_tokenization {
-		value = strings.ReplaceAll(value, string(char), string("\\"+string(char)))
-	}
-	return value
 }
 
 // DocumentList is used to sort documents by descending score
