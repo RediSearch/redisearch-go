@@ -383,6 +383,47 @@ func TestDelete(t *testing.T) {
 	assert.Equal(t, uint64(0), info.DocCount)
 }
 
+func TestSpellCheck(t *testing.T) {
+	c := createClient("testung")
+	countries := []string{"Spain", "Israel", "Portugal", "France", "England", "Angola"}
+	sc := redisearch.NewSchema(redisearch.DefaultOptions).
+		AddField(redisearch.NewTextField("country"))
+	c.Drop()
+	assert.Nil(t, c.CreateIndex(sc))
+
+	docs := make([]redisearch.Document, len(countries))
+
+	for i := 0; i < len(countries); i++ {
+		docs[i] = redisearch.NewDocument(fmt.Sprintf("doc%d", i), 1).Set("country", countries[i])
+	}
+
+	assert.Nil(t, c.Index(docs...))
+	query := redisearch.NewQuery("Anla Portuga" )
+	opts := redisearch.NewSpellCheckOptions(2 )
+	sugs, total, err := c.SpellCheck(query,opts )
+	assert.Nil(t, err)
+	assert.Equal(t, 2, len(sugs))
+	assert.Equal(t, 2, total)
+
+	// query that return the MisspelledTerm but with an empty list of suggestions
+	// 1) 1) "TERM"
+	//   2) "an"
+	//   3) (empty list or set)
+	queryEmpty := redisearch.NewQuery("An" )
+	sugs, total, err = c.SpellCheck(queryEmpty,opts )
+	assert.Nil(t, err)
+	assert.Equal(t, 1, len(sugs))
+	assert.Equal(t, 0, total)
+
+	// same query but now with a distance of 4
+	opts.SetDistance(4)
+	sugs, total, err = c.SpellCheck(queryEmpty,opts )
+	assert.Nil(t, err)
+	assert.Equal(t, 1, len(sugs))
+	assert.Equal(t, 1, total)
+
+}
+
 func ExampleClient() {
 
 	// Create a client. By default a client is schemaless

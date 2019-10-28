@@ -346,6 +346,49 @@ func (i *Client) Search(q *Query) (docs []Document, total int, err error) {
 	return
 }
 
+// SpellCheck performs spelling correction on a query, returning suggestions for misspelled terms,
+// the total number of results, or an error if something went wrong
+func (i *Client) SpellCheck(q *Query, s *SpellCheckOptions) (suggs []MisspelledTerm, total int, err error) {
+	conn := i.pool.Get()
+	defer conn.Close()
+
+	args := redis.Args{i.name}
+	args = append(args, q.serialize()...)
+	args = append(args, s.serialize()...)
+
+	res, err := redis.Values(conn.Do("FT.SPELLCHECK", args...))
+	if err != nil {
+		return
+	}
+	total = 0
+	suggs = make([]MisspelledTerm, 0 )
+
+	// Each misspelled term, in turn, is a 3-element array consisting of
+	// - the constant string "TERM" ( 3-element position 0 -- we dont use it )
+	// - the term itself ( 3-element position 1 )
+	// - an array of suggestions for spelling corrections ( 3-element position 2 )
+	termIdx := 1
+	suggIdx := 2
+	for i := 0; i < len(res); i ++ {
+		var termArray []interface{} = nil
+		termArray, err = redis.Values(res[i], nil)
+		if err != nil {
+			return
+		}
+
+		if d, e := loadMisspelledTerm(termArray, termIdx, suggIdx); e == nil {
+			suggs = append(suggs, d)
+			if d.Len() > 0 {
+				total++
+			}
+		} else {
+			log.Print("Error parsing misspelled suggestion: ", e)
+		}
+	}
+
+	return
+}
+
 // Aggregate
 func (i *Client) Aggregate( q *AggregateQuery ) ( aggregateReply [][]string, total int, err error) {
 	conn := i.pool.Get()
@@ -388,7 +431,6 @@ func (i *Client) Aggregate( q *AggregateQuery ) ( aggregateReply [][]string, tot
 
 	return
 }
-
 
 // Explain Return a textual string explaining the query
 func (i *Client) Explain(q *Query) (string, error) {
