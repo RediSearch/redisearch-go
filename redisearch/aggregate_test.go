@@ -6,10 +6,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/RediSearch/redisearch-go/redisearch"
+	"github.com/garyburd/redigo/redis"
 	"github.com/stretchr/testify/assert"
 	"log"
 	"math/rand"
 	"os"
+	"reflect"
 	"strconv"
 	"strings"
 	"testing"
@@ -214,4 +216,310 @@ func BenchmarkProcessAggResponseSS_100x4Elements(b *testing.B) {
 	res := makeAggResponseInterface(12345, 100, []int{4, 20, 20, 4})
 	b.ResetTimer()
 	benchmarkProcessAggResponseSS(res, 100, b)
+}
+
+func TestProjection_Serialize(t *testing.T) {
+	type fields struct {
+		Expression string
+		Alias      string
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   redis.Args
+	}{
+		{"Test_Serialize_1", fields{"sqrt(log(foo) * floor(@bar/baz)) + (3^@qaz % 6)", "sqrt"}, redis.Args{"APPLY", "sqrt(log(foo) * floor(@bar/baz)) + (3^@qaz % 6)", "AS", "sqrt"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := redisearch.Projection{
+				Expression: tt.fields.Expression,
+				Alias:      tt.fields.Alias,
+			}
+			if got := p.Serialize(); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Serialize() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestCursor_Serialize(t *testing.T) {
+	type fields struct {
+		Id      int
+		Count   int
+		MaxIdle int
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   redis.Args
+	}{
+		{"TestCursor_Serialize_1", fields{1, 0, 0,}, redis.Args{"WITHCURSOR"}},
+		{"TestCursor_Serialize_2_MAXIDLE", fields{1, 0, 30000,}, redis.Args{"WITHCURSOR", "MAXIDLE", 30000}},
+		{"TestCursor_Serialize_3_COUNT_MAXIDLE", fields{1, 10, 30000,}, redis.Args{"WITHCURSOR", "COUNT", 10, "MAXIDLE", 30000}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := redisearch.Cursor{
+				Id:      tt.fields.Id,
+				Count:   tt.fields.Count,
+				MaxIdle: tt.fields.MaxIdle,
+			}
+			if got := c.Serialize(); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Serialize() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestGroupBy_AddFields(t *testing.T) {
+	type fields struct {
+		Fields   []string
+		Reducers []redisearch.Reducer
+		Paging   *redisearch.Paging
+	}
+	type args struct {
+		fields interface{}
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+		want   *redisearch.GroupBy
+	}{
+		{"TestGroupBy_AddFields_1",
+			fields{[]string{}, nil, nil},
+			args{"a",},
+			&redisearch.GroupBy{[]string{"a"}, nil, nil},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := &redisearch.GroupBy{
+				Fields:   tt.fields.Fields,
+				Reducers: tt.fields.Reducers,
+				Paging:   tt.fields.Paging,
+			}
+			if got := g.AddFields(tt.args.fields); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("AddFields() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestGroupBy_Limit(t *testing.T) {
+	type fields struct {
+		Fields   []string
+		Reducers []redisearch.Reducer
+		Paging   *redisearch.Paging
+	}
+	type args struct {
+		offset int
+		num    int
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+		want   *redisearch.GroupBy
+	}{
+		{"TestGroupBy_Limit_1",
+			fields{[]string{}, nil, nil},
+			args{10, 20},
+			&redisearch.GroupBy{[]string{}, nil, &redisearch.Paging{10, 20}},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := &redisearch.GroupBy{
+				Fields:   tt.fields.Fields,
+				Reducers: tt.fields.Reducers,
+				Paging:   tt.fields.Paging,
+			}
+			if got := g.Limit(tt.args.offset, tt.args.num); (got.Paging.Num != tt.want.Paging.Num) || (got.Paging.Offset != tt.want.Paging.Offset) {
+				t.Errorf("Limit() = %v, want %v, %v, want %v",
+					got.Paging.Num, tt.want.Paging.Num,
+					got.Paging.Offset, tt.want.Paging.Offset)
+			}
+		})
+	}
+}
+
+func TestAggregateQuery_SetMax(t *testing.T) {
+	type fields struct {
+		Query         *redisearch.Query
+		AggregatePlan redis.Args
+		Paging        *redisearch.Paging
+		Max           int
+		WithSchema    bool
+		Verbatim      bool
+		WithCursor    bool
+		Cursor        *redisearch.Cursor
+	}
+	type args struct {
+		value int
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+		want   *redisearch.AggregateQuery
+	}{
+		{"TestAggregateQuery_SetMax_1",
+			fields{nil, redis.Args{}, nil, 0, false, false, false, nil},
+			args{10},
+			&redisearch.AggregateQuery{nil, redis.Args{}, nil, 10, false, false, false, nil},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			a := &redisearch.AggregateQuery{
+				Query:         tt.fields.Query,
+				AggregatePlan: tt.fields.AggregatePlan,
+				Paging:        tt.fields.Paging,
+				Max:           tt.fields.Max,
+				WithSchema:    tt.fields.WithSchema,
+				Verbatim:      tt.fields.Verbatim,
+				WithCursor:    tt.fields.WithCursor,
+				Cursor:        tt.fields.Cursor,
+			}
+			if got := a.SetMax(tt.args.value); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("SetMax() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestAggregateQuery_SetVerbatim(t *testing.T) {
+	type fields struct {
+		Query         *redisearch.Query
+		AggregatePlan redis.Args
+		Paging        *redisearch.Paging
+		Max           int
+		WithSchema    bool
+		Verbatim      bool
+		WithCursor    bool
+		Cursor        *redisearch.Cursor
+	}
+	type args struct {
+		value bool
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+		want   *redisearch.AggregateQuery
+	}{
+		{"TestAggregateQuery_SetVerbatim_1",
+			fields{nil, redis.Args{}, nil, 0, false, false, false, nil},
+			args{true},
+			&redisearch.AggregateQuery{nil, redis.Args{}, nil, 0, false, true, false, nil},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			a := &redisearch.AggregateQuery{
+				Query:         tt.fields.Query,
+				AggregatePlan: tt.fields.AggregatePlan,
+				Paging:        tt.fields.Paging,
+				Max:           tt.fields.Max,
+				WithSchema:    tt.fields.WithSchema,
+				Verbatim:      tt.fields.Verbatim,
+				WithCursor:    tt.fields.WithCursor,
+				Cursor:        tt.fields.Cursor,
+			}
+			if got := a.SetVerbatim(tt.args.value); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("SetVerbatim() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestAggregateQuery_SetWithSchema(t *testing.T) {
+	type fields struct {
+		Query         *redisearch.Query
+		AggregatePlan redis.Args
+		Paging        *redisearch.Paging
+		Max           int
+		WithSchema    bool
+		Verbatim      bool
+		WithCursor    bool
+		Cursor        *redisearch.Cursor
+	}
+	type args struct {
+		value bool
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+		want   *redisearch.AggregateQuery
+	}{
+		{"TestAggregateQuery_SetWithSchema_1",
+			fields{nil, redis.Args{}, nil, 0, false, false, false, nil},
+			args{true},
+			&redisearch.AggregateQuery{nil, redis.Args{}, nil, 0, true, false, false, nil},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			a := &redisearch.AggregateQuery{
+				Query:         tt.fields.Query,
+				AggregatePlan: tt.fields.AggregatePlan,
+				Paging:        tt.fields.Paging,
+				Max:           tt.fields.Max,
+				WithSchema:    tt.fields.WithSchema,
+				Verbatim:      tt.fields.Verbatim,
+				WithCursor:    tt.fields.WithCursor,
+				Cursor:        tt.fields.Cursor,
+			}
+			if got := a.SetWithSchema(tt.args.value); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("SetWithSchema() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestAggregateQuery_CursorHasResults(t *testing.T) {
+	type fields struct {
+		Query         *redisearch.Query
+		AggregatePlan redis.Args
+		Paging        *redisearch.Paging
+		Max           int
+		WithSchema    bool
+		Verbatim      bool
+		WithCursor    bool
+		Cursor        *redisearch.Cursor
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		wantRes bool
+	}{
+		{"TestAggregateQuery_CursorHasResults_1_false",
+			fields{nil, redis.Args{}, nil, 0, false, false, false, nil},
+			false,
+		},
+		{"TestAggregateQuery_CursorHasResults_1_true",
+			fields{nil, redis.Args{}, nil, 0, false, false, false, redisearch.NewCursor().SetId(10)},
+			true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			a := &redisearch.AggregateQuery{
+				Query:         tt.fields.Query,
+				AggregatePlan: tt.fields.AggregatePlan,
+				Paging:        tt.fields.Paging,
+				Max:           tt.fields.Max,
+				WithSchema:    tt.fields.WithSchema,
+				Verbatim:      tt.fields.Verbatim,
+				WithCursor:    tt.fields.WithCursor,
+				Cursor:        tt.fields.Cursor,
+			}
+			if gotRes := a.CursorHasResults(); gotRes != tt.wantRes {
+				t.Errorf("CursorHasResults() = %v, want %v", gotRes, tt.wantRes)
+			}
+		})
+	}
 }
