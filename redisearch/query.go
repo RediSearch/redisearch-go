@@ -106,7 +106,7 @@ func (p Paging) serialize() redis.Args {
 	args := redis.Args{}
 	// only serialize something if it's different than the default
 	// The default is 0 10
-	if p.Offset != DefaultOffset && p.Num != DefaultNum {
+	if p.Offset != DefaultOffset || p.Num != DefaultNum {
 		args = args.Add("LIMIT", p.Offset, p.Num)
 	}
 	return args

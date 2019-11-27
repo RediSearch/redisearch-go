@@ -33,7 +33,7 @@ func init() {
 		if err := c.CreateIndex(sc); err != nil {
 			log.Fatal(err)
 		}
-		ndocs := 100000
+		ndocs := 10000
 		docs := make([]redisearch.Document, ndocs)
 		for i := 0; i < ndocs; i++ {
 			docs[i] = redisearch.NewDocument(fmt.Sprintf("doc%d", i), 1).Set("foo", "hello world")
