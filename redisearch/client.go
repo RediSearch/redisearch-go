@@ -26,10 +26,13 @@ type Options struct {
 	NoOffsetVectors bool
 
 	Stopwords []string
+
+	MaxTextFields int
 }
 
 // DefaultOptions represents the default options
 var DefaultOptions = Options{
+	MaxTextFields:   32,
 	NoSave:          false,
 	NoFieldFlags:    false,
 	NoFrequencies:   false,
@@ -68,6 +71,9 @@ func NewClient(addr, name string) *Client {
 // CreateIndex configues the index and creates it on redis
 func (i *Client) CreateIndex(s *Schema) error {
 	args := redis.Args{i.name}
+
+	args = append(args, "MAXTEXTFIELDS", fmt.Sprintf("%d", s.Options.MaxTextFields))
+
 	// Set flags based on options
 	if s.Options.NoFieldFlags {
 		args = append(args, "NOFIELDS")
@@ -156,6 +162,81 @@ func (i *Client) CreateIndex(s *Schema) error {
 	conn := i.pool.Get()
 	defer conn.Close()
 	_, err := conn.Do("FT.CREATE", args...)
+	return err
+}
+
+// AddField Adds a new field to the index.
+func (i *Client) AddField(f Field) error {
+	args := redis.Args{i.name}
+
+	args = append(args, "SCHEMA", "ADD")
+
+	switch f.Type {
+	case TextField:
+
+		args = append(args, f.Name, "TEXT")
+		if f.Options != nil {
+			opts, ok := f.Options.(TextFieldOptions)
+			if !ok {
+				return errors.New("Invalid text field options type")
+			}
+
+			if opts.Weight != 0 && opts.Weight != 1 {
+				args = append(args, "WEIGHT", opts.Weight)
+			}
+			if opts.NoStem {
+				args = append(args, "NOSTEM")
+			}
+
+			if opts.Sortable {
+				args = append(args, "SORTABLE")
+			}
+
+			if opts.NoIndex {
+				args = append(args, "NOINDEX")
+			}
+		}
+
+	case NumericField:
+		args = append(args, f.Name, "NUMERIC")
+		if f.Options != nil {
+			opts, ok := f.Options.(NumericFieldOptions)
+			if !ok {
+				return errors.New("Invalid numeric field options type")
+			}
+
+			if opts.Sortable {
+				args = append(args, "SORTABLE")
+			}
+			if opts.NoIndex {
+				args = append(args, "NOINDEX")
+			}
+		}
+	case TagField:
+		args = append(args, f.Name, "TAG")
+		if f.Options != nil {
+			opts, ok := f.Options.(TagFieldOptions)
+			if !ok {
+				return errors.New("Invalid tag field options type")
+			}
+			if opts.Separator != 0 {
+				args = append(args, "SEPARATOR", fmt.Sprintf("%c", opts.Separator))
+
+			}
+			if opts.Sortable {
+				args = append(args, "SORTABLE")
+			}
+			if opts.NoIndex {
+				args = append(args, "NOINDEX")
+			}
+		}
+	default:
+		return fmt.Errorf("Unsupported field type %v", f.Type)
+	}
+
+	conn := i.pool.Get()
+	defer conn.Close()
+	_, err := conn.Do("FT.ALTER", args...)
 	return err
 }
 
@@ -361,7 +442,7 @@ func (i *Client) SpellCheck(q *Query, s *SpellCheckOptions) (suggs []MisspelledT
 		return
 	}
 	total = 0
-	suggs = make([]MisspelledTerm, 0 )
+	suggs = make([]MisspelledTerm, 0)
 
 	// Each misspelled term, in turn, is a 3-element array consisting of
 	// - the constant string "TERM" ( 3-element position 0 -- we dont use it )
@@ -369,7 +450,7 @@ func (i *Client) SpellCheck(q *Query, s *SpellCheckOptions) (suggs []MisspelledT
 	// - an array of suggestions for spelling corrections ( 3-element position 2 )
 	termIdx := 1
 	suggIdx := 2
-	for i := 0; i < len(res); i ++ {
+	for i := 0; i < len(res); i++ {
 		var termArray []interface{} = nil
 		termArray, err = redis.Values(res[i], nil)
 		if err != nil {
@@ -390,40 +471,40 @@ func (i *Client) SpellCheck(q *Query, s *SpellCheckOptions) (suggs []MisspelledT
 }
 
 // Aggregate
-func (i *Client) Aggregate( q *AggregateQuery ) ( aggregateReply [][]string, total int, err error) {
+func (i *Client) Aggregate(q *AggregateQuery) (aggregateReply [][]string, total int, err error) {
 	conn := i.pool.Get()
 	defer conn.Close()
 	hasCursor := q.WithCursor
 	validCursor := q.CursorHasResults()
 	var res []interface{} = nil
-	if ! validCursor {
+	if !validCursor {
 		args := redis.Args{i.name}
 		args = append(args, q.Serialize()...)
 		res, err = redis.Values(conn.Do("FT.AGGREGATE", args...))
 	} else {
 		args := redis.Args{"READ", i.name, q.Cursor.Id}
-		res, err = redis.Values(conn.Do("FT.CURSOR", args... ))
+		res, err = redis.Values(conn.Do("FT.CURSOR", args...))
 	}
 	if err != nil {
 		return
 	}
 	// has no cursor
-	if ! hasCursor {
-		total = len(res)-1
+	if !hasCursor {
+		total = len(res) - 1
 		if total > 1 {
-			aggregateReply = ProcessAggResponse(res[1:] )
+			aggregateReply = ProcessAggResponse(res[1:])
 		}
-	// has cursor
+		// has cursor
 	} else {
-		var partialResults, err = redis.Values(res[0],nil)
+		var partialResults, err = redis.Values(res[0], nil)
 		if err != nil {
-			return aggregateReply,total,err
+			return aggregateReply, total, err
 		}
-		q.Cursor.Id, err = redis.Int(res[1],nil)
+		q.Cursor.Id, err = redis.Int(res[1], nil)
 		if err != nil {
-			return aggregateReply,total,err
+			return aggregateReply, total, err
 		}
-		total = len(partialResults)-1
+		total = len(partialResults) - 1
 		if total > 1 {
 			aggregateReply = ProcessAggResponse(partialResults[1:])
 		}
