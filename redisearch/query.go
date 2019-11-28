@@ -157,6 +157,10 @@ func (q Query) serialize() redis.Args {
 		args = args.Add("SCORER", q.Scorer)
 	}
 
+	if q.Language != "" {
+		args = args.Add("LANGUAGE", q.Language)
+	}
+
 	if q.Expander != "" {
 		args = args.Add("EXPANDER", q.Expander)
 	}
