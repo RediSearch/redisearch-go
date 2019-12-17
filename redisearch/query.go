@@ -144,7 +144,7 @@ func NewQuery(raw string) *Query {
 	}
 }
 
-func (q Query) serialize() redis.Args {
+func (q Query) Serialize() redis.Args {
 
 	args := redis.Args{q.Raw}.AddFlat(q.Paging.Serialize())
 	if q.Flags&QueryVerbatim != 0 {
@@ -177,6 +177,10 @@ func (q Query) serialize() redis.Args {
 
 	if q.Scorer != "" {
 		args = args.Add("SCORER", q.Scorer)
+	}
+
+	if q.Language != "" {
+		args = args.Add("LANGUAGE", q.Language)
 	}
 
 	if q.Expander != "" {

@@ -218,7 +218,7 @@ func (a *AggregateQuery) Filter(expression string) *AggregateQuery {
 func (q AggregateQuery) Serialize() redis.Args {
 	args := redis.Args{}
 	if q.Query != nil {
-		args = args.AddFlat(q.Query.serialize())
+		args = args.AddFlat(q.Query.Serialize())
 	} else {
 		args = args.Add("*")
 	}
