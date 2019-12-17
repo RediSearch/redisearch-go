@@ -161,18 +161,20 @@ func (i *Client) CreateIndex(s *Schema) error {
 
 // IndexingOptions represent the options for indexing a single document
 type IndexingOptions struct {
-	Language string
-	NoSave   bool
-	Replace  bool
-	Partial  bool
+	Language         string
+	NoSave           bool
+	Replace          bool
+	Partial          bool
+	ReplaceCondition string
 }
 
 // DefaultIndexingOptions are the default options for document indexing
 var DefaultIndexingOptions = IndexingOptions{
-	Language: "",
-	NoSave:   false,
-	Replace:  false,
-	Partial:  false,
+	Language:         "",
+	NoSave:           false,
+	Replace:          false,
+	Partial:          false,
+	ReplaceCondition: "",
 }
 
 // IndexOptions indexes multiple documents on the index, with optional Options passed to options
@@ -203,6 +205,9 @@ func (i *Client) IndexOptions(opts IndexingOptions, docs ...Document) error {
 			args = append(args, "REPLACE")
 			if opts.Partial {
 				args = append(args, "PARTIAL")
+			}
+			if opts.ReplaceCondition != "" {
+				args = append(args, "IF", opts.ReplaceCondition)
 			}
 		}
 
@@ -361,7 +366,7 @@ func (i *Client) SpellCheck(q *Query, s *SpellCheckOptions) (suggs []MisspelledT
 		return
 	}
 	total = 0
-	suggs = make([]MisspelledTerm, 0 )
+	suggs = make([]MisspelledTerm, 0)
 
 	// Each misspelled term, in turn, is a 3-element array consisting of
 	// - the constant string "TERM" ( 3-element position 0 -- we dont use it )
@@ -369,7 +374,7 @@ func (i *Client) SpellCheck(q *Query, s *SpellCheckOptions) (suggs []MisspelledT
 	// - an array of suggestions for spelling corrections ( 3-element position 2 )
 	termIdx := 1
 	suggIdx := 2
-	for i := 0; i < len(res); i ++ {
+	for i := 0; i < len(res); i++ {
 		var termArray []interface{} = nil
 		termArray, err = redis.Values(res[i], nil)
 		if err != nil {
@@ -390,7 +395,7 @@ func (i *Client) SpellCheck(q *Query, s *SpellCheckOptions) (suggs []MisspelledT
 }
 
 // Aggregate
-func (i *Client) Aggregate( q *AggregateQuery ) ( aggregateReply [][]string, total int, err error) {
+func (i *Client) Aggregate(q *AggregateQuery) (aggregateReply [][]string, total int, err error) {
 	conn := i.pool.Get()
 	defer conn.Close()
 	hasCursor := q.WithCursor
@@ -402,28 +407,28 @@ func (i *Client) Aggregate( q *AggregateQuery ) ( aggregateReply [][]string, tot
 		res, err = redis.Values(conn.Do("FT.AGGREGATE", args...))
 	} else {
 		args := redis.Args{"READ", i.name, q.Cursor.Id}
-		res, err = redis.Values(conn.Do("FT.CURSOR", args... ))
+		res, err = redis.Values(conn.Do("FT.CURSOR", args...))
 	}
 	if err != nil {
 		return
 	}
 	// has no cursor
 	if ! hasCursor {
-		total = len(res)-1
+		total = len(res) - 1
 		if total > 1 {
-			aggregateReply = ProcessAggResponse(res[1:] )
+			aggregateReply = ProcessAggResponse(res[1:])
 		}
-	// has cursor
+		// has cursor
 	} else {
-		var partialResults, err = redis.Values(res[0],nil)
+		var partialResults, err = redis.Values(res[0], nil)
 		if err != nil {
-			return aggregateReply,total,err
+			return aggregateReply, total, err
 		}
-		q.Cursor.Id, err = redis.Int(res[1],nil)
+		q.Cursor.Id, err = redis.Int(res[1], nil)
 		if err != nil {
-			return aggregateReply,total,err
+			return aggregateReply, total, err
 		}
-		total = len(partialResults)-1
+		total = len(partialResults) - 1
 		if total > 1 {
 			aggregateReply = ProcessAggResponse(partialResults[1:])
 		}
