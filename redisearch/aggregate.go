@@ -110,7 +110,7 @@ func (g GroupBy) Serialize() redis.Args {
 		args = args.AddFlat(reducer.Serialize())
 	}
 	if g.Paging != nil {
-		args = args.AddFlat(g.Paging.serialize())
+		args = args.AddFlat(g.Paging.Serialize())
 	}
 	return args
 }

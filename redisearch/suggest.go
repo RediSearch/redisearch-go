@@ -17,6 +17,14 @@ type SuggestOptions struct {
 	WithScores   bool
 }
 
+// DefaultIndexingOptions are the default options for document indexing
+var DefaultSuggestOptions = SuggestOptions{
+	Num:          5,
+	Fuzzy:        false,
+	WithPayloads: false,
+	WithScores:   false,
+}
+
 // SuggestionList is a sortable list of suggestions returned from an engine
 type SuggestionList []Suggestion
 

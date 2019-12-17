@@ -3,6 +3,31 @@ package redisearch
 // FieldType is an enumeration of field/property types
 type FieldType int
 
+// Options are flags passed to the the abstract Index call, which receives them as interface{}, allowing
+// for implementation specific options
+type Options struct {
+
+	// If set, we will not save the documents contents, just index them, for fetching ids only
+	NoSave bool
+
+	NoFieldFlags bool
+
+	NoFrequencies bool
+
+	NoOffsetVectors bool
+
+	Stopwords []string
+}
+
+// DefaultOptions represents the default options
+var DefaultOptions = Options{
+	NoSave:          false,
+	NoFieldFlags:    false,
+	NoFrequencies:   false,
+	NoOffsetVectors: false,
+	Stopwords:       nil,
+}
+
 const (
 	// TextField full-text field
 	TextField FieldType = iota

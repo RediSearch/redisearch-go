@@ -1,6 +1,10 @@
 package redisearch
 
-import "github.com/garyburd/redigo/redis"
+import (
+	"errors"
+	"fmt"
+	"github.com/garyburd/redigo/redis"
+)
 
 // Flag is a type for query flags
 type Flag uint64
@@ -69,6 +73,24 @@ type SummaryOptions struct {
 	Separator    string // default "..."
 }
 
+// IndexingOptions represent the options for indexing a single document
+type IndexingOptions struct {
+	Language         string
+	NoSave           bool
+	Replace          bool
+	Partial          bool
+	ReplaceCondition string
+}
+
+// DefaultIndexingOptions are the default options for document indexing
+var DefaultIndexingOptions = IndexingOptions{
+	Language:         "",
+	NoSave:           false,
+	Replace:          false,
+	Partial:          false,
+	ReplaceCondition: "",
+}
+
 // Query is a single search query and all its parameters and predicates
 type Query struct {
 	Raw string
@@ -102,7 +124,7 @@ func NewPaging(offset int, num int) *Paging {
 	}
 }
 
-func (p Paging) serialize() redis.Args {
+func (p Paging) Serialize() redis.Args {
 	args := redis.Args{}
 	// only serialize something if it's different than the default
 	// The default is 0 10
@@ -124,7 +146,7 @@ func NewQuery(raw string) *Query {
 
 func (q Query) serialize() redis.Args {
 
-	args := redis.Args{q.Raw}.AddFlat(q.Paging.serialize())
+	args := redis.Args{q.Raw}.AddFlat(q.Paging.Serialize())
 	if q.Flags&QueryVerbatim != 0 {
 		args = args.Add("VERBATIM")
 	}
@@ -289,3 +311,190 @@ func (q *Query) SummarizeOptions(opts SummaryOptions) *Query {
 	q.SummarizeOpts = &opts
 	return q
 }
+
+func SerializeSchema(s *Schema, args redis.Args) (redis.Args, error) {
+	if s.Options.NoFieldFlags {
+		args = append(args, "NOFIELDS")
+	}
+	if s.Options.NoFrequencies {
+		args = append(args, "NOFREQS")
+	}
+	if s.Options.NoOffsetVectors {
+		args = append(args, "NOOFFSETS")
+	}
+	if s.Options.Stopwords != nil {
+		args = args.Add("STOPWORDS", len(s.Options.Stopwords))
+		if len(s.Options.Stopwords) > 0 {
+			args = args.AddFlat(s.Options.Stopwords)
+		}
+	}
+
+	args = append(args, "SCHEMA")
+	for _, f := range s.Fields {
+
+		switch f.Type {
+		case TextField:
+
+			args = append(args, f.Name, "TEXT")
+			if f.Options != nil {
+				opts, ok := f.Options.(TextFieldOptions)
+				if !ok {
+					return nil, errors.New("Invalid text field options type")
+				}
+
+				if opts.Weight != 0 && opts.Weight != 1 {
+					args = append(args, "WEIGHT", opts.Weight)
+				}
+				if opts.NoStem {
+					args = append(args, "NOSTEM")
+				}
+
+				if opts.Sortable {
+					args = append(args, "SORTABLE")
+				}
+
+				if opts.NoIndex {
+					args = append(args, "NOINDEX")
+				}
+			}
+
+		case NumericField:
+			args = append(args, f.Name, "NUMERIC")
+			if f.Options != nil {
+				opts, ok := f.Options.(NumericFieldOptions)
+				if !ok {
+					return nil, errors.New("Invalid numeric field options type")
+				}
+
+				if opts.Sortable {
+					args = append(args, "SORTABLE")
+				}
+				if opts.NoIndex {
+					args = append(args, "NOINDEX")
+				}
+			}
+		case TagField:
+			args = append(args, f.Name, "TAG")
+			if f.Options != nil {
+				opts, ok := f.Options.(TagFieldOptions)
+				if !ok {
+					return nil, errors.New("Invalid tag field options type")
+				}
+				if opts.Separator != 0 {
+					args = append(args, "SEPARATOR", fmt.Sprintf("%c", opts.Separator))
+
+				}
+				if opts.Sortable {
+					args = append(args, "SORTABLE")
+				}
+				if opts.NoIndex {
+					args = append(args, "NOINDEX")
+				}
+			}
+		default:
+			return nil, fmt.Errorf("Unsupported field type %v", f.Type)
+		}
+
+	}
+	return args, nil
+}
+
+// IndexOptions indexes multiple documents on the index, with optional Options passed to options
+func (i *Client) IndexOptions(opts IndexingOptions, docs ...Document) error {
+
+	conn := i.pool.Get()
+	defer conn.Close()
+
+	n := 0
+	var merr MultiError
+
+	for ii, doc := range docs {
+		args := make(redis.Args, 0, 6+len(doc.Properties))
+		args = append(args, i.name, doc.Id, doc.Score)
+		args = SerializeIndexingOptions(opts, args)
+
+		if doc.Payload != nil {
+			args = args.Add("PAYLOAD", doc.Payload)
+		}
+
+		args = append(args, "FIELDS")
+
+		for k, f := range doc.Properties {
+			args = append(args, k, f)
+		}
+
+		if err := conn.Send("FT.ADD", args...); err != nil {
+			if merr == nil {
+				merr = NewMultiError(len(docs))
+			}
+			merr[ii] = err
+
+			return merr
+		}
+		n++
+	}
+
+	if err := conn.Flush(); err != nil {
+		return err
+	}
+
+	for n > 0 {
+		if _, err := conn.Receive(); err != nil {
+			if merr == nil {
+				merr = NewMultiError(len(docs))
+			}
+			merr[n-1] = err
+		}
+		n--
+	}
+
+	if merr == nil {
+		return nil
+	}
+
+	return merr
+}
+
+func SerializeIndexingOptions(opts IndexingOptions, args redis.Args) redis.Args {
+	// apply options
+	if opts.NoSave {
+		args = append(args, "NOSAVE")
+	}
+	if opts.Language != "" {
+		args = append(args, "LANGUAGE", opts.Language)
+	}
+
+	if opts.Partial {
+		opts.Replace = true
+	}
+
+	if opts.Replace {
+		args = append(args, "REPLACE")
+		if opts.Partial {
+			args = append(args, "PARTIAL")
+		}
+		if opts.ReplaceCondition != "" {
+			args = append(args, "IF", opts.ReplaceCondition)
+		}
+	}
+	return args
+}
+
+// IndexInfo - Structure showing information about an existing index
+type IndexInfo struct {
+	Schema               Schema
+	Name                 string  `redis:"index_name"`
+	DocCount             uint64  `redis:"num_docs"`
+	RecordCount          uint64  `redis:"num_records"`
+	TermCount            uint64  `redis:"num_terms"`
+	MaxDocID             uint64  `redis:"max_doc_id"`
+	InvertedIndexSizeMB  float64 `redis:"inverted_sz_mb"`
+	OffsetVectorSizeMB   float64 `redis:"offset_vector_sz_mb"`
+	DocTableSizeMB       float64 `redis:"doc_table_size_mb"`
+	KeyTableSizeMB       float64 `redis:"key_table_size_mb"`
+	RecordsPerDocAvg     float64 `redis:"records_per_doc_avg"`
+	BytesPerRecordAvg    float64 `redis:"bytes_per_record_avg"`
+	OffsetsPerTermAvg    float64 `redis:"offsets_per_term_avg"`
+	OffsetBitsPerTermAvg float64 `redis:"offset_bits_per_record_avg"`
+}
+
