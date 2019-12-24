@@ -187,6 +187,18 @@ func (a *AggregateQuery) Limit(offset int, num int) *AggregateQuery {
 	return a
 }
 
+//Load document fields from the document HASH objects (if they are not in the sortables)
+func (a *AggregateQuery) Load( Properties []string) *AggregateQuery {
+	nproperties := len(Properties)
+	if nproperties > 0 {
+		a.AggregatePlan = a.AggregatePlan.Add("LOAD", nproperties)
+		for _, property := range Properties {
+			a.AggregatePlan = a.AggregatePlan.Add(fmt.Sprintf( "@%s", property ))
+		}
+	}
+	return a
+}
+
 //Adds a GROUPBY clause to the aggregate plan
 func (a *AggregateQuery) GroupBy(group GroupBy) *AggregateQuery {
 	a.AggregatePlan = a.AggregatePlan.AddFlat(group.Serialize())
