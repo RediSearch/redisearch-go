@@ -123,7 +123,6 @@ type AggregateQuery struct {
 	Max           int
 	WithSchema    bool
 	Verbatim      bool
-	// TODO: add cursor
 	WithCursor bool
 	Cursor     *Cursor
 	// TODO: add load fields
