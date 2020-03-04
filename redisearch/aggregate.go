@@ -2,7 +2,7 @@ package redisearch
 
 import (
 	"fmt"
-	"github.com/garyburd/redigo/redis"
+	"github.com/gomodule/redigo/redis"
 	"log"
 	"reflect"
 )

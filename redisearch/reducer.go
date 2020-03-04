@@ -1,6 +1,6 @@
 package redisearch
 
-import "github.com/garyburd/redigo/redis"
+import "github.com/gomodule/redigo/redis"
 
 // GroupByReducers
 type GroupByReducers string

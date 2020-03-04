@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/RediSearch/redisearch-go/redisearch"
-	"github.com/garyburd/redigo/redis"
+	"github.com/gomodule/redigo/redis"
 	"github.com/stretchr/testify/assert"
 	"log"
 	"math/rand"
