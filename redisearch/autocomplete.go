@@ -2,7 +2,6 @@ package redisearch
 
 import (
 	"strconv"
-
 	"github.com/gomodule/redigo/redis"
 )
 
