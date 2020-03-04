@@ -9,7 +9,7 @@ import (
 
 	"log"
 
-	"github.com/garyburd/redigo/redis"
+	"github.com/gomodule/redigo"
 )
 
 // Options are flags passed to the the abstract Index call, which receives them as interface{}, allowing
