@@ -1,6 +1,6 @@
 package redisearch
 
-import "github.com/garyburd/redigo/redis"
+import "github.com/gomodule/redigo/redis"
 
 // Flag is a type for query flags
 type Flag uint64

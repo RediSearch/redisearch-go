@@ -6,10 +6,8 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
-
 	"log"
-
-	"github.com/garyburd/redigo/redis"
+	"github.com/gomodule/redigo/redis"
 )
 
 // Options are flags passed to the the abstract Index call, which receives them as interface{}, allowing
