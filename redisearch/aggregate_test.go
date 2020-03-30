@@ -237,7 +237,7 @@ func TestProjection_Serialize(t *testing.T) {
 				Alias:      tt.fields.Alias,
 			}
 			if got := p.Serialize(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Serialize() = %v, want %v", got, tt.want)
+				t.Errorf("serialize() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -266,7 +266,7 @@ func TestCursor_Serialize(t *testing.T) {
 				MaxIdle: tt.fields.MaxIdle,
 			}
 			if got := c.Serialize(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Serialize() = %v, want %v", got, tt.want)
+				t.Errorf("serialize() = %v, want %v", got, tt.want)
 			}
 		})
 	}

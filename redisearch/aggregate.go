@@ -110,7 +110,7 @@ func (g GroupBy) Serialize() redis.Args {
 		args = args.AddFlat(reducer.Serialize())
 	}
 	if g.Paging != nil {
-		args = args.AddFlat(g.Paging.Serialize())
+		args = args.AddFlat(g.Paging.serialize())
 	}
 	return args
 }
@@ -229,7 +229,7 @@ func (a *AggregateQuery) Filter(expression string) *AggregateQuery {
 func (q AggregateQuery) Serialize() redis.Args {
 	args := redis.Args{}
 	if q.Query != nil {
-		args = args.AddFlat(q.Query.Serialize())
+		args = args.AddFlat(q.Query.serialize())
 	} else {
 		args = args.Add("*")
 	}

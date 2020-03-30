@@ -107,7 +107,7 @@ func (i *Client) Search(q *Query) (docs []Document, total int, err error) {
 	defer conn.Close()
 
 	args := redis.Args{i.name}
-	args = append(args, q.Serialize()...)
+	args = append(args, q.serialize()...)
 
 	res, err := redis.Values(conn.Do("FT.SEARCH", args...))
 	if err != nil {
@@ -158,7 +158,7 @@ func (i *Client) SpellCheck(q *Query, s *SpellCheckOptions) (suggs []MisspelledT
 	defer conn.Close()
 
 	args := redis.Args{i.name}
-	args = append(args, q.Serialize()...)
+	args = append(args, q.serialize()...)
 	args = append(args, s.Serialize()...)
 
 	res, err := redis.Values(conn.Do("FT.SPELLCHECK", args...))
@@ -243,7 +243,7 @@ func (i *Client) Explain(q *Query) (string, error) {
 	defer conn.Close()
 
 	args := redis.Args{i.name}
-	args = append(args, q.Serialize()...)
+	args = append(args, q.serialize()...)
 
 	return redis.String(conn.Do("FT.EXPLAIN", args...))
 }

@@ -125,7 +125,7 @@ func NewPaging(offset int, num int) *Paging {
 	}
 }
 
-func (p Paging) Serialize() redis.Args {
+func (p Paging) serialize() redis.Args {
 	args := redis.Args{}
 	// only serialize something if it's different than the default
 	// The default is 0 10
@@ -145,9 +145,9 @@ func NewQuery(raw string) *Query {
 	}
 }
 
-func (q Query) Serialize() redis.Args {
+func (q Query) serialize() redis.Args {
 
-	args := redis.Args{q.Raw}.AddFlat(q.Paging.Serialize())
+	args := redis.Args{q.Raw}.AddFlat(q.Paging.serialize())
 	if q.Flags&QueryVerbatim != 0 {
 		args = args.Add("VERBATIM")
 	}

@@ -56,10 +56,10 @@ func TestAutocompleter_Serialize(t *testing.T) {
 			a := redisearch.NewAutocompleterFromPool(nil, tt.fields.name)
 			got, got1 := a.Serialize(tt.args.prefix, tt.args.opts)
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Serialize() got = %v, want %v", got, tt.want)
+				t.Errorf("serialize() got = %v, want %v", got, tt.want)
 			}
 			if got1 != tt.want1 {
-				t.Errorf("Serialize() got1 = %v, want %v", got1, tt.want1)
+				t.Errorf("serialize() got1 = %v, want %v", got1, tt.want1)
 			}
 		})
 	}
