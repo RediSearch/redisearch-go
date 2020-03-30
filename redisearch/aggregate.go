@@ -2,7 +2,7 @@ package redisearch
 
 import (
 	"fmt"
-	"github.com/garyburd/redigo/redis"
+	"github.com/gomodule/redigo/redis"
 	"log"
 	"reflect"
 )
@@ -123,7 +123,6 @@ type AggregateQuery struct {
 	Max           int
 	WithSchema    bool
 	Verbatim      bool
-	// TODO: add cursor
 	WithCursor bool
 	Cursor     *Cursor
 	// TODO: add load fields
@@ -184,6 +183,18 @@ func (a *AggregateQuery) Apply(expression Projection) *AggregateQuery {
 //Sets the limit for the initial pool of results from the query.
 func (a *AggregateQuery) Limit(offset int, num int) *AggregateQuery {
 	a.Paging = NewPaging(offset, num)
+	return a
+}
+
+//Load document fields from the document HASH objects (if they are not in the sortables)
+func (a *AggregateQuery) Load( Properties []string) *AggregateQuery {
+	nproperties := len(Properties)
+	if nproperties > 0 {
+		a.AggregatePlan = a.AggregatePlan.Add("LOAD", nproperties)
+		for _, property := range Properties {
+			a.AggregatePlan = a.AggregatePlan.Add(fmt.Sprintf( "@%s", property ))
+		}
+	}
 	return a
 }
 

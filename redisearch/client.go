@@ -6,10 +6,8 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
-
 	"log"
-
-	"github.com/garyburd/redigo/redis"
+	"github.com/gomodule/redigo/redis"
 )
 
 // Client is an interface to redisearch's redis commands

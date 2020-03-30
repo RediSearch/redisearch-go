@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/RediSearch/redisearch-go/redisearch"
-	"github.com/garyburd/redigo/redis"
+	"github.com/gomodule/redigo/redis"
 )
 
 func TestPaging_serialize(t *testing.T) {

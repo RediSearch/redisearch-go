@@ -2,8 +2,7 @@ package redisearch
 
 import (
 	"strconv"
-
-	"github.com/garyburd/redigo/redis"
+	"github.com/gomodule/redigo/redis"
 )
 
 // Autocompleter implements a redisearch auto-completer API

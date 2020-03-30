@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/RediSearch/redisearch-go/redisearch"
-	"github.com/garyburd/redigo/redis"
+	"github.com/gomodule/redigo/redis"
 	"github.com/stretchr/testify/assert"
 	"log"
 	"math/rand"
@@ -519,6 +519,61 @@ func TestAggregateQuery_CursorHasResults(t *testing.T) {
 			}
 			if gotRes := a.CursorHasResults(); gotRes != tt.wantRes {
 				t.Errorf("CursorHasResults() = %v, want %v", gotRes, tt.wantRes)
+			}
+		})
+	}
+}
+
+func TestAggregateQuery_Load(t *testing.T) {
+	type fields struct {
+		Query         *redisearch.Query
+		AggregatePlan redis.Args
+		Paging        *redisearch.Paging
+		Max           int
+		WithSchema    bool
+		Verbatim      bool
+		WithCursor    bool
+		Cursor        *redisearch.Cursor
+	}
+	type args struct {
+		Properties []string
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+		want   redis.Args
+	}{
+		{"TestAggregateQuery_Load_1",
+			fields{nil, redis.Args{}, nil, 0, false, false, false, nil},
+			args{[]string{"field1"}},
+			redis.Args{"*", "LOAD", 1, "@field1"},
+		},
+		{"TestAggregateQuery_Load_2",
+			fields{nil, redis.Args{}, nil, 0, false, false, false, nil},
+			args{[]string{"field1", "field2", "field3", "field4"}},
+			redis.Args{"*", "LOAD", 4, "@field1", "@field2", "@field3", "@field4"},
+		},
+		{"TestAggregateQuery_Load_Empty",
+			fields{nil, redis.Args{}, nil, 0, false, false, false, nil},
+			args{[]string{}},
+			redis.Args{"*"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			a := &redisearch.AggregateQuery{
+				Query:         tt.fields.Query,
+				AggregatePlan: tt.fields.AggregatePlan,
+				Paging:        tt.fields.Paging,
+				Max:           tt.fields.Max,
+				WithSchema:    tt.fields.WithSchema,
+				Verbatim:      tt.fields.Verbatim,
+				WithCursor:    tt.fields.WithCursor,
+				Cursor:        tt.fields.Cursor,
+			}
+			if got := a.Load(tt.args.Properties).Serialize(); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Load() = %v, want %v", got, tt.want)
 			}
 		})
 	}

@@ -3,7 +3,8 @@ package redisearch
 import (
 	"errors"
 	"fmt"
-	"github.com/garyburd/redigo/redis"
+
+	"github.com/gomodule/redigo/redis"
 )
 
 // Flag is a type for query flags
@@ -42,13 +43,13 @@ type SortingKey struct {
 
 func NewSortingKeyDir(field string, ascending bool) *SortingKey {
 	return &SortingKey{
-		Field: field,
+		Field:     field,
 		Ascending: ascending,
 	}
 }
 
 func (s SortingKey) Serialize() redis.Args {
-	args := redis.Args{ s.Field }
+	args := redis.Args{s.Field}
 	if s.Ascending {
 		args = args.Add("ASC")
 	} else {
@@ -120,7 +121,7 @@ type Paging struct {
 func NewPaging(offset int, num int) *Paging {
 	return &Paging{
 		Offset: offset,
-		Num: num,
+		Num:    num,
 	}
 }
 
@@ -188,7 +189,7 @@ func (q Query) Serialize() redis.Args {
 	}
 
 	if q.SortBy != nil {
-		args = args.Add("SORTBY").AddFlat( q.SortBy.Serialize() )
+		args = args.Add("SORTBY").AddFlat(q.SortBy.Serialize())
 	}
 
 	if q.HighlightOpts != nil {
@@ -501,4 +502,3 @@ type IndexInfo struct {
 	OffsetsPerTermAvg    float64 `redis:"offsets_per_term_avg"`
 	OffsetBitsPerTermAvg float64 `redis:"offset_bits_per_record_avg"`
 }
-
