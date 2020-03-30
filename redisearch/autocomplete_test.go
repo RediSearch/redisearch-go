@@ -3,7 +3,7 @@ package redisearch_test
 import (
 	"fmt"
 	"github.com/RediSearch/redisearch-go/redisearch"
-	"github.com/garyburd/redigo/redis"
+	"github.com/gomodule/redigo/redis"
 	"github.com/stretchr/testify/assert"
 	"os"
 	"reflect"
@@ -53,7 +53,7 @@ func TestAutocompleter_Serialize(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			a := redisearch.NewAutocompleterFromPool(nil,tt.fields.name)
+			a := redisearch.NewAutocompleterFromPool(nil, tt.fields.name)
 			got, got1 := a.Serialize(tt.args.prefix, tt.args.opts)
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("Serialize() got = %v, want %v", got, tt.want)
