@@ -51,7 +51,7 @@ func (s *SpellCheckOptions) AddInclusionDict(dictname string) *SpellCheckOptions
 	return s
 }
 
-func (s SpellCheckOptions) Serialize() redis.Args {
+func (s SpellCheckOptions) serialize() redis.Args {
 	args := redis.Args{}
 	if s.Distance > 1 {
 		args = args.Add("DISTANCE").Add(s.Distance)

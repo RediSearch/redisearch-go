@@ -159,7 +159,7 @@ func (i *Client) SpellCheck(q *Query, s *SpellCheckOptions) (suggs []MisspelledT
 
 	args := redis.Args{i.name}
 	args = append(args, q.serialize()...)
-	args = append(args, s.Serialize()...)
+	args = append(args, s.serialize()...)
 
 	res, err := redis.Values(conn.Do("FT.SPELLCHECK", args...))
 	if err != nil {

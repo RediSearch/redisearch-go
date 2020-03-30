@@ -1,7 +1,6 @@
-package redisearch_test
+package redisearch
 
 import (
-	"github.com/RediSearch/redisearch-go/redisearch"
 	"github.com/gomodule/redigo/redis"
 	"reflect"
 	"testing"
@@ -38,7 +37,7 @@ func TestSpellCheckOptions_SetDistance(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := &redisearch.SpellCheckOptions{
+			s := &SpellCheckOptions{
 				Distance:       tt.fields.Distance,
 				ExclusionDicts: tt.fields.ExclusionDicts,
 				InclusionDicts: tt.fields.InclusionDicts,
@@ -71,7 +70,7 @@ func TestSpellCheckOptions_AddExclusionDict(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := redisearch.NewSpellCheckOptionsDefaults()
+			s := NewSpellCheckOptionsDefaults()
 			if got := s.AddExclusionDict(tt.args.dictname); !reflect.DeepEqual(got.ExclusionDicts, tt.wantExclusionDicts) {
 				t.Errorf("AddExclusionDict() = %v, want %v", got.ExclusionDicts, tt.wantExclusionDicts)
 			}
@@ -92,7 +91,7 @@ func TestSpellCheckOptions_AddInclusionDict(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := redisearch.NewSpellCheckOptionsDefaults()
+			s := NewSpellCheckOptionsDefaults()
 			if got := s.AddInclusionDict(tt.args.dictname); !reflect.DeepEqual(got.ExclusionDicts, tt.wantInclusionDicts) {
 				t.Errorf("AddInclusionDict() = %v, want %v", got.ExclusionDicts, tt.wantInclusionDicts)
 			}
@@ -126,12 +125,12 @@ func TestSpellCheckOptions_serialize(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := redisearch.SpellCheckOptions{
+			s := SpellCheckOptions{
 				Distance:       tt.fields.Distance,
 				ExclusionDicts: tt.fields.ExclusionDicts,
 				InclusionDicts: tt.fields.InclusionDicts,
 			}
-			if got := s.Serialize(); !reflect.DeepEqual(got, tt.want) {
+			if got := s.serialize(); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("serialize() = %v, want %v", got, tt.want)
 			}
 		})
