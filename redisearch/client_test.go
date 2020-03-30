@@ -91,12 +91,15 @@ func TestClient_Get(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	doc := NewDocument("doc1", 1.0)
-	doc2 := NewDocument("doc2", 1.0)
-	doc.Set("foo", "Hello world")
-
-	err := c.IndexOptions(DefaultIndexingOptions, doc)
-	err = c.IndexOptions(DefaultIndexingOptions, doc2)
+	docs := make([]Document, 10)
+	docPointers := make([]*Document, 10)
+	docIds := make([]string, 10)
+	for i := 0; i < 10; i++ {
+		docIds[i] = fmt.Sprintf("doc%d", i)
+		docs[i] = NewDocument(docIds[i], 1).Set("foo", "Hello world")
+		docPointers[i] = &docs[i]
+	}
+	err := c.Index(docs...)
 	assert.Nil(t, err)
 
 	type fields struct {
@@ -114,8 +117,8 @@ func TestClient_Get(t *testing.T) {
 		wantErr bool
 	}{
 		{"dont-exist", fields{pool: c.pool, name: c.name}, args{"dont-exist"}, nil, false},
-		{"doc1", fields{pool: c.pool, name: c.name}, args{"doc1"}, &doc, false},
-		{"doc2", fields{pool: c.pool, name: c.name}, args{"doc2"}, &doc2, false},
+		{"doc1", fields{pool: c.pool, name: c.name}, args{"doc1"}, &docs[1], false},
+		{"doc2", fields{pool: c.pool, name: c.name}, args{"doc2"}, &docs[2], false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
