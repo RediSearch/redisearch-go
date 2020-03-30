@@ -1,7 +1,9 @@
 package redisearch
 
 import (
+	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -52,6 +54,55 @@ func EscapeTextFileString(value string) (string) {
 		value = strings.Replace(value, string(char), ("\\"+string(char)), -1 )
 	}
 	return value
+}
+
+// convert the result from a redis query to a proper Document object
+func loadDocument(arr []interface{}, idIdx, scoreIdx, payloadIdx, fieldsIdx int) (Document, error) {
+
+	var score float64 = 1
+	var err error
+	if scoreIdx > 0 {
+		if score, err = strconv.ParseFloat(string(arr[idIdx+scoreIdx].([]byte)), 64); err != nil {
+			return Document{}, fmt.Errorf("Could not parse score: %s", err)
+		}
+	}
+
+	doc := NewDocument(string(arr[idIdx].([]byte)), float32(score))
+
+	if payloadIdx > 0 {
+		doc.Payload, _ = arr[idIdx+payloadIdx].([]byte)
+	}
+
+	if fieldsIdx > 0 {
+		lst := arr[idIdx+fieldsIdx].([]interface{})
+		doc.loadFields(lst)
+	}
+
+	return doc, nil
+}
+
+
+// SetPayload Sets the document payload
+func (d *Document) loadFields(lst []interface{}) *Document{
+	for i := 0; i < len(lst); i += 2 {
+		var prop string
+		switch lst[i].(type) {
+		case []byte:
+			prop = string(lst[i].([]byte))
+		default:
+			prop = lst[i].(string)
+		}
+
+		var val interface{}
+		switch v := lst[i+1].(type) {
+		case []byte:
+			val = string(v)
+		default:
+			val = v
+		}
+		*d = d.Set(prop,val)
+	}
+	return d
 }
 
 // DocumentList is used to sort documents by descending score

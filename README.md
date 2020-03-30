@@ -89,8 +89,8 @@ func ExampleClient() {
 | [FT.CURSOR](https://oss.redislabs.com/redisearch/Aggregations.html#cursor_api) |   [Aggregate](https://godoc.org/github.com/RediSearch/redisearch-go/redisearch#Client.Aggregate) + (*WithCursor option set to True)         |
 | [FT.EXPLAIN](https://oss.redislabs.com/redisearch/Commands.html#ftexplain) |   [Explain](https://godoc.org/github.com/RediSearch/redisearch-go/redisearch#Client.Explain)        |
 | [FT.DEL](https://oss.redislabs.com/redisearch/Commands.html#ftdel) |   [Delete](https://godoc.org/github.com/RediSearch/redisearch-go/redisearch#Client.Delete)        |
-| [FT.GET](https://oss.redislabs.com/redisearch/Commands.html#ftget) |    N/A |
-| [FT.MGET](https://oss.redislabs.com/redisearch/Commands.html#ftmget) |    N/A |
+| [FT.GET](https://oss.redislabs.com/redisearch/Commands.html#ftget) |    [Get](https://godoc.org/github.com/RediSearch/redisearch-go/redisearch#Client.Get) |
+| [FT.MGET](https://oss.redislabs.com/redisearch/Commands.html#ftmget) |    [MultiGet](https://godoc.org/github.com/RediSearch/redisearch-go/redisearch#Client.Multi) |
 | [FT.DROP](https://oss.redislabs.com/redisearch/Commands.html#ftdrop) |   [Drop](https://godoc.org/github.com/RediSearch/redisearch-go/redisearch#Client.Drop)        |
 | [FT.TAGVALS](https://oss.redislabs.com/redisearch/Commands.html#fttagvals) |    N/A |
 | [FT.SUGADD](https://oss.redislabs.com/redisearch/Commands.html#ftsugadd) |    [AddTerms](https://godoc.org/github.com/RediSearch/redisearch-go/redisearch#Autocompleter.AddTerms) |

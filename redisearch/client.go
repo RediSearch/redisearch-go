@@ -2,7 +2,6 @@ package redisearch
 
 import (
 	"errors"
-	"fmt"
 	"reflect"
 	"strconv"
 	"strings"
@@ -51,48 +50,6 @@ func (i *Client) CreateIndex(s *Schema) (err error) {
 	defer conn.Close()
 	_, err = conn.Do("FT.CREATE", args...)
 	return err
-}
-
-// convert the result from a redis query to a proper Document object
-func loadDocument(arr []interface{}, idIdx, scoreIdx, payloadIdx, fieldsIdx int) (Document, error) {
-
-	var score float64 = 1
-	var err error
-	if scoreIdx > 0 {
-		if score, err = strconv.ParseFloat(string(arr[idIdx+scoreIdx].([]byte)), 64); err != nil {
-			return Document{}, fmt.Errorf("Could not parse score: %s", err)
-		}
-	}
-
-	doc := NewDocument(string(arr[idIdx].([]byte)), float32(score))
-
-	if payloadIdx > 0 {
-		doc.Payload, _ = arr[idIdx+payloadIdx].([]byte)
-	}
-
-	if fieldsIdx > 0 {
-		lst := arr[idIdx+fieldsIdx].([]interface{})
-		for i := 0; i < len(lst); i += 2 {
-			var prop string
-			switch lst[i].(type) {
-			case []byte:
-				prop = string(lst[i].([]byte))
-			default:
-				prop = lst[i].(string)
-			}
-
-			var val interface{}
-			switch v := lst[i+1].(type) {
-			case []byte:
-				val = string(v)
-			default:
-				val = v
-			}
-			doc = doc.Set(prop, val)
-		}
-	}
-
-	return doc, nil
 }
 
 // Index indexes a list of documents with the default options
@@ -234,6 +191,72 @@ func (i *Client) Aggregate(q *AggregateQuery) (aggregateReply [][]string, total 
 		}
 	}
 
+	return
+}
+
+
+// Get - Returns the full contents of a document
+func (i *Client) Get(docId string) (doc* Document, err error) {
+	doc = nil
+	conn := i.pool.Get()
+	defer conn.Close()
+	var reply interface{}
+	args := redis.Args{i.name, docId}
+	reply, err = conn.Do("FT.GET", args...)
+	if reply != nil {
+		var array_reply []interface{}
+		array_reply, err = redis.Values(reply,err)
+		if err != nil {
+			return
+		}
+		if len(array_reply) > 0 {
+			document := NewDocument(docId,1)
+			document.loadFields(array_reply)
+			doc = &document
+		}
+	}
+	return
+}
+
+
+// MultiGet - Returns the full contents of multiple documents.
+// Returns an array with exactly the same number of elements as the number of keys sent to the command.
+// Each element in it is either an Document or nil if it was not found.
+func (i *Client) MultiGet(documentIds []string) (docs []*Document, err error) {
+	docs = make([]*Document,len(documentIds))
+	conn := i.pool.Get()
+	defer conn.Close()
+	var reply interface{}
+	args := redis.Args{i.name}.AddFlat(documentIds)
+	reply, err = conn.Do("FT.MGET", args...)
+	if reply != nil {
+		var array_reply []interface{}
+		array_reply, err = redis.Values(reply,err)
+		if err != nil {
+			return
+		}
+		for i := 0; i < len(array_reply); i++ {
+
+			if array_reply[i] != nil {
+				var innerArray []interface{}
+				innerArray, err = redis.Values(array_reply[i], nil)
+				if err != nil {
+					return
+				}
+				if len(array_reply) > 0 {
+					document := NewDocument(documentIds[i],1)
+					document.loadFields(innerArray)
+					docs[i] = &document
+				}
+			} else{
+				docs[i] = nil
+			}
+
+		}
+
+
+
+	}
 	return
 }
 
