@@ -101,8 +101,8 @@ func ExampleClient() {
 | [FT.SYNUPDATE](https://oss.redislabs.com/redisearch/Commands.html#ftsynupdate) |    N/A |
 | [FT.SYNDUMP](https://oss.redislabs.com/redisearch/Commands.html#ftsyndump) |    N/A |
 | [FT.SPELLCHECK](https://oss.redislabs.com/redisearch/Commands.html#ftspellcheck) |  [SpellCheck](https://godoc.org/github.com/RediSearch/redisearch-go/redisearch#Client.SpellCheck)        |
-| [FT.DICTADD](https://oss.redislabs.com/redisearch/Commands.html#ftdictadd) |    N/A |
-| [FT.DICTDEL](https://oss.redislabs.com/redisearch/Commands.html#ftdictdel) |    N/A |
-| [FT.DICTDUMP](https://oss.redislabs.com/redisearch/Commands.html#ftdictdump) |    N/A |
+| [FT.DICTADD](https://oss.redislabs.com/redisearch/Commands.html#ftdictadd) |    [DictAdd](https://godoc.org/github.com/RediSearch/redisearch-go/redisearch#Client.DictAdd)  |
+| [FT.DICTDEL](https://oss.redislabs.com/redisearch/Commands.html#ftdictdel) |    [DictDel](https://godoc.org/github.com/RediSearch/redisearch-go/redisearch#Client.DictDel)  |
+| [FT.DICTDUMP](https://oss.redislabs.com/redisearch/Commands.html#ftdictdump) |    [DictDump](https://godoc.org/github.com/RediSearch/redisearch-go/redisearch#Client.DictDump)  |
 | [FT.CONFIG](https://oss.redislabs.com/redisearch/Commands.html#ftconfig) |    N/A |
 

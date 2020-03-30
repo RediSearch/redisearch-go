@@ -71,7 +71,7 @@ func AddValues(c *redisearch.Client) {
 	}
 
 }
-func init() {
+func Init() {
 	/* load test data */
 	c := createClient("docs-games-idx1")
 
@@ -88,7 +88,7 @@ func init() {
 	AddValues(c)
 }
 func TestAggregateGroupBy(t *testing.T) {
-
+	Init()
 	c := createClient("docs-games-idx1")
 
 	q1 := redisearch.NewAggregateQuery().
@@ -103,7 +103,7 @@ func TestAggregateGroupBy(t *testing.T) {
 }
 
 func TestAggregateMinMax(t *testing.T) {
-
+	Init()
 	c := createClient("docs-games-idx1")
 
 	q1 := redisearch.NewAggregateQuery().SetQuery(redisearch.NewQuery("sony")).
@@ -134,7 +134,7 @@ func TestAggregateMinMax(t *testing.T) {
 }
 
 func TestAggregateCountDistinct(t *testing.T) {
-
+	Init()
 	c := createClient("docs-games-idx1")
 
 	q1 := redisearch.NewAggregateQuery().
@@ -149,7 +149,7 @@ func TestAggregateCountDistinct(t *testing.T) {
 }
 
 func TestAggregateFilter(t *testing.T) {
-
+	Init()
 	c := createClient("docs-games-idx1")
 
 	q1 := redisearch.NewAggregateQuery().

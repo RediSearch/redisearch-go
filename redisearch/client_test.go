@@ -202,3 +202,142 @@ func TestClient_MultiGet(t *testing.T) {
 		})
 	}
 }
+
+func TestClient_DictAdd(t *testing.T) {
+	c := createClient("test-get")
+	_, err := c.pool.Get().Do("FLUSHALL")
+	assert.Nil(t, err)
+
+	type fields struct {
+		pool ConnPool
+		name string
+	}
+	type args struct {
+		dictionaryName string
+		terms          []string
+	}
+	tests := []struct {
+		name         string
+		fields       fields
+		args         args
+		wantNewTerms int
+		wantErr      bool
+	}{
+		{"empty-error", fields{pool: c.pool, name: c.name}, args{"dict1", []string{},}, 0, true},
+		{"1-term", fields{pool: c.pool, name: c.name}, args{"dict1", []string{"term1"},}, 1, false},
+		{"2nd-time-term", fields{pool: c.pool, name: c.name}, args{"dict1", []string{"term1"},}, 0, false},
+		{"multi-term", fields{pool: c.pool, name: c.name}, args{"dict1", []string{"t1", "t2", "t3", "t4", "t5"},}, 5, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			i := &Client{
+				pool: tt.fields.pool,
+				name: tt.fields.name,
+			}
+			gotNewTerms, err := i.DictAdd(tt.args.dictionaryName, tt.args.terms)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("DictAdd() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if gotNewTerms != tt.wantNewTerms {
+				t.Errorf("DictAdd() gotNewTerms = %v, want %v", gotNewTerms, tt.wantNewTerms)
+			}
+		})
+	}
+}
+
+func TestClient_DictDel(t *testing.T) {
+
+	c := createClient("test-get")
+	_, err := c.pool.Get().Do("FLUSHALL")
+	assert.Nil(t, err)
+
+	terms := make([]string, 10)
+	for i := 0; i < 10; i++ {
+		terms[i] = fmt.Sprintf("term%d", i)
+	}
+
+	c.DictAdd("dict1", terms)
+
+	type fields struct {
+		pool ConnPool
+		name string
+	}
+	type args struct {
+		dictionaryName string
+		terms          []string
+	}
+	tests := []struct {
+		name             string
+		fields           fields
+		args             args
+		wantDeletedTerms int
+		wantErr          bool
+	}{
+		{"empty-error", fields{pool: c.pool, name: c.name}, args{"dict1", []string{},}, 0, true},
+		{"1-term", fields{pool: c.pool, name: c.name}, args{"dict1", []string{"term1"},}, 1, false},
+		{"2nd-time-term", fields{pool: c.pool, name: c.name}, args{"dict1", []string{"term1"},}, 0, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			i := &Client{
+				pool: tt.fields.pool,
+				name: tt.fields.name,
+			}
+			gotDeletedTerms, err := i.DictDel(tt.args.dictionaryName, tt.args.terms)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("DictDel() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if gotDeletedTerms != tt.wantDeletedTerms {
+				t.Errorf("DictDel() gotDeletedTerms = %v, want %v", gotDeletedTerms, tt.wantDeletedTerms)
+			}
+		})
+	}
+}
+
+func TestClient_DictDump(t *testing.T) {
+	c := createClient("test-get")
+	_, err := c.pool.Get().Do("FLUSHALL")
+	assert.Nil(t, err)
+
+	terms1 := make([]string, 10)
+	for i := 0; i < 10; i++ {
+		terms1[i] = fmt.Sprintf("term%d", i)
+	}
+	c.DictAdd("dict1", terms1)
+
+	type fields struct {
+		pool ConnPool
+		name string
+	}
+	type args struct {
+		dictionaryName string
+	}
+	tests := []struct {
+		name      string
+		fields    fields
+		args      args
+		wantTerms []string
+		wantErr   bool
+	}{
+		{"empty-error", fields{pool: c.pool, name: c.name}, args{"dontexist"}, []string{}, true},
+		{"dict1", fields{pool: c.pool, name: c.name}, args{"dict1"}, terms1, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			i := &Client{
+				pool: tt.fields.pool,
+				name: tt.fields.name,
+			}
+			gotTerms, err := i.DictDump(tt.args.dictionaryName)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("DictDump() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(gotTerms, tt.wantTerms) && !tt.wantErr {
+				t.Errorf("DictDump() gotTerms = %v, want %v", gotTerms, tt.wantTerms)
+			}
+		})
+	}
+}

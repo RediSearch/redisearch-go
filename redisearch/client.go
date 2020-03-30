@@ -108,6 +108,38 @@ func (i *Client) Search(q *Query) (docs []Document, total int, err error) {
 	return
 }
 
+// Adds terms to a dictionary.
+func (i *Client) DictAdd(dictionaryName string,  terms []string) (newTerms int, err error) {
+	conn := i.pool.Get()
+	defer conn.Close()
+	newTerms = 0
+	args := redis.Args{dictionaryName}.AddFlat(terms)
+	newTerms, err = redis.Int(conn.Do("FT.DICTADD", args...))
+	return
+}
+
+
+// Deletes terms from a dictionary
+func (i *Client) DictDel(dictionaryName string,  terms []string) (deletedTerms int, err error) {
+	conn := i.pool.Get()
+	defer conn.Close()
+	deletedTerms = 0
+	args := redis.Args{dictionaryName}.AddFlat(terms)
+	deletedTerms, err = redis.Int(conn.Do("FT.DICTDEL", args...))
+	return
+}
+
+
+// Dumps all terms in the given dictionary.
+func (i *Client) DictDump(dictionaryName string) (terms []string,err error) {
+	conn := i.pool.Get()
+	defer conn.Close()
+	args := redis.Args{dictionaryName}
+	terms, err = redis.Strings(conn.Do("FT.DICTDUMP", args...))
+	return
+}
+
+
 // SpellCheck performs spelling correction on a query, returning suggestions for misspelled terms,
 // the total number of results, or an error if something went wrong
 func (i *Client) SpellCheck(q *Query, s *SpellCheckOptions) (suggs []MisspelledTerm, total int, err error) {
