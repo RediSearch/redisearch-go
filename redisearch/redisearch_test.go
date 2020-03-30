@@ -20,9 +20,6 @@ func createClient(indexName string) *redisearch.Client {
 	return redisearch.NewClient(host, indexName)
 }
 
-func createAutocompleter(indexName string) *redisearch.Autocompleter {
-	return redisearch.NewAutocompleter(indexName)
-}
 
 func TestClient(t *testing.T) {
 
@@ -304,42 +301,6 @@ func TestTags(t *testing.T) {
 	assertNumResults("@tags:{hello world} @tags2:{foo\\ bar\\;bar}", 1)
 	assertNumResults("hello world", 1)
 
-}
-
-func TestSuggest(t *testing.T) {
-	c := createClient("testung")
-	a := createAutocompleter("testing")
-
-	// Add Terms to the Autocompleter
-	terms := make([]redisearch.Suggestion, 10)
-	for i := 0; i < 10; i++ {
-		terms[i] = redisearch.Suggestion{Term: fmt.Sprintf("foo %d", i),
-			Score: 1.0, Payload: fmt.Sprintf("bar %d", i)}
-	}
-	err := c.AutocompleterAddTerms(a,terms...)
-	assert.Nil(t, err)
-	suglen, err := c.AutocompleterLength(a)
-	assert.Nil(t, err)
-	assert.Equal(t, int64(10), suglen)
-	// Retrieve Terms From Autocompleter - Without Payloads / Scores
-	suggestions, err := c.AutocompleterSuggestOpts(a,"f", redisearch.SuggestOptions{Num: 10})
-	assert.Nil(t, err)
-	assert.Equal(t, 10, len(suggestions))
-	for _, suggestion := range suggestions {
-		assert.Contains(t, suggestion.Term, "foo")
-		assert.Equal(t, suggestion.Payload, "")
-		assert.Zero(t, suggestion.Score)
-	}
-
-	// Retrieve Terms From Autocompleter - With Payloads & Scores
-	suggestions, err = c.AutocompleterSuggestOpts(a,"f", redisearch.SuggestOptions{Num: 10, WithScores: true, WithPayloads: true})
-	assert.Nil(t, err)
-	assert.Equal(t, 10, len(suggestions))
-	for _, suggestion := range suggestions {
-		assert.Contains(t, suggestion.Term, "foo")
-		assert.Contains(t, suggestion.Payload, "bar")
-		assert.NotZero(t, suggestion.Score)
-	}
 }
 
 func TestDelete(t *testing.T) {
