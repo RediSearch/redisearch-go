@@ -3,11 +3,11 @@ package redisearch
 import (
 	"errors"
 	"fmt"
+	"github.com/gomodule/redigo/redis"
+	"log"
 	"reflect"
 	"strconv"
 	"strings"
-	"log"
-	"github.com/gomodule/redigo/redis"
 )
 
 // Options are flags passed to the the abstract Index call, which receives them as interface{}, allowing
@@ -399,7 +399,7 @@ func (i *Client) Aggregate(q *AggregateQuery) (aggregateReply [][]string, total 
 	hasCursor := q.WithCursor
 	validCursor := q.CursorHasResults()
 	var res []interface{} = nil
-	if ! validCursor {
+	if !validCursor {
 		args := redis.Args{i.name}
 		args = append(args, q.Serialize()...)
 		res, err = redis.Values(conn.Do("FT.AGGREGATE", args...))
@@ -411,9 +411,11 @@ func (i *Client) Aggregate(q *AggregateQuery) (aggregateReply [][]string, total 
 		return
 	}
 	// has no cursor
-	if ! hasCursor {
+	if !hasCursor {
 		total = len(res) - 1
-		if total > 1 {
+		// there is a case when only 1 data from aggregate, it returns nothing
+		// then set total > 0 so the data will be return
+		if total > 0 {
 			aggregateReply = ProcessAggResponse(res[1:])
 		}
 		// has cursor
@@ -427,7 +429,9 @@ func (i *Client) Aggregate(q *AggregateQuery) (aggregateReply [][]string, total 
 			return aggregateReply, total, err
 		}
 		total = len(partialResults) - 1
-		if total > 1 {
+		// there is a case when only 1 data from aggregate, it returns nothing
+		// then set total > 0 so the data will be return
+		if total > 0 {
 			aggregateReply = ProcessAggResponse(partialResults[1:])
 		}
 	}
