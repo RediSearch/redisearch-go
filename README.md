@@ -93,10 +93,10 @@ func ExampleClient() {
 | [FT.MGET](https://oss.redislabs.com/redisearch/Commands.html#ftmget) |    N/A |
 | [FT.DROP](https://oss.redislabs.com/redisearch/Commands.html#ftdrop) |   [Drop](https://godoc.org/github.com/RediSearch/redisearch-go/redisearch#Client.Drop)        |
 | [FT.TAGVALS](https://oss.redislabs.com/redisearch/Commands.html#fttagvals) |    N/A |
-| [FT.SUGADD](https://oss.redislabs.com/redisearch/Commands.html#ftsugadd) |    N/A |
-| [FT.SUGGET](https://oss.redislabs.com/redisearch/Commands.html#ftsugget) |    N/A |
-| [FT.SUGDEL](https://oss.redislabs.com/redisearch/Commands.html#ftsugdel) |    N/A |
-| [FT.SUGLEN](https://oss.redislabs.com/redisearch/Commands.html#ftsuglen) |    N/A |
+| [FT.SUGADD](https://oss.redislabs.com/redisearch/Commands.html#ftsugadd) |    [AddTerms](https://godoc.org/github.com/RediSearch/redisearch-go/redisearch#Autocompleter.AddTerms) |
+| [FT.SUGGET](https://oss.redislabs.com/redisearch/Commands.html#ftsugget) |    [SuggestOpts](https://godoc.org/github.com/RediSearch/redisearch-go/redisearch#Autocompleter.SuggestOpts)  |
+| [FT.SUGDEL](https://oss.redislabs.com/redisearch/Commands.html#ftsugdel) |    [DeleteTerms](https://godoc.org/github.com/RediSearch/redisearch-go/redisearch#Autocompleter.DeleteTerms)  |
+| [FT.SUGLEN](https://oss.redislabs.com/redisearch/Commands.html#ftsuglen) |    [Autocompleter.Length](https://godoc.org/github.com/RediSearch/redisearch-go/redisearch#Autocompleter.Length)  |
 | [FT.SYNADD](https://oss.redislabs.com/redisearch/Commands.html#ftsynadd) |    N/A |
 | [FT.SYNUPDATE](https://oss.redislabs.com/redisearch/Commands.html#ftsynupdate) |    N/A |
 | [FT.SYNDUMP](https://oss.redislabs.com/redisearch/Commands.html#ftsyndump) |    N/A |
