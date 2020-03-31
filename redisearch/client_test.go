@@ -95,7 +95,7 @@ func TestClient_Get(t *testing.T) {
 	docPointers := make([]*Document, 10)
 	docIds := make([]string, 10)
 	for i := 0; i < 10; i++ {
-		docIds[i] = fmt.Sprintf("doc%d", i)
+		docIds[i] = fmt.Sprintf("doc-get-%d", i)
 		docs[i] = NewDocument(docIds[i], 1).Set("foo", "Hello world")
 		docPointers[i] = &docs[i]
 	}
@@ -117,8 +117,8 @@ func TestClient_Get(t *testing.T) {
 		wantErr bool
 	}{
 		{"dont-exist", fields{pool: c.pool, name: c.name}, args{"dont-exist"}, nil, false},
-		{"doc1", fields{pool: c.pool, name: c.name}, args{"doc1"}, &docs[1], false},
-		{"doc2", fields{pool: c.pool, name: c.name}, args{"doc2"}, &docs[2], false},
+		{"doc-get-1", fields{pool: c.pool, name: c.name}, args{"doc-get-1"}, &docs[1], false},
+		{"doc-get-2", fields{pool: c.pool, name: c.name}, args{"doc-get-2"}, &docs[2], false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -157,7 +157,7 @@ func TestClient_MultiGet(t *testing.T) {
 	docPointers := make([]*Document, 10)
 	docIds := make([]string, 10)
 	for i := 0; i < 10; i++ {
-		docIds[i] = fmt.Sprintf("doc%d", i)
+		docIds[i] = fmt.Sprintf("doc-get-%d", i)
 		docs[i] = NewDocument(docIds[i], 1).Set("foo", "Hello world")
 		docPointers[i] = &docs[i]
 	}
@@ -179,10 +179,10 @@ func TestClient_MultiGet(t *testing.T) {
 		wantErr  bool
 	}{
 		{"dont-exist", fields{pool: c.pool, name: c.name}, args{[]string{"dont-exist"}}, []*Document{nil}, false},
-		{"doc2", fields{pool: c.pool, name: c.name}, args{[]string{"doc3"}}, []*Document{&docs[3]}, false},
-		{"doc1", fields{pool: c.pool, name: c.name}, args{[]string{"doc1"}}, []*Document{&docs[1]}, false},
-		{"doc1-and-other-dont-exist", fields{pool: c.pool, name: c.name}, args{[]string{"doc1", "dontexist"}}, []*Document{&docs[1], nil}, false},
-		{"dont-exist-and-doc1", fields{pool: c.pool, name: c.name}, args{[]string{"dontexist", "doc1"}}, []*Document{nil, &docs[1]}, false},
+		{"doc2", fields{pool: c.pool, name: c.name}, args{[]string{"doc-get-3"}}, []*Document{&docs[3]}, false},
+		{"doc1", fields{pool: c.pool, name: c.name}, args{[]string{"doc-get-1"}}, []*Document{&docs[1]}, false},
+		{"doc1-and-other-dont-exist", fields{pool: c.pool, name: c.name}, args{[]string{"doc-get-1", "dontexist"}}, []*Document{&docs[1], nil}, false},
+		{"dont-exist-and-doc1", fields{pool: c.pool, name: c.name}, args{[]string{"dontexist", "doc-get-1"}}, []*Document{nil, &docs[1]}, false},
 		{"alldocs", fields{pool: c.pool, name: c.name}, args{docIds}, docPointers, false},
 	}
 	for _, tt := range tests {
@@ -337,6 +337,150 @@ func TestClient_DictDump(t *testing.T) {
 			}
 			if !reflect.DeepEqual(gotTerms, tt.wantTerms) && !tt.wantErr {
 				t.Errorf("DictDump() gotTerms = %v, want %v", gotTerms, tt.wantTerms)
+			}
+		})
+	}
+}
+
+func TestClient_AliasAdd(t *testing.T) {
+	c := createClient("testalias")
+	c1_unexistingIndex := createClient("testaliasadd-dontexist")
+
+	sc := NewSchema(DefaultOptions).
+		AddField(NewTextField("foo")).
+		AddField(NewTextField("bar"))
+	c.Drop()
+	assert.Nil(t, c.CreateIndex(sc))
+
+	docs := make([]Document, 100)
+	for i := 0; i < 100; i++ {
+		docs[i] = NewDocument(fmt.Sprintf("doc--alias-add-%d", i), 1).Set("foo", "hello world").Set("bar", "hello world foo bar baz")
+	}
+	err := c.Index(docs...)
+
+	assert.Nil(t, err)
+
+	type fields struct {
+		pool ConnPool
+		name string
+	}
+	type args struct {
+		name string
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		wantErr bool
+	}{
+		{"unexisting-index", fields{pool: c1_unexistingIndex.pool, name: c1_unexistingIndex.name}, args{"dont-exist"}, true},
+		{"alias-ok", fields{pool: c.pool, name: c.name}, args{"testalias"}, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			i := &Client{
+				pool: tt.fields.pool,
+				name: tt.fields.name,
+			}
+			if err := i.AliasAdd(tt.args.name); (err != nil) != tt.wantErr {
+				t.Errorf("AliasAdd() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestClient_AliasDel(t *testing.T) {
+	c := createClient("testaliasdel")
+	c1_unexistingIndex := createClient("testaliasdel-dontexist")
+
+	sc := NewSchema(DefaultOptions).
+		AddField(NewTextField("foo")).
+		AddField(NewTextField("bar"))
+	c.Drop()
+	err := c.CreateIndex(sc)
+	assert.Nil(t, err)
+
+	docs := make([]Document, 100)
+	for i := 0; i < 100; i++ {
+		docs[i] = NewDocument(fmt.Sprintf("doc-alias-del-%d", i), 1).Set("foo", "hello world").Set("bar", "hello world foo bar baz")
+	}
+	err = c.Index(docs...)
+
+	assert.Nil(t, err)
+	err = c.AliasAdd("aliasdel1")
+	assert.Nil(t, err)
+
+	type fields struct {
+		pool ConnPool
+		name string
+	}
+	type args struct {
+		name string
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		wantErr bool
+	}{
+		{"unexisting-index", fields{pool: c1_unexistingIndex.pool, name: c1_unexistingIndex.name}, args{"dont-exist"}, true},
+		{"aliasdel1", fields{pool: c.pool, name: c.name}, args{"aliasdel1"}, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			i := &Client{
+				pool: tt.fields.pool,
+				name: tt.fields.name,
+			}
+			if err := i.AliasDel(tt.args.name); (err != nil) != tt.wantErr {
+				t.Errorf("AliasDel() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestClient_AliasUpdate(t *testing.T) {
+	c := createClient("testaliasupdateindex")
+
+	sc := NewSchema(DefaultOptions).
+		AddField(NewTextField("foo")).
+		AddField(NewTextField("bar"))
+	c.Drop()
+	err := c.CreateIndex(sc)
+	assert.Nil(t, err)
+
+	docs := make([]Document, 100)
+	for i := 0; i < 100; i++ {
+		docs[i] = NewDocument(fmt.Sprintf("doc-alias-del-%d", i), 1).Set("foo", "hello world").Set("bar", "hello world foo bar baz")
+	}
+	err = c.Index(docs...)
+
+	assert.Nil(t, err)
+	err = c.AliasAdd("aliasupdate")
+	assert.Nil(t, err)
+	type fields struct {
+		pool ConnPool
+		name string
+	}
+	type args struct {
+		name string
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		wantErr bool
+	}{
+		{"aliasupdate", fields{pool: c.pool, name: c.name}, args{"aliasupdate"}, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			i := &Client{
+				pool: tt.fields.pool,
+				name: tt.fields.name,
+			}
+			if err := i.AliasUpdate(tt.args.name); (err != nil) != tt.wantErr {
+				t.Errorf("AliasUpdate() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}

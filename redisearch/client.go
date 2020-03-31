@@ -108,6 +108,34 @@ func (i *Client) Search(q *Query) (docs []Document, total int, err error) {
 	return
 }
 
+// Adds an alias to an index.
+func (i *Client) AliasAdd(name string) ( err error) {
+	conn := i.pool.Get()
+	defer conn.Close()
+	args := redis.Args{name}.Add(i.name)
+	_, err = redis.String(conn.Do("FT.ALIASADD", args...))
+	return
+}
+
+// Deletes an alias to an index.
+func (i *Client) AliasDel(name string) ( err error) {
+	conn := i.pool.Get()
+	defer conn.Close()
+	args := redis.Args{name}
+	_, err = redis.String(conn.Do("FT.ALIASDEL", args...))
+	return
+}
+
+// Deletes an alias to an index.
+func (i *Client) AliasUpdate(name string) ( err error) {
+	conn := i.pool.Get()
+	defer conn.Close()
+	args := redis.Args{name}.Add(i.name)
+	_, err = redis.String(conn.Do("FT.ALIASUPDATE", args...))
+	return
+}
+
+
 // Adds terms to a dictionary.
 func (i *Client) DictAdd(dictionaryName string,  terms []string) (newTerms int, err error) {
 	conn := i.pool.Get()
