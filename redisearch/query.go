@@ -38,13 +38,13 @@ type SortingKey struct {
 
 func NewSortingKeyDir(field string, ascending bool) *SortingKey {
 	return &SortingKey{
-		Field: field,
+		Field:     field,
 		Ascending: ascending,
 	}
 }
 
 func (s SortingKey) Serialize() redis.Args {
-	args := redis.Args{ s.Field }
+	args := redis.Args{s.Field}
 	if s.Ascending {
 		args = args.Add("ASC")
 	} else {
@@ -98,7 +98,7 @@ type Paging struct {
 func NewPaging(offset int, num int) *Paging {
 	return &Paging{
 		Offset: offset,
-		Num: num,
+		Num:    num,
 	}
 }
 
@@ -106,7 +106,8 @@ func (p Paging) serialize() redis.Args {
 	args := redis.Args{}
 	// only serialize something if it's different than the default
 	// The default is 0 10
-	if p.Offset != DefaultOffset || p.Num != DefaultNum {
+	// when either offset or num is default number, then need to set limit too
+	if !(p.Offset == DefaultOffset && p.Num == DefaultNum) {
 		args = args.Add("LIMIT", p.Offset, p.Num)
 	}
 	return args
@@ -166,7 +167,7 @@ func (q Query) serialize() redis.Args {
 	}
 
 	if q.SortBy != nil {
-		args = args.Add("SORTBY").AddFlat( q.SortBy.Serialize() )
+		args = args.Add("SORTBY").AddFlat(q.SortBy.Serialize())
 	}
 
 	if q.HighlightOpts != nil {
