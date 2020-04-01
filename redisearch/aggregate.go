@@ -123,8 +123,8 @@ type AggregateQuery struct {
 	Max           int
 	WithSchema    bool
 	Verbatim      bool
-	WithCursor bool
-	Cursor     *Cursor
+	WithCursor    bool
+	Cursor        *Cursor
 	// TODO: add load fields
 
 }
@@ -187,12 +187,12 @@ func (a *AggregateQuery) Limit(offset int, num int) *AggregateQuery {
 }
 
 //Load document fields from the document HASH objects (if they are not in the sortables)
-func (a *AggregateQuery) Load( Properties []string) *AggregateQuery {
+func (a *AggregateQuery) Load(Properties []string) *AggregateQuery {
 	nproperties := len(Properties)
 	if nproperties > 0 {
 		a.AggregatePlan = a.AggregatePlan.Add("LOAD", nproperties)
 		for _, property := range Properties {
-			a.AggregatePlan = a.AggregatePlan.Add(fmt.Sprintf( "@%s", property ))
+			a.AggregatePlan = a.AggregatePlan.Add(fmt.Sprintf("@%s", property))
 		}
 	}
 	return a
@@ -260,6 +260,7 @@ func (q AggregateQuery) Serialize() redis.Args {
 	return args
 }
 
+// Deprecated: Please use processAggReply() instead
 func ProcessAggResponse(res []interface{}) [][]string {
 	aggregateReply := make([][]string, len(res), len(res))
 	for i := 0; i < len(res); i++ {
@@ -271,6 +272,25 @@ func ProcessAggResponse(res []interface{}) [][]string {
 		}
 	}
 	return aggregateReply
+}
+
+func processAggReply(res []interface{}) (total int, aggregateReply [][]string, err error) {
+	aggregateReply = [][]string{}
+	total = 0
+	aggregate_results := len(res) - 1
+	if aggregate_results > 0 {
+		total = aggregate_results
+		aggregateReply = make([][]string, aggregate_results, aggregate_results)
+		for i := 0; i < aggregate_results; i++ {
+			if d, e := redis.Strings(res[i+1], nil); e == nil {
+				aggregateReply[i] = d
+			} else {
+				err = fmt.Errorf("Error parsing Aggregate Reply: %v on reply position %d", e, i)
+				aggregateReply[i] = nil
+			}
+		}
+	}
+	return
 }
 
 func ProcessAggResponseSS(res []interface{}) [][]string {
