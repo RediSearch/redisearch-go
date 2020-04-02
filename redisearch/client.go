@@ -2,10 +2,11 @@ package redisearch
 
 import (
 	"errors"
+	"log"
 	"reflect"
 	"strconv"
 	"strings"
-	"log"
+
 	"github.com/gomodule/redigo/redis"
 )
 
@@ -109,7 +110,7 @@ func (i *Client) Search(q *Query) (docs []Document, total int, err error) {
 }
 
 // Adds an alias to an index.
-func (i *Client) AliasAdd(name string) ( err error) {
+func (i *Client) AliasAdd(name string) (err error) {
 	conn := i.pool.Get()
 	defer conn.Close()
 	args := redis.Args{name}.Add(i.name)
@@ -118,7 +119,7 @@ func (i *Client) AliasAdd(name string) ( err error) {
 }
 
 // Deletes an alias to an index.
-func (i *Client) AliasDel(name string) ( err error) {
+func (i *Client) AliasDel(name string) (err error) {
 	conn := i.pool.Get()
 	defer conn.Close()
 	args := redis.Args{name}
@@ -127,7 +128,7 @@ func (i *Client) AliasDel(name string) ( err error) {
 }
 
 // Deletes an alias to an index.
-func (i *Client) AliasUpdate(name string) ( err error) {
+func (i *Client) AliasUpdate(name string) (err error) {
 	conn := i.pool.Get()
 	defer conn.Close()
 	args := redis.Args{name}.Add(i.name)
@@ -135,9 +136,8 @@ func (i *Client) AliasUpdate(name string) ( err error) {
 	return
 }
 
-
 // Adds terms to a dictionary.
-func (i *Client) DictAdd(dictionaryName string,  terms []string) (newTerms int, err error) {
+func (i *Client) DictAdd(dictionaryName string, terms []string) (newTerms int, err error) {
 	conn := i.pool.Get()
 	defer conn.Close()
 	newTerms = 0
@@ -146,9 +146,8 @@ func (i *Client) DictAdd(dictionaryName string,  terms []string) (newTerms int, 
 	return
 }
 
-
 // Deletes terms from a dictionary
-func (i *Client) DictDel(dictionaryName string,  terms []string) (deletedTerms int, err error) {
+func (i *Client) DictDel(dictionaryName string, terms []string) (deletedTerms int, err error) {
 	conn := i.pool.Get()
 	defer conn.Close()
 	deletedTerms = 0
@@ -157,16 +156,14 @@ func (i *Client) DictDel(dictionaryName string,  terms []string) (deletedTerms i
 	return
 }
 
-
 // Dumps all terms in the given dictionary.
-func (i *Client) DictDump(dictionaryName string) (terms []string,err error) {
+func (i *Client) DictDump(dictionaryName string) (terms []string, err error) {
 	conn := i.pool.Get()
 	defer conn.Close()
 	args := redis.Args{dictionaryName}
 	terms, err = redis.Strings(conn.Do("FT.DICTDUMP", args...))
 	return
 }
-
 
 // SpellCheck performs spelling correction on a query, returning suggestions for misspelled terms,
 // the total number of results, or an error if something went wrong
@@ -218,7 +215,7 @@ func (i *Client) Aggregate(q *AggregateQuery) (aggregateReply [][]string, total 
 	hasCursor := q.WithCursor
 	validCursor := q.CursorHasResults()
 	var res []interface{} = nil
-	if ! validCursor {
+	if !validCursor {
 		args := redis.Args{i.name}
 		args = append(args, q.Serialize()...)
 		res, err = redis.Values(conn.Do("FT.AGGREGATE", args...))
@@ -230,9 +227,11 @@ func (i *Client) Aggregate(q *AggregateQuery) (aggregateReply [][]string, total 
 		return
 	}
 	// has no cursor
-	if ! hasCursor {
+	if !hasCursor {
 		total = len(res) - 1
-		if total > 1 {
+		// there is a case when only 1 data from aggregate, it returns nothing
+		// then set total > 0 so the data will be return
+		if total > 0 {
 			aggregateReply = ProcessAggResponse(res[1:])
 		}
 		// has cursor
@@ -246,7 +245,9 @@ func (i *Client) Aggregate(q *AggregateQuery) (aggregateReply [][]string, total 
 			return aggregateReply, total, err
 		}
 		total = len(partialResults) - 1
-		if total > 1 {
+		// there is a case when only 1 data from aggregate, it returns nothing
+		// then set total > 0 so the data will be return
+		if total > 0 {
 			aggregateReply = ProcessAggResponse(partialResults[1:])
 		}
 	}
@@ -254,9 +255,8 @@ func (i *Client) Aggregate(q *AggregateQuery) (aggregateReply [][]string, total 
 	return
 }
 
-
 // Get - Returns the full contents of a document
-func (i *Client) Get(docId string) (doc* Document, err error) {
+func (i *Client) Get(docId string) (doc *Document, err error) {
 	doc = nil
 	conn := i.pool.Get()
 	defer conn.Close()
@@ -265,12 +265,12 @@ func (i *Client) Get(docId string) (doc* Document, err error) {
 	reply, err = conn.Do("FT.GET", args...)
 	if reply != nil {
 		var array_reply []interface{}
-		array_reply, err = redis.Values(reply,err)
+		array_reply, err = redis.Values(reply, err)
 		if err != nil {
 			return
 		}
 		if len(array_reply) > 0 {
-			document := NewDocument(docId,1)
+			document := NewDocument(docId, 1)
 			document.loadFields(array_reply)
 			doc = &document
 		}
@@ -278,12 +278,11 @@ func (i *Client) Get(docId string) (doc* Document, err error) {
 	return
 }
 
-
 // MultiGet - Returns the full contents of multiple documents.
 // Returns an array with exactly the same number of elements as the number of keys sent to the command.
 // Each element in it is either an Document or nil if it was not found.
 func (i *Client) MultiGet(documentIds []string) (docs []*Document, err error) {
-	docs = make([]*Document,len(documentIds))
+	docs = make([]*Document, len(documentIds))
 	conn := i.pool.Get()
 	defer conn.Close()
 	var reply interface{}
@@ -291,7 +290,7 @@ func (i *Client) MultiGet(documentIds []string) (docs []*Document, err error) {
 	reply, err = conn.Do("FT.MGET", args...)
 	if reply != nil {
 		var array_reply []interface{}
-		array_reply, err = redis.Values(reply,err)
+		array_reply, err = redis.Values(reply, err)
 		if err != nil {
 			return
 		}
@@ -304,17 +303,15 @@ func (i *Client) MultiGet(documentIds []string) (docs []*Document, err error) {
 					return
 				}
 				if len(array_reply) > 0 {
-					document := NewDocument(documentIds[i],1)
+					document := NewDocument(documentIds[i], 1)
 					document.loadFields(innerArray)
 					docs[i] = &document
 				}
-			} else{
+			} else {
 				docs[i] = nil
 			}
 
 		}
-
-
 
 	}
 	return
