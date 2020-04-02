@@ -7,15 +7,28 @@ type FieldType int
 // for implementation specific options
 type Options struct {
 
-	// If set, we will not save the documents contents, just index them, for fetching ids only
+	// If set, we will not save the documents contents, just index them, for fetching ids only.
 	NoSave bool
 
+	// If set, we avoid saving field bits for each term.
+	// This saves memory, but does not allow filtering by specific fields.
+	// This is an option that is applied and index level.
 	NoFieldFlags bool
 
+	// If set, we avoid saving the term frequencies in the index.
+	// This saves memory but does not allow sorting based on the frequencies of a given term within the document.
+	// This is an option that is applied and index level.
 	NoFrequencies bool
 
+	// If set, , we avoid saving the term offsets for documents.
+	// This saves memory but does not allow exact searches or highlighting. Implies NOHL
+	// This is an option that is applied and index level.
 	NoOffsetVectors bool
 
+	// Set the index with a custom stop-words list, to be ignored during indexing and search time
+	// This is an option that is applied and index level.
+	// If the list is nil the default stop-words list is used.
+	// See https://oss.redislabs.com/redisearch/Stopwords.html#default_stop-word_list
 	Stopwords []string
 }
 
