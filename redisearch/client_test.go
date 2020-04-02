@@ -9,15 +9,6 @@ import (
 	"testing"
 )
 
-func createClient(indexName string) *Client {
-	value, exists := os.LookupEnv("REDISEARCH_TEST_HOST")
-	host := "localhost:6379"
-	if exists && value != "" {
-		host = value
-	}
-	return NewClient(host, indexName)
-}
-
 func init() {
 	/* load test data */
 	value, exists := os.LookupEnv("REDISEARCH_RDB_LOADED")
