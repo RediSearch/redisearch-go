@@ -1,11 +1,10 @@
-package redisearch_test
+package redisearch
 
 import (
 	"bufio"
 	"compress/bzip2"
 	"encoding/json"
 	"fmt"
-	"github.com/RediSearch/redisearch-go/redisearch"
 	"github.com/gomodule/redigo/redis"
 	"github.com/stretchr/testify/assert"
 	"log"
@@ -16,6 +15,15 @@ import (
 	"strings"
 	"testing"
 )
+
+func createClient(indexName string) *Client {
+	value, exists := os.LookupEnv("REDISEARCH_TEST_HOST")
+	host := "localhost:6379"
+	if exists && value != "" {
+		host = value
+	}
+	return NewClient(host, indexName)
+}
 
 // Game struct which contains a Asin, a Description, a Title, a Price, and a list of categories
 // a type and a list of social links
@@ -30,7 +38,7 @@ type Game struct {
 	Categories  []string `json:"categories"`
 }
 
-func AddValues(c *redisearch.Client) {
+func AddValues(c *Client) {
 	// Open our jsonFile
 	bzipfile := "../tests/games.json.bz2"
 
@@ -47,7 +55,7 @@ func AddValues(c *redisearch.Client) {
 	d := bufio.NewReader(cr)
 	// create a scanner
 	scanner := bufio.NewScanner(d)
-	docs := make([]redisearch.Document, 0)
+	docs := make([]Document, 0)
 	docPos := 1
 	for scanner.Scan() {
 		// we initialize our Users array
@@ -57,7 +65,7 @@ func AddValues(c *redisearch.Client) {
 		if err != nil {
 			fmt.Println("error:", err)
 		}
-		docs = append(docs, redisearch.NewDocument(fmt.Sprintf("docs-games-%d", docPos), 1).
+		docs = append(docs, NewDocument(fmt.Sprintf("docs-games-%d", docPos), 1).
 			Set("title", game.Title).
 			Set("brand", game.Brand).
 			Set("description", game.Description).
@@ -66,7 +74,7 @@ func AddValues(c *redisearch.Client) {
 		docPos = docPos + 1
 	}
 
-	if err := c.IndexOptions(redisearch.DefaultIndexingOptions, docs...); err != nil {
+	if err := c.IndexOptions(DefaultIndexingOptions, docs...); err != nil {
 		log.Fatal(err)
 	}
 
@@ -75,12 +83,12 @@ func Init() {
 	/* load test data */
 	c := createClient("docs-games-idx1")
 
-	sc := redisearch.NewSchema(redisearch.DefaultOptions).
-		AddField(redisearch.NewTextFieldOptions("title", redisearch.TextFieldOptions{Sortable: true})).
-		AddField(redisearch.NewTextFieldOptions("brand", redisearch.TextFieldOptions{Sortable: true, NoStem: true})).
-		AddField(redisearch.NewTextField("description")).
-		AddField(redisearch.NewSortableNumericField("price")).
-		AddField(redisearch.NewTagField("categories"))
+	sc := NewSchema(DefaultOptions).
+		AddField(NewTextFieldOptions("title", TextFieldOptions{Sortable: true})).
+		AddField(NewTextFieldOptions("brand", TextFieldOptions{Sortable: true, NoStem: true})).
+		AddField(NewTextField("description")).
+		AddField(NewSortableNumericField("price")).
+		AddField(NewTagField("categories"))
 
 	c.Drop()
 	c.CreateIndex(sc)
@@ -91,10 +99,10 @@ func TestAggregateGroupBy(t *testing.T) {
 	Init()
 	c := createClient("docs-games-idx1")
 
-	q1 := redisearch.NewAggregateQuery().
-		GroupBy(*redisearch.NewGroupBy().AddFields("@brand").
-			Reduce(*redisearch.NewReducerAlias(redisearch.GroupByReducerCount, []string{}, "count"))).
-		SortBy([]redisearch.SortingKey{*redisearch.NewSortingKeyDir("@count", false)}).
+	q1 := NewAggregateQuery().
+		GroupBy(*NewGroupBy().AddFields("@brand").
+			Reduce(*NewReducerAlias(GroupByReducerCount, []string{}, "count"))).
+		SortBy([]SortingKey{*NewSortingKeyDir("@count", false)}).
 		Limit(0, 5)
 
 	_, count, err := c.Aggregate(q1)
@@ -106,24 +114,25 @@ func TestAggregateMinMax(t *testing.T) {
 	Init()
 	c := createClient("docs-games-idx1")
 
-	q1 := redisearch.NewAggregateQuery().SetQuery(redisearch.NewQuery("sony")).
-		GroupBy(*redisearch.NewGroupBy().AddFields("@brand").
-			Reduce(*redisearch.NewReducer(redisearch.GroupByReducerCount, []string{})).
-			Reduce(*redisearch.NewReducerAlias(redisearch.GroupByReducerMin, []string{"@price"}, "minPrice"))).
-		SortBy([]redisearch.SortingKey{*redisearch.NewSortingKeyDir("@minPrice", false)})
+	q1 := NewAggregateQuery().SetQuery(NewQuery("sony")).
+		GroupBy(*NewGroupBy().AddFields("@brand").
+			Reduce(*NewReducer(GroupByReducerCount, []string{})).
+			Reduce(*NewReducerAlias(GroupByReducerMin, []string{"@price"}, "minPrice"))).
+		SortBy([]SortingKey{*NewSortingKeyDir("@minPrice", false)})
 
 	res, _, err := c.Aggregate(q1)
 	assert.Nil(t, err)
 	row := res[0]
+	fmt.Println(row)
 	f, _ := strconv.ParseFloat(row[5], 64)
 	assert.GreaterOrEqual(t, f, 88.0)
 	assert.Less(t, f, 89.0)
 
-	q2 := redisearch.NewAggregateQuery().SetQuery(redisearch.NewQuery("sony")).
-		GroupBy(*redisearch.NewGroupBy().AddFields("@brand").
-			Reduce(*redisearch.NewReducer(redisearch.GroupByReducerCount, []string{})).
-			Reduce(*redisearch.NewReducerAlias(redisearch.GroupByReducerMax, []string{"@price"}, "maxPrice"))).
-		SortBy([]redisearch.SortingKey{*redisearch.NewSortingKeyDir("@maxPrice", false)})
+	q2 := NewAggregateQuery().SetQuery(NewQuery("sony")).
+		GroupBy(*NewGroupBy().AddFields("@brand").
+			Reduce(*NewReducer(GroupByReducerCount, []string{})).
+			Reduce(*NewReducerAlias(GroupByReducerMax, []string{"@price"}, "maxPrice"))).
+		SortBy([]SortingKey{*NewSortingKeyDir("@maxPrice", false)})
 
 	res, _, err = c.Aggregate(q2)
 	assert.Nil(t, err)
@@ -137,10 +146,10 @@ func TestAggregateCountDistinct(t *testing.T) {
 	Init()
 	c := createClient("docs-games-idx1")
 
-	q1 := redisearch.NewAggregateQuery().
-		GroupBy(*redisearch.NewGroupBy().AddFields("@brand").
-			Reduce(*redisearch.NewReducer(redisearch.GroupByReducerCountDistinct, []string{"@title"}).SetAlias("count_distinct(title)")).
-			Reduce(*redisearch.NewReducer(redisearch.GroupByReducerCount, []string{})))
+	q1 := NewAggregateQuery().
+		GroupBy(*NewGroupBy().AddFields("@brand").
+			Reduce(*NewReducer(GroupByReducerCountDistinct, []string{"@title"}).SetAlias("count_distinct(title)")).
+			Reduce(*NewReducer(GroupByReducerCount, []string{})))
 
 	res, _, err := c.Aggregate(q1)
 	assert.Nil(t, err)
@@ -152,9 +161,9 @@ func TestAggregateFilter(t *testing.T) {
 	Init()
 	c := createClient("docs-games-idx1")
 
-	q1 := redisearch.NewAggregateQuery().
-		GroupBy(*redisearch.NewGroupBy().AddFields("@brand").
-			Reduce(*redisearch.NewReducerAlias(redisearch.GroupByReducerCount, []string{}, "count"))).
+	q1 := NewAggregateQuery().
+		GroupBy(*NewGroupBy().AddFields("@brand").
+			Reduce(*NewReducerAlias(GroupByReducerCount, []string{}, "count"))).
 		Filter("@count > 5")
 
 	res, _, err := c.Aggregate(q1)
@@ -184,13 +193,13 @@ func makeAggResponseInterface(seed int64, nElements int, responseSizes []int) (r
 
 func benchmarkProcessAggResponseSS(res []interface{}, total int, b *testing.B) {
 	for n := 0; n < b.N; n++ {
-		redisearch.ProcessAggResponseSS(res)
+		ProcessAggResponseSS(res)
 	}
 }
 
 func benchmarkProcessAggResponse(res []interface{}, total int, b *testing.B) {
 	for n := 0; n < b.N; n++ {
-		redisearch.ProcessAggResponse(res)
+		ProcessAggResponse(res)
 	}
 }
 
@@ -232,7 +241,7 @@ func TestProjection_Serialize(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			p := redisearch.Projection{
+			p := Projection{
 				Expression: tt.fields.Expression,
 				Alias:      tt.fields.Alias,
 			}
@@ -260,7 +269,7 @@ func TestCursor_Serialize(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := redisearch.Cursor{
+			c := Cursor{
 				Id:      tt.fields.Id,
 				Count:   tt.fields.Count,
 				MaxIdle: tt.fields.MaxIdle,
@@ -275,8 +284,8 @@ func TestCursor_Serialize(t *testing.T) {
 func TestGroupBy_AddFields(t *testing.T) {
 	type fields struct {
 		Fields   []string
-		Reducers []redisearch.Reducer
-		Paging   *redisearch.Paging
+		Reducers []Reducer
+		Paging   *Paging
 	}
 	type args struct {
 		fields interface{}
@@ -285,17 +294,17 @@ func TestGroupBy_AddFields(t *testing.T) {
 		name   string
 		fields fields
 		args   args
-		want   *redisearch.GroupBy
+		want   *GroupBy
 	}{
 		{"TestGroupBy_AddFields_1",
 			fields{[]string{}, nil, nil},
 			args{"a",},
-			&redisearch.GroupBy{[]string{"a"}, nil, nil},
+			&GroupBy{[]string{"a"}, nil, nil},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			g := &redisearch.GroupBy{
+			g := &GroupBy{
 				Fields:   tt.fields.Fields,
 				Reducers: tt.fields.Reducers,
 				Paging:   tt.fields.Paging,
@@ -310,8 +319,8 @@ func TestGroupBy_AddFields(t *testing.T) {
 func TestGroupBy_Limit(t *testing.T) {
 	type fields struct {
 		Fields   []string
-		Reducers []redisearch.Reducer
-		Paging   *redisearch.Paging
+		Reducers []Reducer
+		Paging   *Paging
 	}
 	type args struct {
 		offset int
@@ -321,17 +330,17 @@ func TestGroupBy_Limit(t *testing.T) {
 		name   string
 		fields fields
 		args   args
-		want   *redisearch.GroupBy
+		want   *GroupBy
 	}{
 		{"TestGroupBy_Limit_1",
 			fields{[]string{}, nil, nil},
 			args{10, 20},
-			&redisearch.GroupBy{[]string{}, nil, &redisearch.Paging{10, 20}},
+			&GroupBy{[]string{}, nil, &Paging{10, 20}},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			g := &redisearch.GroupBy{
+			g := &GroupBy{
 				Fields:   tt.fields.Fields,
 				Reducers: tt.fields.Reducers,
 				Paging:   tt.fields.Paging,
@@ -347,14 +356,14 @@ func TestGroupBy_Limit(t *testing.T) {
 
 func TestAggregateQuery_SetMax(t *testing.T) {
 	type fields struct {
-		Query         *redisearch.Query
+		Query         *Query
 		AggregatePlan redis.Args
-		Paging        *redisearch.Paging
+		Paging        *Paging
 		Max           int
 		WithSchema    bool
 		Verbatim      bool
 		WithCursor    bool
-		Cursor        *redisearch.Cursor
+		Cursor        *Cursor
 	}
 	type args struct {
 		value int
@@ -363,17 +372,17 @@ func TestAggregateQuery_SetMax(t *testing.T) {
 		name   string
 		fields fields
 		args   args
-		want   *redisearch.AggregateQuery
+		want   *AggregateQuery
 	}{
 		{"TestAggregateQuery_SetMax_1",
 			fields{nil, redis.Args{}, nil, 0, false, false, false, nil},
 			args{10},
-			&redisearch.AggregateQuery{nil, redis.Args{}, nil, 10, false, false, false, nil},
+			&AggregateQuery{nil, redis.Args{}, nil, 10, false, false, false, nil},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			a := &redisearch.AggregateQuery{
+			a := &AggregateQuery{
 				Query:         tt.fields.Query,
 				AggregatePlan: tt.fields.AggregatePlan,
 				Paging:        tt.fields.Paging,
@@ -392,14 +401,14 @@ func TestAggregateQuery_SetMax(t *testing.T) {
 
 func TestAggregateQuery_SetVerbatim(t *testing.T) {
 	type fields struct {
-		Query         *redisearch.Query
+		Query         *Query
 		AggregatePlan redis.Args
-		Paging        *redisearch.Paging
+		Paging        *Paging
 		Max           int
 		WithSchema    bool
 		Verbatim      bool
 		WithCursor    bool
-		Cursor        *redisearch.Cursor
+		Cursor        *Cursor
 	}
 	type args struct {
 		value bool
@@ -408,17 +417,17 @@ func TestAggregateQuery_SetVerbatim(t *testing.T) {
 		name   string
 		fields fields
 		args   args
-		want   *redisearch.AggregateQuery
+		want   *AggregateQuery
 	}{
 		{"TestAggregateQuery_SetVerbatim_1",
 			fields{nil, redis.Args{}, nil, 0, false, false, false, nil},
 			args{true},
-			&redisearch.AggregateQuery{nil, redis.Args{}, nil, 0, false, true, false, nil},
+			&AggregateQuery{nil, redis.Args{}, nil, 0, false, true, false, nil},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			a := &redisearch.AggregateQuery{
+			a := &AggregateQuery{
 				Query:         tt.fields.Query,
 				AggregatePlan: tt.fields.AggregatePlan,
 				Paging:        tt.fields.Paging,
@@ -437,14 +446,14 @@ func TestAggregateQuery_SetVerbatim(t *testing.T) {
 
 func TestAggregateQuery_SetWithSchema(t *testing.T) {
 	type fields struct {
-		Query         *redisearch.Query
+		Query         *Query
 		AggregatePlan redis.Args
-		Paging        *redisearch.Paging
+		Paging        *Paging
 		Max           int
 		WithSchema    bool
 		Verbatim      bool
 		WithCursor    bool
-		Cursor        *redisearch.Cursor
+		Cursor        *Cursor
 	}
 	type args struct {
 		value bool
@@ -453,17 +462,17 @@ func TestAggregateQuery_SetWithSchema(t *testing.T) {
 		name   string
 		fields fields
 		args   args
-		want   *redisearch.AggregateQuery
+		want   *AggregateQuery
 	}{
 		{"TestAggregateQuery_SetWithSchema_1",
 			fields{nil, redis.Args{}, nil, 0, false, false, false, nil},
 			args{true},
-			&redisearch.AggregateQuery{nil, redis.Args{}, nil, 0, true, false, false, nil},
+			&AggregateQuery{nil, redis.Args{}, nil, 0, true, false, false, nil},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			a := &redisearch.AggregateQuery{
+			a := &AggregateQuery{
 				Query:         tt.fields.Query,
 				AggregatePlan: tt.fields.AggregatePlan,
 				Paging:        tt.fields.Paging,
@@ -482,14 +491,14 @@ func TestAggregateQuery_SetWithSchema(t *testing.T) {
 
 func TestAggregateQuery_CursorHasResults(t *testing.T) {
 	type fields struct {
-		Query         *redisearch.Query
+		Query         *Query
 		AggregatePlan redis.Args
-		Paging        *redisearch.Paging
+		Paging        *Paging
 		Max           int
 		WithSchema    bool
 		Verbatim      bool
 		WithCursor    bool
-		Cursor        *redisearch.Cursor
+		Cursor        *Cursor
 	}
 	tests := []struct {
 		name    string
@@ -501,13 +510,13 @@ func TestAggregateQuery_CursorHasResults(t *testing.T) {
 			false,
 		},
 		{"TestAggregateQuery_CursorHasResults_1_true",
-			fields{nil, redis.Args{}, nil, 0, false, false, false, redisearch.NewCursor().SetId(10)},
+			fields{nil, redis.Args{}, nil, 0, false, false, false, NewCursor().SetId(10)},
 			true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			a := &redisearch.AggregateQuery{
+			a := &AggregateQuery{
 				Query:         tt.fields.Query,
 				AggregatePlan: tt.fields.AggregatePlan,
 				Paging:        tt.fields.Paging,
@@ -526,14 +535,14 @@ func TestAggregateQuery_CursorHasResults(t *testing.T) {
 
 func TestAggregateQuery_Load(t *testing.T) {
 	type fields struct {
-		Query         *redisearch.Query
+		Query         *Query
 		AggregatePlan redis.Args
-		Paging        *redisearch.Paging
+		Paging        *Paging
 		Max           int
 		WithSchema    bool
 		Verbatim      bool
 		WithCursor    bool
-		Cursor        *redisearch.Cursor
+		Cursor        *Cursor
 	}
 	type args struct {
 		Properties []string
@@ -562,7 +571,7 @@ func TestAggregateQuery_Load(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			a := &redisearch.AggregateQuery{
+			a := &AggregateQuery{
 				Query:         tt.fields.Query,
 				AggregatePlan: tt.fields.AggregatePlan,
 				Paging:        tt.fields.Paging,
@@ -574,6 +583,59 @@ func TestAggregateQuery_Load(t *testing.T) {
 			}
 			if got := a.Load(tt.args.Properties).Serialize(); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("Load() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestProcessAggResponse(t *testing.T) {
+	type args struct {
+		res []interface{}
+	}
+	tests := []struct {
+		name string
+		args args
+		want [][]string
+	}{
+		{"empty-reply", args{[]interface{}{}}, [][]string{},},
+		{"1-element-reply", args{[]interface{}{[]interface{}{"userFullName", "berge, julius", "count", "2783"}}}, [][]string{{"userFullName", "berge, julius", "count", "2783"}},},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := ProcessAggResponse(tt.args.res); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("ProcessAggResponse() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_processAggReply(t *testing.T) {
+	type args struct {
+		res []interface{}
+	}
+	tests := []struct {
+		name               string
+		args               args
+		wantTotal          int
+		wantAggregateReply [][]string
+		wantErr            bool
+	}{
+		{"empty-reply", args{[]interface{}{}}, 0, [][]string{}, false},
+		{"1-element-reply", args{[]interface{}{1, []interface{}{"userFullName", "j", "count", "2"}}}, 1, [][]string{{"userFullName", "j", "count", "2"}}, false},
+		{"multi-element-reply", args{[]interface{}{2, []interface{}{"userFullName", "j"}, []interface{}{"userFullName", "a"}}}, 2, [][]string{{"userFullName", "j"}, {"userFullName", "a"}}, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotTotal, gotAggregateReply, err := processAggReply(tt.args.res)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("processAggReply() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if gotTotal != tt.wantTotal {
+				t.Errorf("processAggReply() gotTotal = %v, want %v", gotTotal, tt.wantTotal)
+			}
+			if !reflect.DeepEqual(gotAggregateReply, tt.wantAggregateReply) {
+				t.Errorf("processAggReply() gotAggregateReply = %v, want %v", gotAggregateReply, tt.wantAggregateReply)
 			}
 		})
 	}
