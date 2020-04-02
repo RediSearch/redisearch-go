@@ -18,6 +18,8 @@ func TestPaging_serialize(t *testing.T) {
 	}{
 		{"default", fields{0, 10}, redis.Args{}},
 		{"0-1000", fields{0, 1000}, redis.Args{"LIMIT", 0, 1000}},
+		{"0-2", fields{0, 2}, redis.Args{"LIMIT", 0, 2}},
+		{"100-10", fields{100, 10}, redis.Args{"LIMIT", 100, 10}},
 		{"100-200", fields{100, 200}, redis.Args{"LIMIT", 100, 200}},
 	}
 	for _, tt := range tests {

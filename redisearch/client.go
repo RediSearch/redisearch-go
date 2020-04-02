@@ -412,13 +412,8 @@ func (i *Client) Aggregate(q *AggregateQuery) (aggregateReply [][]string, total 
 	}
 	// has no cursor
 	if !hasCursor {
-		total = len(res) - 1
-		// there is a case when only 1 data from aggregate, it returns nothing
-		// then set total > 0 so the data will be return
-		if total > 0 {
-			aggregateReply = ProcessAggResponse(res[1:])
-		}
-		// has cursor
+		total, aggregateReply,err = processAggReply(res)
+	// has cursor
 	} else {
 		var partialResults, err = redis.Values(res[0], nil)
 		if err != nil {
@@ -428,12 +423,7 @@ func (i *Client) Aggregate(q *AggregateQuery) (aggregateReply [][]string, total 
 		if err != nil {
 			return aggregateReply, total, err
 		}
-		total = len(partialResults) - 1
-		// there is a case when only 1 data from aggregate, it returns nothing
-		// then set total > 0 so the data will be return
-		if total > 0 {
-			aggregateReply = ProcessAggResponse(partialResults[1:])
-		}
+		total, aggregateReply,err = processAggReply(partialResults)
 	}
 
 	return
