@@ -74,35 +74,6 @@ type SummaryOptions struct {
 	Separator    string // default "..."
 }
 
-// IndexingOptions represent the options for indexing a single document
-type IndexingOptions struct {
-
-	// If set, we use a stemmer for the supplied language during indexing. If set to "", we Default to English.
-	Language         string
-
-	// If set to true, we will not save the actual document in the database and only index it.
-	NoSave           bool
-
-	//  If set, we will do an UPSERT style insertion - and delete an older version of the document if it exists.
-	Replace          bool
-
-	// (only applicable with Replace): If set, you do not have to specify all fields for reindexing.
-	Partial          bool
-
-	// Applicable only in conjunction with Replace and optionally Partial
-	// Update the document only if a boolean expression applies to the document before the update
-	ReplaceCondition string
-}
-
-// DefaultIndexingOptions are the default options for document indexing
-var DefaultIndexingOptions = IndexingOptions{
-	Language:         "",
-	NoSave:           false,
-	Replace:          false,
-	Partial:          false,
-	ReplaceCondition: "",
-}
-
 // Query is a single search query and all its parameters and predicates
 type Query struct {
 	Raw string
