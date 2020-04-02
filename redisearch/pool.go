@@ -53,12 +53,11 @@ func (p *MultiHostPool) Get() redis.Conn {
 			// TODO: Add timeouts. and 2 separate pools for indexing and querying, with different timeouts
 			return redis.Dial("tcp", host)
 		}, maxConns)
-		pool.TestOnBorrow = func(c redis.Conn, t time.Time) error {
-			if time.Since(t).Seconds() > 1 {
-				_, err := c.Do("PING")
-				return err
+		pool.TestOnBorrow = func(c redis.Conn, t time.Time) (err error) {
+			if time.Since(t) > time.Second {
+				_, err = c.Do("PING")
 			}
-			return nil
+			return err
 		}
 
 		p.pools[host] = pool

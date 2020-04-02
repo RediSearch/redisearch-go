@@ -2,38 +2,13 @@ package redisearch
 
 import (
 	"errors"
-	"fmt"
-	"github.com/gomodule/redigo/redis"
 	"log"
 	"reflect"
 	"strconv"
 	"strings"
+
+	"github.com/gomodule/redigo/redis"
 )
-
-// Options are flags passed to the the abstract Index call, which receives them as interface{}, allowing
-// for implementation specific options
-type Options struct {
-
-	// If set, we will not save the documents contents, just index them, for fetching ids only
-	NoSave bool
-
-	NoFieldFlags bool
-
-	NoFrequencies bool
-
-	NoOffsetVectors bool
-
-	Stopwords []string
-}
-
-// DefaultOptions represents the default options
-var DefaultOptions = Options{
-	NoSave:          false,
-	NoFieldFlags:    false,
-	NoFrequencies:   false,
-	NoOffsetVectors: false,
-	Stopwords:       nil,
-}
 
 // Client is an interface to redisearch's redis commands
 type Client struct {
@@ -64,233 +39,18 @@ func NewClient(addr, name string) *Client {
 }
 
 // CreateIndex configues the index and creates it on redis
-func (i *Client) CreateIndex(s *Schema) error {
+func (i *Client) CreateIndex(s *Schema) (err error) {
 	args := redis.Args{i.name}
 	// Set flags based on options
-	if s.Options.NoFieldFlags {
-		args = append(args, "NOFIELDS")
-	}
-	if s.Options.NoFrequencies {
-		args = append(args, "NOFREQS")
-	}
-	if s.Options.NoOffsetVectors {
-		args = append(args, "NOOFFSETS")
-	}
-	if s.Options.Stopwords != nil {
-		args = args.Add("STOPWORDS", len(s.Options.Stopwords))
-		if len(s.Options.Stopwords) > 0 {
-			args = args.AddFlat(s.Options.Stopwords)
-		}
-	}
-
-	args = append(args, "SCHEMA")
-	for _, f := range s.Fields {
-
-		switch f.Type {
-		case TextField:
-
-			args = append(args, f.Name, "TEXT")
-			if f.Options != nil {
-				opts, ok := f.Options.(TextFieldOptions)
-				if !ok {
-					return errors.New("Invalid text field options type")
-				}
-
-				if opts.Weight != 0 && opts.Weight != 1 {
-					args = append(args, "WEIGHT", opts.Weight)
-				}
-				if opts.NoStem {
-					args = append(args, "NOSTEM")
-				}
-
-				if opts.Sortable {
-					args = append(args, "SORTABLE")
-				}
-
-				if opts.NoIndex {
-					args = append(args, "NOINDEX")
-				}
-			}
-
-		case NumericField:
-			args = append(args, f.Name, "NUMERIC")
-			if f.Options != nil {
-				opts, ok := f.Options.(NumericFieldOptions)
-				if !ok {
-					return errors.New("Invalid numeric field options type")
-				}
-
-				if opts.Sortable {
-					args = append(args, "SORTABLE")
-				}
-				if opts.NoIndex {
-					args = append(args, "NOINDEX")
-				}
-			}
-		case TagField:
-			args = append(args, f.Name, "TAG")
-			if f.Options != nil {
-				opts, ok := f.Options.(TagFieldOptions)
-				if !ok {
-					return errors.New("Invalid tag field options type")
-				}
-				if opts.Separator != 0 {
-					args = append(args, "SEPARATOR", fmt.Sprintf("%c", opts.Separator))
-
-				}
-				if opts.Sortable {
-					args = append(args, "SORTABLE")
-				}
-				if opts.NoIndex {
-					args = append(args, "NOINDEX")
-				}
-			}
-		default:
-			return fmt.Errorf("Unsupported field type %v", f.Type)
-		}
-
+	args, err = SerializeSchema(s, args)
+	if err != nil {
+		return
 	}
 
 	conn := i.pool.Get()
 	defer conn.Close()
-	_, err := conn.Do("FT.CREATE", args...)
+	_, err = conn.Do("FT.CREATE", args...)
 	return err
-}
-
-// IndexingOptions represent the options for indexing a single document
-type IndexingOptions struct {
-	Language         string
-	NoSave           bool
-	Replace          bool
-	Partial          bool
-	ReplaceCondition string
-}
-
-// DefaultIndexingOptions are the default options for document indexing
-var DefaultIndexingOptions = IndexingOptions{
-	Language:         "",
-	NoSave:           false,
-	Replace:          false,
-	Partial:          false,
-	ReplaceCondition: "",
-}
-
-// IndexOptions indexes multiple documents on the index, with optional Options passed to options
-func (i *Client) IndexOptions(opts IndexingOptions, docs ...Document) error {
-
-	conn := i.pool.Get()
-	defer conn.Close()
-
-	n := 0
-	var merr MultiError
-
-	for ii, doc := range docs {
-		args := make(redis.Args, 0, 6+len(doc.Properties))
-		args = append(args, i.name, doc.Id, doc.Score)
-		// apply options
-		if opts.NoSave {
-			args = append(args, "NOSAVE")
-		}
-		if opts.Language != "" {
-			args = append(args, "LANGUAGE", opts.Language)
-		}
-
-		if opts.Partial {
-			opts.Replace = true
-		}
-
-		if opts.Replace {
-			args = append(args, "REPLACE")
-			if opts.Partial {
-				args = append(args, "PARTIAL")
-			}
-			if opts.ReplaceCondition != "" {
-				args = append(args, "IF", opts.ReplaceCondition)
-			}
-		}
-
-		if doc.Payload != nil {
-			args = args.Add("PAYLOAD", doc.Payload)
-		}
-
-		args = append(args, "FIELDS")
-
-		for k, f := range doc.Properties {
-			args = append(args, k, f)
-		}
-
-		if err := conn.Send("FT.ADD", args...); err != nil {
-			if merr == nil {
-				merr = NewMultiError(len(docs))
-			}
-			merr[ii] = err
-
-			return merr
-		}
-		n++
-	}
-
-	if err := conn.Flush(); err != nil {
-		return err
-	}
-
-	for n > 0 {
-		if _, err := conn.Receive(); err != nil {
-			if merr == nil {
-				merr = NewMultiError(len(docs))
-			}
-			merr[n-1] = err
-		}
-		n--
-	}
-
-	if merr == nil {
-		return nil
-	}
-
-	return merr
-}
-
-// convert the result from a redis query to a proper Document object
-func loadDocument(arr []interface{}, idIdx, scoreIdx, payloadIdx, fieldsIdx int) (Document, error) {
-
-	var score float64 = 1
-	var err error
-	if scoreIdx > 0 {
-		if score, err = strconv.ParseFloat(string(arr[idIdx+scoreIdx].([]byte)), 64); err != nil {
-			return Document{}, fmt.Errorf("Could not parse score: %s", err)
-		}
-	}
-
-	doc := NewDocument(string(arr[idIdx].([]byte)), float32(score))
-
-	if payloadIdx > 0 {
-		doc.Payload, _ = arr[idIdx+payloadIdx].([]byte)
-	}
-
-	if fieldsIdx > 0 {
-		lst := arr[idIdx+fieldsIdx].([]interface{})
-		for i := 0; i < len(lst); i += 2 {
-			var prop string
-			switch lst[i].(type) {
-			case []byte:
-				prop = string(lst[i].([]byte))
-			default:
-				prop = lst[i].(string)
-			}
-
-			var val interface{}
-			switch v := lst[i+1].(type) {
-			case []byte:
-				val = string(v)
-			default:
-				val = v
-			}
-			doc = doc.Set(prop, val)
-		}
-	}
-
-	return doc, nil
 }
 
 // Index indexes a list of documents with the default options
@@ -346,6 +106,62 @@ func (i *Client) Search(q *Query) (docs []Document, total int, err error) {
 			}
 		}
 	}
+	return
+}
+
+// Adds an alias to an index.
+func (i *Client) AliasAdd(name string) (err error) {
+	conn := i.pool.Get()
+	defer conn.Close()
+	args := redis.Args{name}.Add(i.name)
+	_, err = redis.String(conn.Do("FT.ALIASADD", args...))
+	return
+}
+
+// Deletes an alias to an index.
+func (i *Client) AliasDel(name string) (err error) {
+	conn := i.pool.Get()
+	defer conn.Close()
+	args := redis.Args{name}
+	_, err = redis.String(conn.Do("FT.ALIASDEL", args...))
+	return
+}
+
+// Deletes an alias to an index.
+func (i *Client) AliasUpdate(name string) (err error) {
+	conn := i.pool.Get()
+	defer conn.Close()
+	args := redis.Args{name}.Add(i.name)
+	_, err = redis.String(conn.Do("FT.ALIASUPDATE", args...))
+	return
+}
+
+// Adds terms to a dictionary.
+func (i *Client) DictAdd(dictionaryName string, terms []string) (newTerms int, err error) {
+	conn := i.pool.Get()
+	defer conn.Close()
+	newTerms = 0
+	args := redis.Args{dictionaryName}.AddFlat(terms)
+	newTerms, err = redis.Int(conn.Do("FT.DICTADD", args...))
+	return
+}
+
+// Deletes terms from a dictionary
+func (i *Client) DictDel(dictionaryName string, terms []string) (deletedTerms int, err error) {
+	conn := i.pool.Get()
+	defer conn.Close()
+	deletedTerms = 0
+	args := redis.Args{dictionaryName}.AddFlat(terms)
+	deletedTerms, err = redis.Int(conn.Do("FT.DICTDEL", args...))
+	return
+}
+
+// Dumps all terms in the given dictionary.
+func (i *Client) DictDump(dictionaryName string) (terms []string, err error) {
+	conn := i.pool.Get()
+	defer conn.Close()
+	args := redis.Args{dictionaryName}
+	terms, err = redis.Strings(conn.Do("FT.DICTDUMP", args...))
 	return
 }
 
@@ -429,6 +245,68 @@ func (i *Client) Aggregate(q *AggregateQuery) (aggregateReply [][]string, total 
 	return
 }
 
+// Get - Returns the full contents of a document
+func (i *Client) Get(docId string) (doc *Document, err error) {
+	doc = nil
+	conn := i.pool.Get()
+	defer conn.Close()
+	var reply interface{}
+	args := redis.Args{i.name, docId}
+	reply, err = conn.Do("FT.GET", args...)
+	if reply != nil {
+		var array_reply []interface{}
+		array_reply, err = redis.Values(reply, err)
+		if err != nil {
+			return
+		}
+		if len(array_reply) > 0 {
+			document := NewDocument(docId, 1)
+			document.loadFields(array_reply)
+			doc = &document
+		}
+	}
+	return
+}
+
+// MultiGet - Returns the full contents of multiple documents.
+// Returns an array with exactly the same number of elements as the number of keys sent to the command.
+// Each element in it is either an Document or nil if it was not found.
+func (i *Client) MultiGet(documentIds []string) (docs []*Document, err error) {
+	docs = make([]*Document, len(documentIds))
+	conn := i.pool.Get()
+	defer conn.Close()
+	var reply interface{}
+	args := redis.Args{i.name}.AddFlat(documentIds)
+	reply, err = conn.Do("FT.MGET", args...)
+	if reply != nil {
+		var array_reply []interface{}
+		array_reply, err = redis.Values(reply, err)
+		if err != nil {
+			return
+		}
+		for i := 0; i < len(array_reply); i++ {
+
+			if array_reply[i] != nil {
+				var innerArray []interface{}
+				innerArray, err = redis.Values(array_reply[i], nil)
+				if err != nil {
+					return
+				}
+				if len(array_reply) > 0 {
+					document := NewDocument(documentIds[i], 1)
+					document.loadFields(innerArray)
+					docs[i] = &document
+				}
+			} else {
+				docs[i] = nil
+			}
+
+		}
+
+	}
+	return
+}
+
 // Explain Return a textual string explaining the query
 func (i *Client) Explain(q *Query) (string, error) {
 	conn := i.pool.Get()
@@ -462,24 +340,6 @@ func (i *Client) Delete(docId string, deleteDocument bool) (err error) {
 	}
 
 	return
-}
-
-// IndexInfo - Structure showing information about an existing index
-type IndexInfo struct {
-	Schema               Schema
-	Name                 string  `redis:"index_name"`
-	DocCount             uint64  `redis:"num_docs"`
-	RecordCount          uint64  `redis:"num_records"`
-	TermCount            uint64  `redis:"num_terms"`
-	MaxDocID             uint64  `redis:"max_doc_id"`
-	InvertedIndexSizeMB  float64 `redis:"inverted_sz_mb"`
-	OffsetVectorSizeMB   float64 `redis:"offset_vector_sz_mb"`
-	DocTableSizeMB       float64 `redis:"doc_table_size_mb"`
-	KeyTableSizeMB       float64 `redis:"key_table_size_mb"`
-	RecordsPerDocAvg     float64 `redis:"records_per_doc_avg"`
-	BytesPerRecordAvg    float64 `redis:"bytes_per_record_avg"`
-	OffsetsPerTermAvg    float64 `redis:"offsets_per_term_avg"`
-	OffsetBitsPerTermAvg float64 `redis:"offset_bits_per_record_avg"`
 }
 
 func (info *IndexInfo) setTarget(key string, value interface{}) error {

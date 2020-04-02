@@ -1,9 +1,10 @@
 package redisearch
 
 import (
-	"github.com/gomodule/redigo/redis"
 	"reflect"
 	"testing"
+
+	"github.com/gomodule/redigo/redis"
 )
 
 func TestPaging_serialize(t *testing.T) {
@@ -30,6 +31,32 @@ func TestPaging_serialize(t *testing.T) {
 			}
 			if got := p.serialize(); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("serialize() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_serializeIndexingOptions(t *testing.T) {
+	type args struct {
+		opts IndexingOptions
+		args redis.Args
+	}
+	tests := []struct {
+		name string
+		args args
+		want redis.Args
+	}{
+		{"default with args", args{DefaultIndexingOptions, redis.Args{"idx1", "doc1", 1.0}}, redis.Args{"idx1", "doc1", 1.0}},
+		{"default", args{DefaultIndexingOptions, redis.Args{}}, redis.Args{}},
+		{"replace full doc", args{IndexingOptions{Replace: true}, redis.Args{}}, redis.Args{"REPLACE"}},
+		{"replace partial", args{IndexingOptions{Replace: true, Partial: true}, redis.Args{}}, redis.Args{"REPLACE", "PARTIAL"}},
+		{"replace if", args{IndexingOptions{Replace: true, ReplaceCondition: "@timestamp < 23323234234"}, redis.Args{}}, redis.Args{"REPLACE", "IF", "@timestamp < 23323234234"}},
+		{"replace partial if", args{IndexingOptions{Replace: true, Partial: true, ReplaceCondition: "@timestamp < 23323234234"}, redis.Args{}}, redis.Args{"REPLACE", "PARTIAL", "IF", "@timestamp < 23323234234"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := SerializeIndexingOptions(tt.args.opts, tt.args.args); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("serializeIndexingOptions() = %v, want %v", got, tt.want)
 			}
 		})
 	}

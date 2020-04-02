@@ -79,7 +79,7 @@ func AddValues(c *Client) {
 	}
 
 }
-func init() {
+func Init() {
 	/* load test data */
 	c := createClient("docs-games-idx1")
 
@@ -96,7 +96,7 @@ func init() {
 	AddValues(c)
 }
 func TestAggregateGroupBy(t *testing.T) {
-
+	Init()
 	c := createClient("docs-games-idx1")
 
 	q1 := NewAggregateQuery().
@@ -111,7 +111,7 @@ func TestAggregateGroupBy(t *testing.T) {
 }
 
 func TestAggregateMinMax(t *testing.T) {
-
+	Init()
 	c := createClient("docs-games-idx1")
 
 	q1 := NewAggregateQuery().SetQuery(NewQuery("sony")).
@@ -143,7 +143,7 @@ func TestAggregateMinMax(t *testing.T) {
 }
 
 func TestAggregateCountDistinct(t *testing.T) {
-
+	Init()
 	c := createClient("docs-games-idx1")
 
 	q1 := NewAggregateQuery().
@@ -158,7 +158,7 @@ func TestAggregateCountDistinct(t *testing.T) {
 }
 
 func TestAggregateFilter(t *testing.T) {
-
+	Init()
 	c := createClient("docs-games-idx1")
 
 	q1 := NewAggregateQuery().
@@ -246,7 +246,7 @@ func TestProjection_Serialize(t *testing.T) {
 				Alias:      tt.fields.Alias,
 			}
 			if got := p.Serialize(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Serialize() = %v, want %v", got, tt.want)
+				t.Errorf("serialize() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -275,7 +275,7 @@ func TestCursor_Serialize(t *testing.T) {
 				MaxIdle: tt.fields.MaxIdle,
 			}
 			if got := c.Serialize(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Serialize() = %v, want %v", got, tt.want)
+				t.Errorf("serialize() = %v, want %v", got, tt.want)
 			}
 		})
 	}

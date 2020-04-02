@@ -1,7 +1,9 @@
 package redisearch
 
 import (
+	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -16,6 +18,36 @@ type Document struct {
 	Score      float32
 	Payload    []byte
 	Properties map[string]interface{}
+}
+
+
+// IndexingOptions represent the options for indexing a single document
+type IndexingOptions struct {
+
+	// If set, we use a stemmer for the supplied language during indexing. If set to "", we Default to English.
+	Language         string
+
+	// If set to true, we will not save the actual document in the database and only index it.
+	NoSave           bool
+
+	//  If set, we will do an UPSERT style insertion - and delete an older version of the document if it exists.
+	Replace          bool
+
+	// (only applicable with Replace): If set, you do not have to specify all fields for reindexing.
+	Partial          bool
+
+	// Applicable only in conjunction with Replace and optionally Partial
+	// Update the document only if a boolean expression applies to the document before the update
+	ReplaceCondition string
+}
+
+// DefaultIndexingOptions are the default options for document indexing
+var DefaultIndexingOptions = IndexingOptions{
+	Language:         "",
+	NoSave:           false,
+	Replace:          false,
+	Partial:          false,
+	ReplaceCondition: "",
 }
 
 // NewDocument creates a document with the specific id and score
@@ -52,6 +84,55 @@ func EscapeTextFileString(value string) (string) {
 		value = strings.Replace(value, string(char), ("\\"+string(char)), -1 )
 	}
 	return value
+}
+
+// convert the result from a redis query to a proper Document object
+func loadDocument(arr []interface{}, idIdx, scoreIdx, payloadIdx, fieldsIdx int) (Document, error) {
+
+	var score float64 = 1
+	var err error
+	if scoreIdx > 0 {
+		if score, err = strconv.ParseFloat(string(arr[idIdx+scoreIdx].([]byte)), 64); err != nil {
+			return Document{}, fmt.Errorf("Could not parse score: %s", err)
+		}
+	}
+
+	doc := NewDocument(string(arr[idIdx].([]byte)), float32(score))
+
+	if payloadIdx > 0 {
+		doc.Payload, _ = arr[idIdx+payloadIdx].([]byte)
+	}
+
+	if fieldsIdx > 0 {
+		lst := arr[idIdx+fieldsIdx].([]interface{})
+		doc.loadFields(lst)
+	}
+
+	return doc, nil
+}
+
+
+// SetPayload Sets the document payload
+func (d *Document) loadFields(lst []interface{}) *Document{
+	for i := 0; i < len(lst); i += 2 {
+		var prop string
+		switch lst[i].(type) {
+		case []byte:
+			prop = string(lst[i].([]byte))
+		default:
+			prop = lst[i].(string)
+		}
+
+		var val interface{}
+		switch v := lst[i+1].(type) {
+		case []byte:
+			val = string(v)
+		default:
+			val = v
+		}
+		*d = d.Set(prop,val)
+	}
+	return d
 }
 
 // DocumentList is used to sort documents by descending score

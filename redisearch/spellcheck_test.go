@@ -1,9 +1,10 @@
 package redisearch
 
 import (
-	"github.com/gomodule/redigo/redis"
 	"reflect"
 	"testing"
+
+	"github.com/gomodule/redigo/redis"
 )
 
 func TestMisspelledTerm_Len(t *testing.T) {
@@ -16,7 +17,7 @@ func TestMisspelledTerm_Len(t *testing.T) {
 		fields fields
 		want   int
 	}{
-		{"empty", fields{"empty", []MisspelledSuggestion{},}, 0,},
+		{"empty", fields{"empty", []MisspelledSuggestion{}}, 0},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -46,8 +47,8 @@ func TestMisspelledTerm_Less(t *testing.T) {
 		args   args
 		want   bool
 	}{
-		{"double-value-list-true", fields{"double", []MisspelledSuggestion{NewMisspelledSuggestion("double", 0), NewMisspelledSuggestion("doublee", 0.1)},}, args{1, 0}, true,},
-		{"double-value-list-false", fields{"double", []MisspelledSuggestion{NewMisspelledSuggestion("double", 0), NewMisspelledSuggestion("doublee", 0.1)},}, args{0, 1}, false,},
+		{"double-value-list-true", fields{"double", []MisspelledSuggestion{NewMisspelledSuggestion("double", 0), NewMisspelledSuggestion("doublee", 0.1)}}, args{1, 0}, true},
+		{"double-value-list-false", fields{"double", []MisspelledSuggestion{NewMisspelledSuggestion("double", 0), NewMisspelledSuggestion("doublee", 0.1)}}, args{0, 1}, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -72,8 +73,8 @@ func TestMisspelledTerm_Sort(t *testing.T) {
 		fields fields
 		want   []MisspelledSuggestion
 	}{
-		{"empty", fields{"empty", []MisspelledSuggestion{},}, []MisspelledSuggestion{},},
-		{"double-value-list", fields{"double", []MisspelledSuggestion{NewMisspelledSuggestion("double", 0), NewMisspelledSuggestion("doublee", 0.1)},}, []MisspelledSuggestion{NewMisspelledSuggestion("doublee", 0.1), NewMisspelledSuggestion("double", 0)},},
+		{"empty", fields{"empty", []MisspelledSuggestion{}}, []MisspelledSuggestion{}},
+		{"double-value-list", fields{"double", []MisspelledSuggestion{NewMisspelledSuggestion("double", 0), NewMisspelledSuggestion("doublee", 0.1)}}, []MisspelledSuggestion{NewMisspelledSuggestion("doublee", 0.1), NewMisspelledSuggestion("double", 0)}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -104,9 +105,9 @@ func TestMisspelledTerm_Swap(t *testing.T) {
 		args   args
 		want   []MisspelledSuggestion
 	}{
-		{"empty-list", fields{"empty", []MisspelledSuggestion{},}, args{0, 1}, []MisspelledSuggestion{},},
-		{"single-value-list", fields{"single", []MisspelledSuggestion{NewMisspelledSuggestion("first", 1)},}, args{0, 1}, []MisspelledSuggestion{NewMisspelledSuggestion("first", 1)},},
-		{"double-value-list", fields{"doubl", []MisspelledSuggestion{NewMisspelledSuggestion("double", 1), NewMisspelledSuggestion("doublee", 0.1)},}, args{0, 1}, []MisspelledSuggestion{NewMisspelledSuggestion("doublee", 0.1), NewMisspelledSuggestion("double", 1)},},
+		{"empty-list", fields{"empty", []MisspelledSuggestion{}}, args{0, 1}, []MisspelledSuggestion{}},
+		{"single-value-list", fields{"single", []MisspelledSuggestion{NewMisspelledSuggestion("first", 1)}}, args{0, 1}, []MisspelledSuggestion{NewMisspelledSuggestion("first", 1)}},
+		{"double-value-list", fields{"doubl", []MisspelledSuggestion{NewMisspelledSuggestion("double", 1), NewMisspelledSuggestion("doublee", 0.1)}}, args{0, 1}, []MisspelledSuggestion{NewMisspelledSuggestion("doublee", 0.1), NewMisspelledSuggestion("double", 1)}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -132,7 +133,7 @@ func TestNewMisspelledSuggestion(t *testing.T) {
 		args args
 		want MisspelledSuggestion
 	}{
-		{"simple", args{"term", 1}, MisspelledSuggestion{"term", 1},},
+		{"simple", args{"term", 1}, MisspelledSuggestion{"term", 1}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -232,8 +233,8 @@ func TestSpellCheckOptions_AddExclusionDict(t *testing.T) {
 		args   args
 		want   []string
 	}{
-		{"empty", fields{1, []string{}, []string{}}, args{"dict1"}, []string{"dict1"},},
-		{"one-prior", fields{1, []string{"dict1"}, []string{}}, args{"dict2"}, []string{"dict1", "dict2"},},
+		{"empty", fields{1, []string{}, []string{}}, args{"dict1"}, []string{"dict1"}},
+		{"one-prior", fields{1, []string{"dict1"}, []string{}}, args{"dict2"}, []string{"dict1", "dict2"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -264,8 +265,8 @@ func TestSpellCheckOptions_AddInclusionDict(t *testing.T) {
 		args   args
 		want   []string
 	}{
-		{"empty", fields{1, []string{}, []string{}}, args{"dict1"}, []string{"dict1"},},
-		{"one-prior", fields{1, []string{}, []string{"dict1"}}, args{"dict2"}, []string{"dict1", "dict2"},},
+		{"empty", fields{1, []string{}, []string{}}, args{"dict1"}, []string{"dict1"}},
+		{"one-prior", fields{1, []string{}, []string{"dict1"}}, args{"dict2"}, []string{"dict1", "dict2"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -371,11 +372,11 @@ func Test_loadMisspelledTerm(t *testing.T) {
 		wantMissT MisspelledTerm
 		wantErr   bool
 	}{
-		{"empty", args{[]interface{}{}, 1, 2,}, MisspelledTerm{}, false},
-		{"missing term", args{[]interface{}{"TERM",}, 1, 2,}, MisspelledTerm{}, true},
-		{"missing sugestion array", args{[]interface{}{"TERM", "hockye"}, 1, 2,}, MisspelledTerm{}, true},
-		{"incorrect float", args{[]interface{}{"TERM", "hockye", []interface{}{[]interface{}{[]byte("INCORRECT"), []byte("hockey")}}}, 1, 2,}, MisspelledTerm{}, true},
-		{"correct1", args{[]interface{}{"TERM", "hockye", []interface{}{[]interface{}{[]byte("1"), []byte("hockey")}}}, 1, 2,}, MisspelledTerm{"hockye", []MisspelledSuggestion{NewMisspelledSuggestion("hockey", 1.0)}}, false},
+		{"empty", args{[]interface{}{}, 1, 2}, MisspelledTerm{}, false},
+		{"missing term", args{[]interface{}{"TERM"}, 1, 2}, MisspelledTerm{}, true},
+		{"missing sugestion array", args{[]interface{}{"TERM", "hockye"}, 1, 2}, MisspelledTerm{}, true},
+		{"incorrect float", args{[]interface{}{"TERM", "hockye", []interface{}{[]interface{}{[]byte("INCORRECT"), []byte("hockey")}}}, 1, 2}, MisspelledTerm{}, true},
+		{"correct1", args{[]interface{}{"TERM", "hockye", []interface{}{[]interface{}{[]byte("1"), []byte("hockey")}}}, 1, 2}, MisspelledTerm{"hockye", []MisspelledSuggestion{NewMisspelledSuggestion("hockey", 1.0)}}, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
