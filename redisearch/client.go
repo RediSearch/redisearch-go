@@ -228,8 +228,8 @@ func (i *Client) Aggregate(q *AggregateQuery) (aggregateReply [][]string, total 
 	}
 	// has no cursor
 	if !hasCursor {
-		total, aggregateReply,err = processAggReply(res)
-	// has cursor
+		total, aggregateReply, err = processAggReply(res)
+		// has cursor
 	} else {
 		var partialResults, err = redis.Values(res[0], nil)
 		if err != nil {
@@ -239,7 +239,7 @@ func (i *Client) Aggregate(q *AggregateQuery) (aggregateReply [][]string, total 
 		if err != nil {
 			return aggregateReply, total, err
 		}
-		total, aggregateReply,err = processAggReply(partialResults)
+		total, aggregateReply, err = processAggReply(partialResults)
 	}
 
 	return
@@ -489,4 +489,35 @@ func (i *Client) Info() (*IndexInfo, error) {
 	}
 
 	return &ret, nil
+}
+
+// Set runtime configuration option
+func (i *Client) SetConfig(option string, value string) (string, error) {
+	conn := i.pool.Get()
+	defer conn.Close()
+
+	args := redis.Args{"SET", option, value}
+	return redis.String(conn.Do("FT.CONFIG", args...))
+}
+
+// Get runtime configuration option value
+func (i *Client) GetConfig(option string) (map[string]string, error) {
+	conn := i.pool.Get()
+	defer conn.Close()
+
+	args := redis.Args{"GET", option}
+	values, err := redis.Values(conn.Do("FT.CONFIG", args...))
+	if err != nil {
+		return nil, err
+	}
+
+	m := make(map[string]string)
+	valLen := len(values)
+	for i := 0; i < valLen; i++ {
+		kvs, _ := redis.Strings(values[i], nil)
+		if kvs != nil && len(kvs) == 2 {
+			m[kvs[0]] = kvs[1]
+		}
+	}
+	return m, nil
 }
