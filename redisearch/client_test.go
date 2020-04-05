@@ -491,3 +491,29 @@ func TestClient_Config(t *testing.T) {
 	kvs, _ = c.GetConfig("*")
 	assert.Equal(t, "100", kvs["TIMEOUT"])
 }
+
+func TestClient_GetTagVals(t *testing.T) {
+	c := createClient("testgettagvals")
+
+	// Create a schema
+	sc := NewSchema(DefaultOptions).
+		AddField(NewTextField("name")).
+		AddField(NewTagField("tags"))
+
+	c.Drop()
+	c.CreateIndex(sc)
+
+	docs := make([]Document, 1)
+	doc := NewDocument("doc1", 1.0)
+	doc.Set("name", "John").
+		Set("tags", "single, young")
+	docs[0] = doc
+	c.Index(docs...)
+	tags, err := c.GetTagVals("testgettagvals", "tags")
+	assert.Nil(t, err)
+	assert.Contains(t, tags, "single")
+	// negative tests
+	tags, err = c.GetTagVals("notexit", "tags")
+	assert.NotNil(t, err)
+	assert.Nil(t, tags)
+}
