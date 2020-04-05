@@ -214,10 +214,10 @@ func TestClient_DictAdd(t *testing.T) {
 		wantNewTerms int
 		wantErr      bool
 	}{
-		{"empty-error", fields{pool: c.pool, name: c.name}, args{"dict1", []string{},}, 0, true},
-		{"1-term", fields{pool: c.pool, name: c.name}, args{"dict1", []string{"term1"},}, 1, false},
-		{"2nd-time-term", fields{pool: c.pool, name: c.name}, args{"dict1", []string{"term1"},}, 0, false},
-		{"multi-term", fields{pool: c.pool, name: c.name}, args{"dict1", []string{"t1", "t2", "t3", "t4", "t5"},}, 5, false},
+		{"empty-error", fields{pool: c.pool, name: c.name}, args{"dict1", []string{}}, 0, true},
+		{"1-term", fields{pool: c.pool, name: c.name}, args{"dict1", []string{"term1"}}, 1, false},
+		{"2nd-time-term", fields{pool: c.pool, name: c.name}, args{"dict1", []string{"term1"}}, 0, false},
+		{"multi-term", fields{pool: c.pool, name: c.name}, args{"dict1", []string{"t1", "t2", "t3", "t4", "t5"}}, 5, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -265,9 +265,9 @@ func TestClient_DictDel(t *testing.T) {
 		wantDeletedTerms int
 		wantErr          bool
 	}{
-		{"empty-error", fields{pool: c.pool, name: c.name}, args{"dict1", []string{},}, 0, true},
-		{"1-term", fields{pool: c.pool, name: c.name}, args{"dict1", []string{"term1"},}, 1, false},
-		{"2nd-time-term", fields{pool: c.pool, name: c.name}, args{"dict1", []string{"term1"},}, 0, false},
+		{"empty-error", fields{pool: c.pool, name: c.name}, args{"dict1", []string{}}, 0, true},
+		{"1-term", fields{pool: c.pool, name: c.name}, args{"dict1", []string{"term1"}}, 1, false},
+		{"2nd-time-term", fields{pool: c.pool, name: c.name}, args{"dict1", []string{"term1"}}, 0, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -475,4 +475,19 @@ func TestClient_AliasUpdate(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestClient_Config(t *testing.T) {
+	c := createClient("testconfigindex")
+
+	ret, err := c.SetConfig("TIMEOUT", "100")
+	assert.Nil(t, err)
+	assert.Equal(t, "OK", ret)
+
+	var kvs map[string]string
+	kvs, _ = c.GetConfig("TIMEOUT")
+	assert.Equal(t, "100", kvs["TIMEOUT"])
+
+	kvs, _ = c.GetConfig("*")
+	assert.Equal(t, "100", kvs["TIMEOUT"])
 }
