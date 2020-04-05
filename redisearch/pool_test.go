@@ -1,6 +1,7 @@
 package redisearch
 
 import (
+	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
@@ -23,6 +24,8 @@ func TestNewMultiHostPool(t *testing.T) {
 				if conn == nil {
 					t.Errorf("NewMultiHostPool() = got nil connection")
 				}
+				err := got.Close()
+				assert.Nil(t, err)
 			})
 		}
 	}
