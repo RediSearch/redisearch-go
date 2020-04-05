@@ -1,17 +1,11 @@
-package redisearch_test
+package redisearch
 
 import (
-	"github.com/RediSearch/redisearch-go/redisearch"
-	"os"
 	"testing"
 )
 
 func TestNewMultiHostPool(t *testing.T) {
-	value, exists := os.LookupEnv("REDISEARCH_TEST_HOST")
-	host := "localhost:6379"
-	if exists && value != "" {
-		host = value
-	}
+	host, password := getTestConnectionDetails()
 	type args struct {
 		hosts []string
 	}
@@ -21,13 +15,15 @@ func TestNewMultiHostPool(t *testing.T) {
 	}{
 		{"multihost same address", args{[]string{host,},},},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := redisearch.NewMultiHostPool(tt.args.hosts)
-			conn := got.Get()
-			if conn == nil {
-				t.Errorf("NewMultiHostPool() = got nil connection")
-			}
-		})
+	if password == "" {
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				got := NewMultiHostPool(tt.args.hosts)
+				conn := got.Get()
+				if conn == nil {
+					t.Errorf("NewMultiHostPool() = got nil connection")
+				}
+			})
+		}
 	}
 }

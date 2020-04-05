@@ -1,14 +1,15 @@
 package redisearch
 
 import (
+	"github.com/gomodule/redigo/redis"
 	"math/rand"
 	"sync"
 	"time"
-	"github.com/gomodule/redigo/redis"
 )
 
 type ConnPool interface {
 	Get() redis.Conn
+	Close() error
 }
 
 type SingleHostPool struct {
@@ -16,10 +17,9 @@ type SingleHostPool struct {
 }
 
 func NewSingleHostPool(host string) *SingleHostPool {
-	ret := redis.NewPool(func() (redis.Conn, error) {
-		// TODO: Add timeouts. and 2 separate pools for indexing and querying, with different timeouts
+	ret := &redis.Pool{Dial: func() (redis.Conn, error) {
 		return redis.Dial("tcp", host)
-	}, maxConns)
+	}, MaxIdle: maxConns}
 	ret.TestOnBorrow = func(c redis.Conn, t time.Time) (err error) {
 		if time.Since(t) > time.Second {
 			_, err = c.Do("PING")
@@ -64,4 +64,19 @@ func (p *MultiHostPool) Get() redis.Conn {
 	}
 	return pool.Get()
 
+}
+
+func (p *MultiHostPool) Close() (err error) {
+	p.Lock()
+	defer p.Unlock()
+	for _, host := range p.hosts {
+		pool, found := p.pools[host]
+		if found {
+			err = pool.Close()
+			if err != nil {
+				return
+			}
+		}
+	}
+	return
 }

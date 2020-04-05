@@ -2,73 +2,11 @@ package redisearch
 
 import (
 	"fmt"
+	"github.com/gomodule/redigo/redis"
 	"github.com/stretchr/testify/assert"
-	"log"
-	"os"
 	"reflect"
 	"testing"
 )
-
-func init() {
-	/* load test data */
-	value, exists := os.LookupEnv("REDISEARCH_RDB_LOADED")
-	requiresDatagen := true
-	if exists && value != "" {
-		requiresDatagen = false
-	}
-	if requiresDatagen {
-		c := createClient("bench.ft.aggregate")
-
-		sc := NewSchema(DefaultOptions).
-			AddField(NewTextField("foo"))
-		c.Drop()
-		if err := c.CreateIndex(sc); err != nil {
-			log.Fatal(err)
-		}
-		ndocs := 10000
-		docs := make([]Document, ndocs)
-		for i := 0; i < ndocs; i++ {
-			docs[i] = NewDocument(fmt.Sprintf("doc%d", i), 1).Set("foo", "hello world")
-		}
-
-		if err := c.IndexOptions(DefaultIndexingOptions, docs...); err != nil {
-			log.Fatal(err)
-		}
-	}
-
-}
-
-func benchmarkAggregate(c *Client, q *AggregateQuery, b *testing.B) {
-	for n := 0; n < b.N; n++ {
-		c.Aggregate(q)
-	}
-}
-
-func benchmarkAggregateCursor(c *Client, q *AggregateQuery, b *testing.B) {
-	for n := 0; n < b.N; n++ {
-		c.Aggregate(q)
-		for q.CursorHasResults() {
-			c.Aggregate(q)
-		}
-	}
-}
-
-func BenchmarkAgg_1(b *testing.B) {
-	c := createClient("bench.ft.aggregate")
-	q := NewAggregateQuery().
-		SetQuery(NewQuery("*"))
-	b.ResetTimer()
-	benchmarkAggregate(c, q, b)
-}
-
-func BenchmarkAggCursor_1(b *testing.B) {
-	c := createClient("bench.ft.aggregate")
-	q := NewAggregateQuery().
-		SetQuery(NewQuery("*")).
-		SetCursor(NewCursor())
-	b.ResetTimer()
-	benchmarkAggregateCursor(c, q, b)
-}
 
 func TestClient_Get(t *testing.T) {
 
@@ -491,3 +429,18 @@ func TestClient_Config(t *testing.T) {
 	kvs, _ = c.GetConfig("*")
 	assert.Equal(t, "100", kvs["TIMEOUT"])
 }
+
+func TestNewClientFromPool(t *testing.T) {
+	host, password := getTestConnectionDetails()
+	pool := &redis.Pool{Dial: func() (redis.Conn, error) {
+		return redis.Dial("tcp", host, redis.DialPassword(password))
+	}, MaxIdle: maxConns}
+	client1 := NewClientFromPool(pool,"index1")
+	client2 := NewClientFromPool(pool, "index2")
+	assert.Equal(t,client1.pool, client2.pool)
+	err1 := client1.pool.Close()
+	err2 := client2.pool.Close()
+	assert.Nil(t, err1)
+	assert.Nil(t, err2)
+}
+

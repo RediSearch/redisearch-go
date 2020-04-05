@@ -38,6 +38,15 @@ func NewClient(addr, name string) *Client {
 	return ret
 }
 
+// NewAutocompleter creates a new Autocompleter with the given pool and index name
+func NewClientFromPool(pool *redis.Pool, name string) *Client {
+	ret := &Client{
+		pool: pool,
+		name: name,
+	}
+	return ret
+}
+
 // CreateIndex configues the index and creates it on redis
 func (i *Client) CreateIndex(s *Schema) (err error) {
 	args := redis.Args{i.name}
