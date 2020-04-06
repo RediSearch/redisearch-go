@@ -530,3 +530,12 @@ func (i *Client) GetConfig(option string) (map[string]string, error) {
 	}
 	return m, nil
 }
+
+// Get the distinct tags indexed in a Tag field
+func (i *Client) GetTagVals(index string, filedName string) ([]string, error) {
+	conn := i.pool.Get()
+	defer conn.Close()
+
+	args := redis.Args{index, filedName}
+	return redis.Strings(conn.Do("FT.TAGVALS", args...))
+}

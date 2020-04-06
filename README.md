@@ -92,7 +92,7 @@ func ExampleClient() {
 | [FT.GET](https://oss.redislabs.com/redisearch/Commands.html#ftget) |    [Get](https://godoc.org/github.com/RediSearch/redisearch-go/redisearch#Client.Get) |
 | [FT.MGET](https://oss.redislabs.com/redisearch/Commands.html#ftmget) |    [MultiGet](https://godoc.org/github.com/RediSearch/redisearch-go/redisearch#Client.Multi) |
 | [FT.DROP](https://oss.redislabs.com/redisearch/Commands.html#ftdrop) |   [Drop](https://godoc.org/github.com/RediSearch/redisearch-go/redisearch#Client.Drop)        |
-| [FT.TAGVALS](https://oss.redislabs.com/redisearch/Commands.html#fttagvals) |    N/A |
+| [FT.TAGVALS](https://oss.redislabs.com/redisearch/Commands.html#fttagvals) |    [GetTagVals](https://godoc.org/github.com/RediSearch/redisearch-go/redisearch#Client.GetTagVals) |
 | [FT.SUGADD](https://oss.redislabs.com/redisearch/Commands.html#ftsugadd) |    [AddTerms](https://godoc.org/github.com/RediSearch/redisearch-go/redisearch#Autocompleter.AddTerms) |
 | [FT.SUGGET](https://oss.redislabs.com/redisearch/Commands.html#ftsugget) |    [SuggestOpts](https://godoc.org/github.com/RediSearch/redisearch-go/redisearch#Autocompleter.SuggestOpts)  |
 | [FT.SUGDEL](https://oss.redislabs.com/redisearch/Commands.html#ftsugdel) |    [DeleteTerms](https://godoc.org/github.com/RediSearch/redisearch-go/redisearch#Autocompleter.DeleteTerms)  |
@@ -104,5 +104,5 @@ func ExampleClient() {
 | [FT.DICTADD](https://oss.redislabs.com/redisearch/Commands.html#ftdictadd) |    [DictAdd](https://godoc.org/github.com/RediSearch/redisearch-go/redisearch#Client.DictAdd)  |
 | [FT.DICTDEL](https://oss.redislabs.com/redisearch/Commands.html#ftdictdel) |    [DictDel](https://godoc.org/github.com/RediSearch/redisearch-go/redisearch#Client.DictDel)  |
 | [FT.DICTDUMP](https://oss.redislabs.com/redisearch/Commands.html#ftdictdump) |    [DictDump](https://godoc.org/github.com/RediSearch/redisearch-go/redisearch#Client.DictDump)  |
-| [FT.CONFIG](https://oss.redislabs.com/redisearch/Commands.html#ftconfig) |    N/A |
+| [FT.CONFIG](https://oss.redislabs.com/redisearch/Commands.html#ftconfig) |    [SetConfig](https://godoc.org/github.com/RediSearch/redisearch-go/redisearch#Client.SetConfig)、[GetConfig](https://godoc.org/github.com/RediSearch/redisearch-go/redisearch#Client.GetConfig) |
 

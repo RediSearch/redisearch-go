@@ -2,10 +2,11 @@ package redisearch
 
 import (
 	"fmt"
-	"github.com/gomodule/redigo/redis"
-	"github.com/stretchr/testify/assert"
 	"reflect"
 	"testing"
+
+	"github.com/gomodule/redigo/redis"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestClient_Get(t *testing.T) {
@@ -435,12 +436,37 @@ func TestNewClientFromPool(t *testing.T) {
 	pool := &redis.Pool{Dial: func() (redis.Conn, error) {
 		return redis.Dial("tcp", host, redis.DialPassword(password))
 	}, MaxIdle: maxConns}
-	client1 := NewClientFromPool(pool,"index1")
+	client1 := NewClientFromPool(pool, "index1")
 	client2 := NewClientFromPool(pool, "index2")
-	assert.Equal(t,client1.pool, client2.pool)
+	assert.Equal(t, client1.pool, client2.pool)
 	err1 := client1.pool.Close()
 	err2 := client2.pool.Close()
 	assert.Nil(t, err1)
 	assert.Nil(t, err2)
 }
 
+func TestClient_GetTagVals(t *testing.T) {
+	c := createClient("testgettagvals")
+
+	// Create a schema
+	sc := NewSchema(DefaultOptions).
+		AddField(NewTextField("name")).
+		AddField(NewTagField("tags"))
+
+	c.Drop()
+	c.CreateIndex(sc)
+
+	docs := make([]Document, 1)
+	doc := NewDocument("doc1", 1.0)
+	doc.Set("name", "John").
+		Set("tags", "single, young")
+	docs[0] = doc
+	c.Index(docs...)
+	tags, err := c.GetTagVals("testgettagvals", "tags")
+	assert.Nil(t, err)
+	assert.Contains(t, tags, "single")
+	// negative tests
+	tags, err = c.GetTagVals("notexit", "tags")
+	assert.NotNil(t, err)
+	assert.Nil(t, tags)
+}
