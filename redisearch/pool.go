@@ -69,13 +69,11 @@ func (p *MultiHostPool) Get() redis.Conn {
 func (p *MultiHostPool) Close() (err error) {
 	p.Lock()
 	defer p.Unlock()
-	for _, host := range p.hosts {
-		pool, found := p.pools[host]
-		if found {
-			err = pool.Close()
-			if err != nil {
-				return
-			}
+	for _, pool := range p.pools {
+		poolErr := pool.Close()
+		//preserve pool error if not nil but continue
+		if poolErr != nil {
+			err = poolErr
 		}
 	}
 	return
