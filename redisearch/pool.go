@@ -50,9 +50,10 @@ func (p *MultiHostPool) Get() redis.Conn {
 	host := p.hosts[rand.Intn(len(p.hosts))]
 	pool, found := p.pools[host]
 	if !found {
-		pool := &redis.Pool{Dial: func() (redis.Conn, error) {
+		pool = redis.NewPool(func() (redis.Conn, error) {
+			// TODO: Add timeouts. and 2 separate pools for indexing and querying, with different timeouts
 			return redis.Dial("tcp", host)
-		}, MaxIdle: maxConns}
+		}, maxConns)
 		pool.TestOnBorrow = func(c redis.Conn, t time.Time) (err error) {
 			if time.Since(t) > time.Second {
 				_, err = c.Do("PING")
