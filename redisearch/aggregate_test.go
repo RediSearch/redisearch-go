@@ -16,14 +16,6 @@ import (
 	"testing"
 )
 
-func createClient(indexName string) *Client {
-	value, exists := os.LookupEnv("REDISEARCH_TEST_HOST")
-	host := "localhost:6379"
-	if exists && value != "" {
-		host = value
-	}
-	return NewClient(host, indexName)
-}
 
 // Game struct which contains a Asin, a Description, a Title, a Price, and a list of categories
 // a type and a list of social links
@@ -36,6 +28,68 @@ type Game struct {
 	Brand       string   `json:"brand"`
 	Price       float32  `json:"price"`
 	Categories  []string `json:"categories"`
+}
+
+
+func init() {
+	/* load test data */
+	value, exists := os.LookupEnv("REDISEARCH_RDB_LOADED")
+	requiresDatagen := true
+	if exists && value != "" {
+		requiresDatagen = false
+	}
+	if requiresDatagen {
+		c := createClient("bench.ft.aggregate")
+
+		sc := NewSchema(DefaultOptions).
+			AddField(NewTextField("foo"))
+		c.Drop()
+		if err := c.CreateIndex(sc); err != nil {
+			log.Fatal(err)
+		}
+		ndocs := 10000
+		docs := make([]Document, ndocs)
+		for i := 0; i < ndocs; i++ {
+			docs[i] = NewDocument(fmt.Sprintf("doc%d", i), 1).Set("foo", "hello world")
+		}
+
+		if err := c.IndexOptions(DefaultIndexingOptions, docs...); err != nil {
+			log.Fatal(err)
+		}
+	}
+
+}
+
+func benchmarkAggregate(c *Client, q *AggregateQuery, b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		c.Aggregate(q)
+	}
+}
+
+func benchmarkAggregateCursor(c *Client, q *AggregateQuery, b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		c.Aggregate(q)
+		for q.CursorHasResults() {
+			c.Aggregate(q)
+		}
+	}
+}
+
+func BenchmarkAgg_1(b *testing.B) {
+	c := createClient("bench.ft.aggregate")
+	q := NewAggregateQuery().
+		SetQuery(NewQuery("*"))
+	b.ResetTimer()
+	benchmarkAggregate(c, q, b)
+}
+
+func BenchmarkAggCursor_1(b *testing.B) {
+	c := createClient("bench.ft.aggregate")
+	q := NewAggregateQuery().
+		SetQuery(NewQuery("*")).
+		SetCursor(NewCursor())
+	b.ResetTimer()
+	benchmarkAggregateCursor(c, q, b)
 }
 
 func AddValues(c *Client) {
