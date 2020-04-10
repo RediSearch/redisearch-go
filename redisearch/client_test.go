@@ -470,3 +470,45 @@ func TestClient_GetTagVals(t *testing.T) {
 	assert.NotNil(t, err)
 	assert.Nil(t, tags)
 }
+
+func TestClient_SynAdd(t *testing.T) {
+	c := createClient("testsynadd")
+
+	sc := NewSchema(DefaultOptions).
+		AddField(NewTextField("name")).
+		AddField(NewTextField("addr"))
+	c.Drop()
+	err := c.CreateIndex(sc)
+	assert.Nil(t, err)
+
+	gid, err := c.SynAdd("testsynadd", []string{"girl", "baby"})
+	assert.Nil(t, err)
+	assert.True(t, gid >= 0)
+	ret, err := c.SynUpdate("testsynadd", gid, []string{"girl", "baby"})
+	assert.Nil(t, err)
+	assert.Equal(t, "OK", ret)
+}
+
+func TestClient_SynDump(t *testing.T) {
+	c := createClient("testsyndump")
+
+	sc := NewSchema(DefaultOptions).
+		AddField(NewTextField("name")).
+		AddField(NewTextField("addr"))
+	c.Drop()
+	err := c.CreateIndex(sc)
+	assert.Nil(t, err)
+
+	gid, err := c.SynAdd("testsyndump", []string{"girl", "baby"})
+	assert.Nil(t, err)
+	assert.True(t, gid >= 0)
+
+	gid2, err := c.SynAdd("testsyndump", []string{"child"})
+
+	m, err := c.SynDump("testsyndump")
+	assert.Contains(t, m, "baby")
+	assert.Contains(t, m, "girl")
+	assert.Contains(t, m, "child")
+	assert.Equal(t, gid, m["baby"][0])
+	assert.Equal(t, gid2, m["child"][0])
+}
