@@ -48,11 +48,12 @@ func TestSerializeSchema(t *testing.T) {
 		{"no-offsets", args{NewSchema(Options{NoOffsetVectors: true}), redis.Args{}}, redis.Args{"NOOFFSETS", "SCHEMA"}, false},
 		{"default-and-numeric", args{NewSchema(DefaultOptions).AddField(NewNumericField("numeric-field")), redis.Args{}}, redis.Args{"SCHEMA", "numeric-field", "NUMERIC"}, false},
 		{"default-and-numeric-sortable", args{NewSchema(DefaultOptions).AddField(NewSortableNumericField("numeric-field")), redis.Args{}}, redis.Args{"SCHEMA", "numeric-field", "NUMERIC", "SORTABLE"}, false},
+		{"default-and-numeric-with-options-noindex", args{NewSchema(DefaultOptions).AddField(NewNumericFieldOptions("numeric-field", NumericFieldOptions{NoIndex: true, Sortable: false})), redis.Args{}}, redis.Args{"SCHEMA", "numeric-field", "NUMERIC", "NOINDEX"}, false},
 		{"default-and-text", args{NewSchema(DefaultOptions).AddField(NewTextField("text-field")), redis.Args{}}, redis.Args{"SCHEMA", "text-field", "TEXT"}, false},
+		{"default-and-sortable-text-field", args{NewSchema(DefaultOptions).AddField(NewSortableTextField("text-field", 10)), redis.Args{}}, redis.Args{"SCHEMA", "text-field", "TEXT", "WEIGHT", float32(10.0), "SORTABLE"}, false},
 		{"default-and-text-with-options", args{NewSchema(DefaultOptions).AddField(NewTextFieldOptions("text-field", TextFieldOptions{Weight: 5.0, Sortable: true, NoStem: false, NoIndex: false})), redis.Args{}}, redis.Args{"SCHEMA", "text-field", "TEXT", "WEIGHT", float32(5.0), "SORTABLE"}, false},
-		{"default-and-tag", args{NewSchema(DefaultOptions).AddField(NewTagField("tag-field")), redis.Args{}}, redis.Args{"SCHEMA", "tag-field", "TAG", "SEPARATOR",","}, false},
-		{"default-and-tag-with-options", args{NewSchema(DefaultOptions).AddField(NewTagFieldOptions("tag-field", TagFieldOptions{Sortable: true, NoIndex: false,Separator:byte(',')})), redis.Args{}}, redis.Args{"SCHEMA", "tag-field", "TAG", "SEPARATOR",",","SORTABLE"}, false},
-
+		{"default-and-tag", args{NewSchema(DefaultOptions).AddField(NewTagField("tag-field")), redis.Args{}}, redis.Args{"SCHEMA", "tag-field", "TAG", "SEPARATOR", ","}, false},
+		{"default-and-tag-with-options", args{NewSchema(DefaultOptions).AddField(NewTagFieldOptions("tag-field", TagFieldOptions{Sortable: true, NoIndex: false, Separator: byte(',')})), redis.Args{}}, redis.Args{"SCHEMA", "tag-field", "TAG", "SEPARATOR", ",", "SORTABLE"}, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
