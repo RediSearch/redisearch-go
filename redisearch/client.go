@@ -38,6 +38,15 @@ func NewClient(addr, name string) *Client {
 	return ret
 }
 
+// NewAutocompleter creates a new Autocompleter with the given pool and index name
+func NewClientFromPool(pool *redis.Pool, name string) *Client {
+	ret := &Client{
+		pool: pool,
+		name: name,
+	}
+	return ret
+}
+
 // CreateIndex configues the index and creates it on redis
 func (i *Client) CreateIndex(s *Schema) (err error) {
 	args := redis.Args{i.name}
@@ -529,4 +538,50 @@ func (i *Client) GetTagVals(index string, filedName string) ([]string, error) {
 
 	args := redis.Args{index, filedName}
 	return redis.Strings(conn.Do("FT.TAGVALS", args...))
+}
+
+// Adds a synonym group.
+func (i *Client) SynAdd(indexName string, terms []string) (int64, error) {
+	conn := i.pool.Get()
+	defer conn.Close()
+
+	args := redis.Args{indexName}.AddFlat(terms)
+	return redis.Int64(conn.Do("FT.SYNADD", args...))
+}
+
+// Updates a synonym group.
+func (i *Client) SynUpdate(indexName string, synonymGroupId int64, terms []string) (string, error) {
+	conn := i.pool.Get()
+	defer conn.Close()
+
+	args := redis.Args{indexName, synonymGroupId}.AddFlat(terms)
+	return redis.String(conn.Do("FT.SYNUPDATE", args...))
+}
+
+// Dumps the contents of a synonym group.
+func (i *Client) SynDump(indexName string) (map[string][]int64, error) {
+	conn := i.pool.Get()
+	defer conn.Close()
+
+	args := redis.Args{indexName}
+	values, err := redis.Values(conn.Do("FT.SYNDUMP", args...))
+	if err != nil {
+		return nil, err
+	}
+
+	valLen := len(values)
+	if valLen%2 != 0 {
+		return nil, errors.New("SynDump: expects even number of values result")
+	}
+
+	m := make(map[string][]int64, valLen/2)
+	for i := 0; i < valLen; i += 2 {
+		key := values[i].([]byte)
+		gids, err := redis.Int64s(values[i+1], nil)
+		if err != nil {
+			return nil, err
+		}
+		m[string(key)] = gids
+	}
+	return m, nil
 }

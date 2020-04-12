@@ -1,7 +1,6 @@
-package redisearch_test
+package redisearch
 
 import (
-	"github.com/RediSearch/redisearch-go/redisearch"
 	"reflect"
 	"testing"
 )
@@ -24,7 +23,7 @@ func TestEscapeTextFileString(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := redisearch.EscapeTextFileString(tt.args.value); got != tt.want {
+			if got := EscapeTextFileString(tt.args.value); got != tt.want {
 				t.Errorf("EscapeTextFileString() = %v, want %v", got, tt.want)
 			}
 		})
@@ -55,7 +54,7 @@ func TestDocument_EstimateSize(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			d := &redisearch.Document{
+			d := &Document{
 				Id:         tt.fields.Id,
 				Score:      tt.fields.Score,
 				Payload:    tt.fields.Payload,
@@ -90,7 +89,7 @@ func TestDocument_SetPayload(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			d := &redisearch.Document{
+			d := &Document{
 				Id:         tt.fields.Id,
 				Score:      tt.fields.Score,
 				Payload:    tt.fields.Payload,
