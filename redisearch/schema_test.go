@@ -69,3 +69,34 @@ func TestSerializeSchema(t *testing.T) {
 		})
 	}
 }
+
+func TestSchema_AddField(t *testing.T) {
+	type fields struct {
+		Fields  []Field
+		Options Options
+	}
+	type args struct {
+		f Field
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+		want   *Schema
+	}{
+		{"nil", fields{nil, DefaultOptions}, args{NewTextField("text-field")}, &Schema{Fields: []Field{NewTextField("text-field")}, Options: DefaultOptions}},
+		{"empty", fields{[]Field{}, DefaultOptions}, args{NewTextField("text-field")}, &Schema{Fields: []Field{NewTextField("text-field")}, Options: DefaultOptions}},
+		{"1-field", fields{[]Field{NewTextField("field1")}, DefaultOptions}, args{NewTextField("field2")}, &Schema{Fields: []Field{NewTextField("field1"), NewTextField("field2")}, Options: DefaultOptions}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := &Schema{
+				Fields:  tt.fields.Fields,
+				Options: tt.fields.Options,
+			}
+			if got := m.AddField(tt.args.f); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("AddField() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
