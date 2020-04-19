@@ -532,38 +532,38 @@ func (i *Client) GetConfig(option string) (map[string]string, error) {
 }
 
 // Get the distinct tags indexed in a Tag field
-func (i *Client) GetTagVals(index string, filedName string) ([]string, error) {
+func (i *Client) GetTagVals(filedName string) ([]string, error) {
 	conn := i.pool.Get()
 	defer conn.Close()
 
-	args := redis.Args{index, filedName}
+	args := redis.Args{i.name, filedName}
 	return redis.Strings(conn.Do("FT.TAGVALS", args...))
 }
 
 // Adds a synonym group.
-func (i *Client) SynAdd(indexName string, terms []string) (int64, error) {
+func (i *Client) SynAdd(terms []string) (int64, error) {
 	conn := i.pool.Get()
 	defer conn.Close()
 
-	args := redis.Args{indexName}.AddFlat(terms)
+	args := redis.Args{i.name}.AddFlat(terms)
 	return redis.Int64(conn.Do("FT.SYNADD", args...))
 }
 
 // Updates a synonym group.
-func (i *Client) SynUpdate(indexName string, synonymGroupId int64, terms []string) (string, error) {
+func (i *Client) SynUpdate(synonymGroupId int64, terms []string) (string, error) {
 	conn := i.pool.Get()
 	defer conn.Close()
 
-	args := redis.Args{indexName, synonymGroupId}.AddFlat(terms)
+	args := redis.Args{i.name, synonymGroupId}.AddFlat(terms)
 	return redis.String(conn.Do("FT.SYNUPDATE", args...))
 }
 
 // Dumps the contents of a synonym group.
-func (i *Client) SynDump(indexName string) (map[string][]int64, error) {
+func (i *Client) SynDump() (map[string][]int64, error) {
 	conn := i.pool.Get()
 	defer conn.Close()
 
-	args := redis.Args{indexName}
+	args := redis.Args{i.name}
 	values, err := redis.Values(conn.Do("FT.SYNDUMP", args...))
 	if err != nil {
 		return nil, err

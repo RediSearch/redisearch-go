@@ -462,11 +462,11 @@ func TestClient_GetTagVals(t *testing.T) {
 		Set("tags", "single, young")
 	docs[0] = doc
 	c.Index(docs...)
-	tags, err := c.GetTagVals("testgettagvals", "tags")
+	tags, err := c.GetTagVals("tags")
 	assert.Nil(t, err)
 	assert.Contains(t, tags, "single")
 	// negative tests
-	tags, err = c.GetTagVals("notexit", "tags")
+	tags, err = c.GetTagVals("notexit")
 	assert.NotNil(t, err)
 	assert.Nil(t, tags)
 }
@@ -481,10 +481,10 @@ func TestClient_SynAdd(t *testing.T) {
 	err := c.CreateIndex(sc)
 	assert.Nil(t, err)
 
-	gid, err := c.SynAdd("testsynadd", []string{"girl", "baby"})
+	gid, err := c.SynAdd([]string{"girl", "baby"})
 	assert.Nil(t, err)
 	assert.True(t, gid >= 0)
-	ret, err := c.SynUpdate("testsynadd", gid, []string{"girl", "baby"})
+	ret, err := c.SynUpdate(gid, []string{"girl", "baby"})
 	assert.Nil(t, err)
 	assert.Equal(t, "OK", ret)
 }
@@ -499,13 +499,13 @@ func TestClient_SynDump(t *testing.T) {
 	err := c.CreateIndex(sc)
 	assert.Nil(t, err)
 
-	gid, err := c.SynAdd("testsyndump", []string{"girl", "baby"})
+	gid, err := c.SynAdd([]string{"girl", "baby"})
 	assert.Nil(t, err)
 	assert.True(t, gid >= 0)
 
-	gid2, err := c.SynAdd("testsyndump", []string{"child"})
+	gid2, err := c.SynAdd([]string{"child"})
 
-	m, err := c.SynDump("testsyndump")
+	m, err := c.SynDump()
 	assert.Contains(t, m, "baby")
 	assert.Contains(t, m, "girl")
 	assert.Contains(t, m, "child")
