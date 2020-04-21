@@ -1,9 +1,6 @@
 package redisearch
 
 import (
-	"errors"
-	"fmt"
-
 	"github.com/gomodule/redigo/redis"
 )
 
@@ -298,93 +295,6 @@ func (q *Query) Summarize(fields ...string) *Query {
 func (q *Query) SummarizeOptions(opts SummaryOptions) *Query {
 	q.SummarizeOpts = &opts
 	return q
-}
-
-func SerializeSchema(s *Schema, args redis.Args) (redis.Args, error) {
-	if s.Options.NoFieldFlags {
-		args = append(args, "NOFIELDS")
-	}
-	if s.Options.NoFrequencies {
-		args = append(args, "NOFREQS")
-	}
-	if s.Options.NoOffsetVectors {
-		args = append(args, "NOOFFSETS")
-	}
-	if s.Options.Stopwords != nil {
-		args = args.Add("STOPWORDS", len(s.Options.Stopwords))
-		if len(s.Options.Stopwords) > 0 {
-			args = args.AddFlat(s.Options.Stopwords)
-		}
-	}
-
-	args = append(args, "SCHEMA")
-	for _, f := range s.Fields {
-
-		switch f.Type {
-		case TextField:
-
-			args = append(args, f.Name, "TEXT")
-			if f.Options != nil {
-				opts, ok := f.Options.(TextFieldOptions)
-				if !ok {
-					return nil, errors.New("Invalid text field options type")
-				}
-
-				if opts.Weight != 0 && opts.Weight != 1 {
-					args = append(args, "WEIGHT", opts.Weight)
-				}
-				if opts.NoStem {
-					args = append(args, "NOSTEM")
-				}
-
-				if opts.Sortable {
-					args = append(args, "SORTABLE")
-				}
-
-				if opts.NoIndex {
-					args = append(args, "NOINDEX")
-				}
-			}
-
-		case NumericField:
-			args = append(args, f.Name, "NUMERIC")
-			if f.Options != nil {
-				opts, ok := f.Options.(NumericFieldOptions)
-				if !ok {
-					return nil, errors.New("Invalid numeric field options type")
-				}
-
-				if opts.Sortable {
-					args = append(args, "SORTABLE")
-				}
-				if opts.NoIndex {
-					args = append(args, "NOINDEX")
-				}
-			}
-		case TagField:
-			args = append(args, f.Name, "TAG")
-			if f.Options != nil {
-				opts, ok := f.Options.(TagFieldOptions)
-				if !ok {
-					return nil, errors.New("Invalid tag field options type")
-				}
-				if opts.Separator != 0 {
-					args = append(args, "SEPARATOR", fmt.Sprintf("%c", opts.Separator))
-
-				}
-				if opts.Sortable {
-					args = append(args, "SORTABLE")
-				}
-				if opts.NoIndex {
-					args = append(args, "NOINDEX")
-				}
-			}
-		default:
-			return nil, fmt.Errorf("Unsupported field type %v", f.Type)
-		}
-
-	}
-	return args, nil
 }
 
 // IndexOptions indexes multiple documents on the index, with optional Options passed to options
