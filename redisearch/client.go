@@ -585,3 +585,19 @@ func (i *Client) SynDump(indexName string) (map[string][]int64, error) {
 	}
 	return m, nil
 }
+
+// Adds a document to the index from an existing HASH key in Redis.
+func (i *Client) AddHash(docId string, score float32, language string, replace bool) (string, error) {
+	conn := i.pool.Get()
+	defer conn.Close()
+
+	args := redis.Args{i.name, docId, score}
+	if language != "" {
+		args = args.Add("LANGUAGE", language)
+	}
+
+	if replace {
+		args = args.Add("REPLACE")
+	}
+	return redis.String(conn.Do("FT.ADDHASH", args...))
+}
