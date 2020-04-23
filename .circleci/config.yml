@@ -1,36 +1,57 @@
 # Golang CircleCI 2.0 configuration file
 #
 # Check https://circleci.com/docs/2.0/language-go/ for more details
-version: 2
+version: 2.1
+
+commands:
+  ci_steps:
+    steps:
+      - checkout
+      - run: go get -v -t -d ./...
+      - run: go test -v ./... -race -coverprofile=coverage.txt -covermode=atomic
+
 jobs:
   build: # test with redisearch:latest
     docker:
       - image: circleci/golang:1.9
       - image: redislabs/redisearch:latest
-
     working_directory: /go/src/github.com/RediSearch/redisearch-go
     steps:
       - checkout
-      - run: go get -v -t -d ./...
-      - run: go test -v ./... -race -coverprofile=coverage.txt -covermode=atomic
+      - ci_steps
       - run: bash <(curl -s https://codecov.io/bash) -t ${CODECOV_TOKEN}
 
-  build_nightly: # test nightly with redisearch:edge 
+  build_v16: # test with redisearch v1.6
+    docker:
+      - image: circleci/golang:1.9
+      - image: redislabs/redisearch:1.6.10
+    working_directory: /go/src/github.com/RediSearch/redisearch-go
+    steps:
+      - ci_steps
+
+  build_v14: # test with redisearch v1.4
+    docker:
+      - image: circleci/golang:1.9
+      - image: redislabs/redisearch:1.4.27
+    working_directory: /go/src/github.com/RediSearch/redisearch-go
+    steps:
+      - ci_steps
+
+  build_nightly: # test nightly with redisearch:edge
     docker:
       - image: circleci/golang:1.9
       - image: redislabs/redisearch:edge
-
     working_directory: /go/src/github.com/RediSearch/redisearch-go
     steps:
-      - checkout
-      - run: go get -v -t -d ./...
-      - run: go test -v ./... -race #no need for codecov on nightly
+      - ci_steps
 
 workflows:
   version: 2
   commit:
     jobs:
       - build
+      - build_v16
+      - build_v14
   nightly:
     triggers:
       - schedule:
