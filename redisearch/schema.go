@@ -91,6 +91,11 @@ type NumericFieldOptions struct {
 	NoIndex  bool
 }
 
+// GeoFieldOptions Options for geo fields
+type GeoFieldOptions struct {
+	NoIndex bool
+}
+
 // NewTextField creates a new text field with the given weight
 func NewTextField(name string) Field {
 	return Field{
@@ -158,6 +163,22 @@ func NewSortableNumericField(name string) Field {
 	return f
 }
 
+// NewGeoField creates a new geo field with the given name
+func NewGeoField(name string) Field {
+	return Field{
+		Name:    name,
+		Type:    GeoField,
+		Options: nil,
+	}
+}
+
+// NewGeoFieldOptions creates a new geo field with the given name and additional options
+func NewGeoFieldOptions(name string, options GeoFieldOptions) Field {
+	f := NewGeoField(name)
+	f.Options = options
+	return f
+}
+
 // Schema represents an index schema Schema, or how the index would
 // treat documents sent to it.
 type Schema struct {
@@ -168,7 +189,7 @@ type Schema struct {
 // NewSchema creates a new Schema object
 func NewSchema(opts Options) *Schema {
 	return &Schema{
-		Fields: []Field{},
+		Fields:  []Field{},
 		Options: opts,
 	}
 }
@@ -181,7 +202,6 @@ func (m *Schema) AddField(f Field) *Schema {
 	m.Fields = append(m.Fields, f)
 	return m
 }
-
 
 func SerializeSchema(s *Schema, args redis.Args) (redis.Args, error) {
 	if s.Options.NoFieldFlags {
@@ -257,6 +277,17 @@ func SerializeSchema(s *Schema, args redis.Args) (redis.Args, error) {
 				}
 				if opts.Sortable {
 					args = append(args, "SORTABLE")
+				}
+				if opts.NoIndex {
+					args = append(args, "NOINDEX")
+				}
+			}
+		case GeoField:
+			args = append(args, f.Name, "GEO")
+			if f.Options != nil {
+				opts, ok := f.Options.(GeoFieldOptions)
+				if !ok {
+					return nil, errors.New("Invalid geo field options type")
 				}
 				if opts.NoIndex {
 					args = append(args, "NOINDEX")

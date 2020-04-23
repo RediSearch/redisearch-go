@@ -2,6 +2,7 @@ package redisearch
 
 import (
 	"github.com/gomodule/redigo/redis"
+	"math"
 )
 
 // Flag is a type for query flags
@@ -79,7 +80,7 @@ type Query struct {
 	Flags  Flag
 	Slop   int
 
-	Filters       []Predicate
+	Filters       []Filter
 	InKeys        []string
 	ReturnFields  []string
 	Language      string
@@ -120,7 +121,7 @@ func (p Paging) serialize() redis.Args {
 func NewQuery(raw string) *Query {
 	return &Query{
 		Raw:     raw,
-		Filters: []Predicate{},
+		Filters: []Filter{},
 		Paging:  Paging{DefaultOffset, DefaultNum},
 	}
 }
@@ -197,7 +198,47 @@ func (q Query) serialize() redis.Args {
 			args = args.Add("SEPARATOR", q.SummarizeOpts.Separator)
 		}
 	}
+
+	if q.Filters != nil {
+		for _, f := range q.Filters {
+			if f.Options != nil {
+				switch f.Options.(type) {
+				case NumericFilterOptions:
+					opts, _ := f.Options.(NumericFilterOptions)
+					args = append(args, "FILTER", f.Field)
+					args = appendNumArgs(opts.Min, opts.ExclusiveMin, args)
+					args = appendNumArgs(opts.Max, opts.ExclusiveMax, args)
+				case GeoFilterOptions:
+					opts, _ := f.Options.(GeoFilterOptions)
+					args = append(args, "GEOFILTER", f.Field, opts.Lon, opts.Lat, opts.Radius, opts.Unit)
+				}
+			}
+		}
+	}
 	return args
+}
+
+func appendNumArgs(num float64, exclude bool, args redis.Args) redis.Args {
+	if math.IsInf(num, 1) {
+		return append(args, "+inf")
+	}
+	if math.IsInf(num, -1) {
+		return append(args, "-inf")
+	}
+
+	if exclude {
+		return append(args, "(", num)
+	}
+	return append(args, num)
+}
+
+// AddFilter adds a filter to the query
+func (q *Query) AddFilter(f Filter) *Query {
+	if q.Filters == nil {
+		q.Filters = []Filter{}
+	}
+	q.Filters = append(q.Filters, f)
+	return q
 }
 
 // // AddPredicate adds a predicate to the query's filters
