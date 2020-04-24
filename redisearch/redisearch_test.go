@@ -25,7 +25,6 @@ func getTestConnectionDetails() (string, string) {
 	return host, password
 }
 
-
 func createClient(indexName string) *Client {
 	host, password := getTestConnectionDetails()
 	if password != "" {
@@ -39,11 +38,10 @@ func createClient(indexName string) *Client {
 			return err
 		}
 		return NewClientFromPool(pool, indexName)
-	}else{
+	} else {
 		return NewClient(host, indexName)
 	}
 }
-
 
 func createAutocompleter(dictName string) *Autocompleter {
 	host, password := getTestConnectionDetails()
@@ -398,9 +396,9 @@ func TestSpellCheck(t *testing.T) {
 	}
 
 	assert.Nil(t, c.Index(docs...))
-	query := NewQuery("Anla Portuga" )
-	opts := NewSpellCheckOptions(2 )
-	sugs, total, err := c.SpellCheck(query,opts )
+	query := NewQuery("Anla Portuga")
+	opts := NewSpellCheckOptions(2)
+	sugs, total, err := c.SpellCheck(query, opts)
 	assert.Nil(t, err)
 	assert.Equal(t, 2, len(sugs))
 	assert.Equal(t, 2, total)
@@ -409,19 +407,66 @@ func TestSpellCheck(t *testing.T) {
 	// 1) 1) "TERM"
 	//   2) "an"
 	//   3) (empty list or set)
-	queryEmpty := NewQuery("An" )
-	sugs, total, err = c.SpellCheck(queryEmpty,opts )
+	queryEmpty := NewQuery("An")
+	sugs, total, err = c.SpellCheck(queryEmpty, opts)
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(sugs))
 	assert.Equal(t, 0, total)
 
 	// same query but now with a distance of 4
 	opts.SetDistance(4)
-	sugs, total, err = c.SpellCheck(queryEmpty,opts )
+	sugs, total, err = c.SpellCheck(queryEmpty, opts)
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(sugs))
 	assert.Equal(t, 1, total)
 
+}
+
+func TestFilter(t *testing.T) {
+	c := createClient("testFilter")
+	// Create a schema
+	sc := NewSchema(DefaultOptions).
+		AddField(NewTextField("body")).
+		AddField(NewTextFieldOptions("title", TextFieldOptions{Weight: 5.0, Sortable: true})).
+		AddField(NewNumericField("age")).
+		AddField(NewGeoFieldOptions("location", GeoFieldOptions{}))
+
+	// Drop an existing index. If the index does not exist an error is returned
+	c.Drop()
+	assert.Nil(t, c.CreateIndex(sc))
+
+	// Create a document with an id and given score
+	doc := NewDocument("doc1", 1.0)
+	doc.Set("title", "Hello world").
+		Set("body", "foo bar").
+		Set("age", 18).
+		Set("location", "13.361389,38.115556")
+
+	assert.Nil(t, c.IndexOptions(DefaultIndexingOptions, doc))
+	// Searching with NumericFilter
+	docs, total, err := c.Search(NewQuery("hello world").
+		AddFilter(Filter{Field: "age", Options: NumericFilterOptions{Min: 1, Max: 20}}).
+		SetSortBy("age", true).
+		SetReturnFields("body"))
+	assert.Nil(t, err)
+	assert.Equal(t, 1, total)
+	assert.Equal(t, "foo bar", docs[0].Properties["body"])
+
+	// Searching with GeoFilter
+	docs, total, err = c.Search(NewQuery("hello world").
+		AddFilter(Filter{Field: "location", Options: GeoFilterOptions{Lon: 15, Lat: 37, Radius: 200, Unit: KILOMETERS}}).
+		SetSortBy("age", true).
+		SetReturnFields("age"))
+	assert.Nil(t, err)
+	assert.Equal(t, 1, total)
+	assert.Equal(t, "18", docs[0].Properties["age"])
+
+	docs, total, err = c.Search(NewQuery("hello world").
+		AddFilter(Filter{Field: "location", Options: GeoFilterOptions{Lon: 10, Lat: 13, Radius: 1, Unit: KILOMETERS}}).
+		SetSortBy("age", true).
+		SetReturnFields("body"))
+	assert.Nil(t, err)
+	assert.Equal(t, 0, total)
 }
 
 func ExampleClient() {
@@ -434,7 +479,8 @@ func ExampleClient() {
 	sc := NewSchema(DefaultOptions).
 		AddField(NewTextField("body")).
 		AddField(NewTextFieldOptions("title", TextFieldOptions{Weight: 5.0, Sortable: true})).
-		AddField(NewNumericField("date"))
+		AddField(NewNumericField("date")).
+		AddField(NewGeoFieldOptions("location", GeoFieldOptions{}))
 
 	// Drop an existing index. If the index does not exist an error is returned
 	c.Drop()
@@ -448,7 +494,8 @@ func ExampleClient() {
 	doc := NewDocument("doc1", 1.0)
 	doc.Set("title", "Hello world").
 		Set("body", "foo bar").
-		Set("date", time.Now().Unix())
+		Set("date", time.Now().Unix()).
+		Set("location", "13.361389,38.115556")
 
 	// Index the document. The API accepts multiple documents at a time
 	if err := c.IndexOptions(DefaultIndexingOptions, doc); err != nil {
@@ -463,5 +510,3 @@ func ExampleClient() {
 	fmt.Println(docs[0].Id, docs[0].Properties["title"], total, err)
 	// Output: doc1 Hello world 1 <nil>
 }
-
-
