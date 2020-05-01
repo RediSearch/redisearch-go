@@ -153,7 +153,7 @@ func TestNewMisspelledTerm(t *testing.T) {
 		args args
 		want MisspelledTerm
 	}{
-		// TODO: Add test cases.
+		{"1", args{"term"}, MisspelledTerm{"term", []MisspelledSuggestion{}}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -333,7 +333,6 @@ func TestSpellCheckOptions_serialize(t *testing.T) {
 		fields fields
 		want   redis.Args
 	}{
-		// TODO: Add test cases.
 		{"empty", fields{1, []string{}, []string{}}, redis.Args{}},
 		{"exclude", fields{1, []string{"dict1"}, []string{}}, redis.Args{"TERMS", "EXCLUDE", "dict1"}},
 		{"include", fields{1, []string{}, []string{"dict1"}}, redis.Args{"TERMS", "INCLUDE", "dict1"}},
