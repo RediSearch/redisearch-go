@@ -1,7 +1,6 @@
 package redisearch
 
 import (
-	"errors"
 	"fmt"
 	"github.com/gomodule/redigo/redis"
 )
@@ -203,100 +202,106 @@ func (m *Schema) AddField(f Field) *Schema {
 	return m
 }
 
-func SerializeSchema(s *Schema, args redis.Args) (redis.Args, error) {
+func SerializeSchema(s *Schema, args redis.Args) (argsOut redis.Args, err error) {
+	argsOut = args
 	if s.Options.NoFieldFlags {
-		args = append(args, "NOFIELDS")
+		argsOut = append(argsOut, "NOFIELDS")
 	}
 	if s.Options.NoFrequencies {
-		args = append(args, "NOFREQS")
+		argsOut = append(argsOut, "NOFREQS")
 	}
 	if s.Options.NoOffsetVectors {
-		args = append(args, "NOOFFSETS")
+		argsOut = append(argsOut, "NOOFFSETS")
 	}
 	if s.Options.Stopwords != nil {
-		args = args.Add("STOPWORDS", len(s.Options.Stopwords))
+		argsOut = argsOut.Add("STOPWORDS", len(s.Options.Stopwords))
 		if len(s.Options.Stopwords) > 0 {
-			args = args.AddFlat(s.Options.Stopwords)
+			argsOut = argsOut.AddFlat(s.Options.Stopwords)
 		}
 	}
 
-	args = append(args, "SCHEMA")
+	argsOut = append(argsOut, "SCHEMA")
 	for _, f := range s.Fields {
-
-		switch f.Type {
-		case TextField:
-
-			args = append(args, f.Name, "TEXT")
-			if f.Options != nil {
-				opts, ok := f.Options.(TextFieldOptions)
-				if !ok {
-					return nil, errors.New("Invalid text field options type")
-				}
-
-				if opts.Weight != 0 && opts.Weight != 1 {
-					args = append(args, "WEIGHT", opts.Weight)
-				}
-				if opts.NoStem {
-					args = append(args, "NOSTEM")
-				}
-
-				if opts.Sortable {
-					args = append(args, "SORTABLE")
-				}
-
-				if opts.NoIndex {
-					args = append(args, "NOINDEX")
-				}
-			}
-
-		case NumericField:
-			args = append(args, f.Name, "NUMERIC")
-			if f.Options != nil {
-				opts, ok := f.Options.(NumericFieldOptions)
-				if !ok {
-					return nil, errors.New("Invalid numeric field options type")
-				}
-
-				if opts.Sortable {
-					args = append(args, "SORTABLE")
-				}
-				if opts.NoIndex {
-					args = append(args, "NOINDEX")
-				}
-			}
-		case TagField:
-			args = append(args, f.Name, "TAG")
-			if f.Options != nil {
-				opts, ok := f.Options.(TagFieldOptions)
-				if !ok {
-					return nil, errors.New("Invalid tag field options type")
-				}
-				if opts.Separator != 0 {
-					args = append(args, "SEPARATOR", fmt.Sprintf("%c", opts.Separator))
-
-				}
-				if opts.Sortable {
-					args = append(args, "SORTABLE")
-				}
-				if opts.NoIndex {
-					args = append(args, "NOINDEX")
-				}
-			}
-		case GeoField:
-			args = append(args, f.Name, "GEO")
-			if f.Options != nil {
-				opts, ok := f.Options.(GeoFieldOptions)
-				if !ok {
-					return nil, errors.New("Invalid geo field options type")
-				}
-				if opts.NoIndex {
-					args = append(args, "NOINDEX")
-				}
-			}
-		default:
-			return nil, fmt.Errorf("Unsupported field type %v", f.Type)
+		argsOut, err = serializeField(f, argsOut)
+		if err != nil {
+			return nil,err
 		}
-
 	}
-	return args, nil
+	return
+}
+
+func serializeField(f Field, args redis.Args) (argsOut redis.Args, err error) {
+	argsOut = args
+	switch f.Type {
+	case TextField:
+		argsOut = append(argsOut, f.Name, "TEXT")
+		if f.Options != nil {
+			opts, ok := f.Options.(TextFieldOptions)
+			if !ok {
+				err = fmt.Errorf("Error on TextField serialization")
+				return
+			}
+			if opts.Weight != 0 && opts.Weight != 1 {
+				argsOut = append(argsOut, "WEIGHT", opts.Weight)
+			}
+			if opts.NoStem {
+				argsOut = append(argsOut, "NOSTEM")
+			}
+			if opts.Sortable {
+				argsOut = append(argsOut, "SORTABLE")
+			}
+			if opts.NoIndex {
+				argsOut = append(argsOut, "NOINDEX")
+			}
+		}
+	case NumericField:
+		argsOut = append(argsOut, f.Name, "NUMERIC")
+		if f.Options != nil {
+			opts, ok := f.Options.(NumericFieldOptions)
+			if !ok {
+				err = fmt.Errorf("Error on NumericField serialization")
+				return
+			}
+			if opts.Sortable {
+				argsOut = append(argsOut, "SORTABLE")
+			}
+			if opts.NoIndex {
+				argsOut = append(argsOut, "NOINDEX")
+			}
+		}
+	case TagField:
+		argsOut = append(argsOut, f.Name, "TAG")
+		if f.Options != nil {
+			opts, ok := f.Options.(TagFieldOptions)
+			if !ok {
+				err = fmt.Errorf("Error on TagField serialization")
+				return
+			}
+			if opts.Separator != 0 {
+				argsOut = append(argsOut, "SEPARATOR", fmt.Sprintf("%c", opts.Separator))
+			}
+			if opts.Sortable {
+				argsOut = append(argsOut, "SORTABLE")
+			}
+			if opts.NoIndex {
+				argsOut = append(argsOut, "NOINDEX")
+			}
+		}
+	case GeoField:
+		argsOut = append(argsOut, f.Name, "GEO")
+		if f.Options != nil {
+			opts, ok := f.Options.(GeoFieldOptions)
+			if !ok {
+				err = fmt.Errorf("Error on GeoField serialization")
+				return
+			}
+			if opts.NoIndex {
+				argsOut = append(argsOut, "NOINDEX")
+			}
+		}
+	default:
+		err = fmt.Errorf("Unrecognized field type %v serialization", f.Type )
+		return
+	}
+	return
 }
