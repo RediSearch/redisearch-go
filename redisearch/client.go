@@ -6,7 +6,6 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
-
 	"github.com/gomodule/redigo/redis"
 )
 
@@ -59,6 +58,20 @@ func (i *Client) CreateIndex(s *Schema) (err error) {
 	conn := i.pool.Get()
 	defer conn.Close()
 	_, err = conn.Do("FT.CREATE", args...)
+	return err
+}
+
+// AddField Adds a new field to the index.
+func (i *Client) AddField(f Field) error {
+	args := redis.Args{i.name}
+	args = append(args, "SCHEMA", "ADD")
+	args,err := serializeField(f,args)
+	if err != nil {
+		return err
+	}
+	conn := i.pool.Get()
+	defer conn.Close()
+	_, err = conn.Do("FT.ALTER", args...)
 	return err
 }
 

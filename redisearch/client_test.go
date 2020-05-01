@@ -530,3 +530,17 @@ func TestClient_AddHash(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, "OK", ret)
 }
+
+func TestClient_AddField(t *testing.T) {
+	c := createClient("alterTest")
+	sc := NewSchema(DefaultOptions).
+		AddField(NewTextField("name")).
+		AddField(NewTextField("addr"))
+	c.Drop()
+	err := c.CreateIndex(sc)
+	assert.Nil(t, err)
+	err = c.AddField(NewNumericField("age"))
+	assert.Nil(t, err)
+	err = c.Index(NewDocument("doc-n1",1.0).Set("age",15 ))
+	assert.Nil(t, err)
+}

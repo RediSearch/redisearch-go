@@ -79,7 +79,7 @@ func ExampleClient() {
 | [FT.CREATE](https://oss.redislabs.com/redisearch/Commands.html#ftcreate) |   [CreateIndex](https://godoc.org/github.com/RediSearch/redisearch-go/redisearch#Client.CreateIndex)          |
 | [FT.ADD](https://oss.redislabs.com/redisearch/Commands.html#ftadd) |   [IndexOptions](https://godoc.org/github.com/RediSearch/redisearch-go/redisearch#Client.IndexOptions)          |
 | [FT.ADDHASH](https://oss.redislabs.com/redisearch/Commands.html#ftaddhash) | [AddHash](https://godoc.org/github.com/RediSearch/redisearch-go/redisearch#Client.AddHash) |
-| [FT.ALTER](https://oss.redislabs.com/redisearch/Commands.html#ftalter) |    N/A |
+| [FT.ALTER](https://oss.redislabs.com/redisearch/Commands.html#ftalter) |    [AddField](https://godoc.org/github.com/RediSearch/redisearch-go/redisearch#Client.AddField) |
 | [FT.ALIASADD](https://oss.redislabs.com/redisearch/Commands.html#ftaliasadd) |  [AliasAdd](https://godoc.org/github.com/RediSearch/redisearch-go/redisearch#Client.AliasAdd)         |
 | [FT.ALIASUPDATE](https://oss.redislabs.com/redisearch/Commands.html#ftaliasupdate) |     [AliasUpdate](https://godoc.org/github.com/RediSearch/redisearch-go/redisearch#Client.AliasUpdate)          |
 | [FT.ALIASDEL](https://oss.redislabs.com/redisearch/Commands.html#ftaliasdel) |     [AliasDel](https://godoc.org/github.com/RediSearch/redisearch-go/redisearch#Client.AliasDel)        |
