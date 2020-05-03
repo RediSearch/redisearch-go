@@ -3,16 +3,16 @@
 # Check https://circleci.com/docs/2.0/language-go/ for more details
 version: 2
 jobs:
-  build: # test with redisearch:latest
+  build: # test with redisearch:edge
     docker:
       - image: circleci/golang:1.9
-      - image: redislabs/redisearch:latest
+      - image: redislabs/redisearch:edge
 
     working_directory: /go/src/github.com/RediSearch/redisearch-go
     steps:
       - checkout
-      - run: go get -v -t -d ./...
-      - run: go test -v ./... -race -coverprofile=coverage.txt -covermode=atomic
+      - run: make get
+      - run: make coverage
       - run: bash <(curl -s https://codecov.io/bash) -t ${CODECOV_TOKEN}
 
   build_nightly: # test nightly with redisearch:edge
