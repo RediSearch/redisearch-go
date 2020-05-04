@@ -7,6 +7,10 @@ import (
 	"time"
 )
 
+/**
+ * This demo should be updated in RediSearch.io if changed
+ * Update at: https://github.com/RediSearch/RediSearch/blob/master/docs/go_client.md
+ */
 func main() {
 	// Create a client. By default a client is schemaless
 	// unless a schema is provided when creating the index
