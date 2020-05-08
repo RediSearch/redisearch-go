@@ -9,7 +9,9 @@ import (
 )
 
 /**
- * This demo demonstrates the usage of Create a lightweight temporary index which will expire after the specified period of inactivity. The internal idle timer is reset whenever the index is searched or added to. Because such indexes are lightweight, you can create thousands of such indexes without negative performance implications.
+ * This demo demonstrates the usage of CreateIndex(), to create a lightweight temporary index that will expire after the specified period of inactivity.
+ * The internal idle timer is reset whenever the index is searched or added to.
+ * Because such indexes are lightweight, you can create thousands of such indexes without negative performance implications.
  */
 func main() {
 	// Create a client. By default a client is schemaless
