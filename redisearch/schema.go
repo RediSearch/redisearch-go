@@ -35,6 +35,42 @@ type Options struct {
 	// If the list is nil the default stop-words list is used.
 	// See https://oss.redislabs.com/redisearch/Stopwords.html#default_stop-word_list
 	Stopwords []string
+
+	// If set to true, creates a lightweight temporary index which will expire after the specified period of inactivity.
+	// The internal idle timer is reset whenever the index is searched or added to.
+	// Because such indexes are lightweight, you can create thousands of such indexes without negative performance implications.
+	Temporary       bool
+	TemporaryPeriod int
+}
+
+func NewOptions() *Options {
+	var opts = DefaultOptions
+	return &opts
+}
+
+// If set to true, creates a lightweight temporary index which will expire after the specified period of inactivity.
+// The internal idle timer is reset whenever the index is searched or added to.
+// To enable the temporary index creation, use SetTemporaryPeriod(). This method should be preferably used for disabling the flag
+func (options *Options) SetTemporary(temporary bool) *Options {
+	options.Temporary = temporary
+	return options
+}
+
+// If set to a positive integer, creates a lightweight temporary index which will expire after the specified period of inactivity (in seconds).
+// The internal idle timer is reset whenever the index is searched or added to.
+func (options *Options) SetTemporaryPeriod(period int) *Options {
+	options.TemporaryPeriod = period
+	options.Temporary = true
+	return options
+}
+
+// Set the index with a custom stop-words list, to be ignored during indexing and search time
+// This is an option that is applied and index level.
+// If the list is nil the default stop-words list is used.
+// See https://oss.redislabs.com/redisearch/Stopwords.html#default_stop-word_list
+func (options *Options) SetStopWords(stopwords []string) *Options {
+	options.Stopwords = stopwords
+	return options
 }
 
 // DefaultOptions represents the default options
@@ -44,6 +80,8 @@ var DefaultOptions = Options{
 	NoFrequencies:   false,
 	NoOffsetVectors: false,
 	Stopwords:       nil,
+	Temporary:       false,
+	TemporaryPeriod: 0,
 }
 
 const (
@@ -204,15 +242,19 @@ func (m *Schema) AddField(f Field) *Schema {
 
 func SerializeSchema(s *Schema, args redis.Args) (argsOut redis.Args, err error) {
 	argsOut = args
+	if s.Options.NoOffsetVectors {
+		argsOut = append(argsOut, "NOOFFSETS")
+	}
+	if s.Options.Temporary {
+		argsOut = append(argsOut, "TEMPORARY",s.Options.TemporaryPeriod)
+	}
 	if s.Options.NoFieldFlags {
 		argsOut = append(argsOut, "NOFIELDS")
 	}
 	if s.Options.NoFrequencies {
 		argsOut = append(argsOut, "NOFREQS")
 	}
-	if s.Options.NoOffsetVectors {
-		argsOut = append(argsOut, "NOOFFSETS")
-	}
+
 	if s.Options.Stopwords != nil {
 		argsOut = argsOut.Add("STOPWORDS", len(s.Options.Stopwords))
 		if len(s.Options.Stopwords) > 0 {
@@ -224,7 +266,7 @@ func SerializeSchema(s *Schema, args redis.Args) (argsOut redis.Args, err error)
 	for _, f := range s.Fields {
 		argsOut, err = serializeField(f, argsOut)
 		if err != nil {
-			return nil,err
+			return nil, err
 		}
 	}
 	return
@@ -300,7 +342,7 @@ func serializeField(f Field, args redis.Args) (argsOut redis.Args, err error) {
 			}
 		}
 	default:
-		err = fmt.Errorf("Unrecognized field type %v serialization", f.Type )
+		err = fmt.Errorf("Unrecognized field type %v serialization", f.Type)
 		return
 	}
 	return
