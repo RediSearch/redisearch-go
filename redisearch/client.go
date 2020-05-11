@@ -37,7 +37,7 @@ func NewClient(addr, name string) *Client {
 	return ret
 }
 
-// NewAutocompleter creates a new Autocompleter with the given pool and index name
+// NewClientFromPool creates a new Client with the given pool and index name
 func NewClientFromPool(pool *redis.Pool, name string) *Client {
 	ret := &Client{
 		pool: pool,
