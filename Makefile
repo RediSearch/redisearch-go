@@ -24,6 +24,7 @@ examples: get
 	$(GOBUILD) ./examples/redisearch_quickstart/.
 	$(GOBUILD) ./examples/redisearch_auth/.
 	$(GOBUILD) ./examples/redisearch_tls_client/.
+	$(GOBUILD) ./examples/redisearch_temporary_index/.
 	./redisearch_tls_client --tls-cert-file $(TLS_CERT) \
 						 --tls-key-file $(TLS_KEY) \
 						 --tls-ca-cert-file $(TLS_CACERT) \
