@@ -43,10 +43,14 @@ func TestSerializeSchema(t *testing.T) {
 		want    redis.Args
 		wantErr bool
 	}{
+
 		{"default-args", args{NewSchema(DefaultOptions), redis.Args{}}, redis.Args{"SCHEMA"}, false},
+		{"default-args-with-different-constructor", args{NewSchema(*NewOptions()), redis.Args{}}, redis.Args{"SCHEMA"}, false},
+		{"temporary", args{NewSchema(*NewOptions().SetTemporaryPeriod(60)), redis.Args{}}, redis.Args{"TEMPORARY",60,"SCHEMA"}, false},
 		{"no-frequencies", args{NewSchema(Options{NoFrequencies: true}), redis.Args{}}, redis.Args{"NOFREQS", "SCHEMA"}, false},
 		{"no-fields", args{NewSchema(Options{NoFieldFlags: true}), redis.Args{}}, redis.Args{"NOFIELDS", "SCHEMA"}, false},
 		{"custom-stopwords", args{NewSchema(Options{Stopwords: []string{"custom"}}), redis.Args{}}, redis.Args{"STOPWORDS", 1, "custom", "SCHEMA"}, false},
+		{"custom-stopwords-with-different-constructor", args{NewSchema(*NewOptions().SetStopWords([]string{"custom"})), redis.Args{}}, redis.Args{"STOPWORDS", 1, "custom", "SCHEMA"}, false},
 		{"no-offsets", args{NewSchema(Options{NoOffsetVectors: true}), redis.Args{}}, redis.Args{"NOOFFSETS", "SCHEMA"}, false},
 		{"default-and-numeric", args{NewSchema(DefaultOptions).AddField(NewNumericField("numeric-field")), redis.Args{}}, redis.Args{"SCHEMA", "numeric-field", "NUMERIC"}, false},
 		{"default-and-numeric-sortable", args{NewSchema(DefaultOptions).AddField(NewSortableNumericField("numeric-field")), redis.Args{}}, redis.Args{"SCHEMA", "numeric-field", "NUMERIC", "SORTABLE"}, false},

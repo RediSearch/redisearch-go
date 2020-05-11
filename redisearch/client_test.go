@@ -544,3 +544,32 @@ func TestClient_AddField(t *testing.T) {
 	err = c.Index(NewDocument("doc-n1",1.0).Set("age",15 ))
 	assert.Nil(t, err)
 }
+
+func TestClient_CreateIndex(t *testing.T) {
+	type fields struct {
+		pool ConnPool
+		name string
+	}
+	type args struct {
+		s *Schema
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		wantErr bool
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			i := &Client{
+				pool: tt.fields.pool,
+				name: tt.fields.name,
+			}
+			if err := i.CreateIndex(tt.args.s); (err != nil) != tt.wantErr {
+				t.Errorf("CreateIndex() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
