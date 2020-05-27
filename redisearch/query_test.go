@@ -68,6 +68,7 @@ func TestQuery_serialize(t *testing.T) {
 		Raw           string
 		Flags         Flag
 		InKeys        []string
+		InFields      []string
 		ReturnFields  []string
 		Language      string
 		Expander      string
@@ -89,6 +90,7 @@ func TestQuery_serialize(t *testing.T) {
 		{"QueryWithPayloads", fields{Raw: raw, Flags: QueryWithPayloads}, redis.Args{raw, "LIMIT", 0, 0, "WITHPAYLOADS"}},
 		{"QueryWithScores", fields{Raw: raw, Flags: QueryWithScores}, redis.Args{raw, "LIMIT", 0, 0, "WITHSCORES"}},
 		{"InKeys", fields{Raw: raw, InKeys: []string{"test_key"}}, redis.Args{raw, "LIMIT", 0, 0, "INKEYS", 1, "test_key"}},
+		{"InFields", fields{Raw: raw, InFields: []string{"test_key"}}, redis.Args{raw, "LIMIT", 0, 0, "INFIELDS", 1, "test_key"}},
 		{"ReturnFields", fields{Raw: raw, ReturnFields: []string{"test_field"}}, redis.Args{raw, "LIMIT", 0, 0, "RETURN", 1, "test_field"}},
 		{"Language", fields{Raw: raw, Language: "chinese"}, redis.Args{raw, "LIMIT", 0, 0, "LANGUAGE", "chinese"}},
 		{"Expander", fields{Raw: raw, Expander: "test_expander"}, redis.Args{raw, "LIMIT", 0, 0, "EXPANDER", "test_expander"}},
@@ -113,6 +115,7 @@ func TestQuery_serialize(t *testing.T) {
 				Raw:           tt.fields.Raw,
 				Flags:         tt.fields.Flags,
 				InKeys:        tt.fields.InKeys,
+				InFields:      tt.fields.InFields,
 				ReturnFields:  tt.fields.ReturnFields,
 				Language:      tt.fields.Language,
 				Expander:      tt.fields.Expander,

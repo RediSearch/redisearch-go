@@ -1,8 +1,9 @@
 package redisearch
 
 import (
-	"github.com/gomodule/redigo/redis"
 	"math"
+
+	"github.com/gomodule/redigo/redis"
 )
 
 // Flag is a type for query flags
@@ -82,6 +83,7 @@ type Query struct {
 
 	Filters       []Filter
 	InKeys        []string
+	InFields      []string
 	ReturnFields  []string
 	Language      string
 	Expander      string
@@ -150,6 +152,11 @@ func (q Query) serialize() redis.Args {
 	if q.InKeys != nil {
 		args = args.Add("INKEYS", len(q.InKeys))
 		args = args.AddFlat(q.InKeys)
+	}
+
+	if q.InFields != nil {
+		args = args.Add("INFIELDS", len(q.InFields))
+		args = args.AddFlat(q.InFields)
 	}
 
 	if q.ReturnFields != nil {
@@ -264,6 +271,12 @@ func (q *Query) SetFlags(flags Flag) *Query {
 // SetInKeys sets the INKEYS argument of the query - limiting the search to a given set of IDs
 func (q *Query) SetInKeys(keys ...string) *Query {
 	q.InKeys = keys
+	return q
+}
+
+// SetInFields sets the INFIELDS argument of the query - filter the results to ones appearing only in specific fields of the document
+func (q *Query) SetInFields(fields ...string) *Query {
+	q.InFields = fields
 	return q
 }
 
