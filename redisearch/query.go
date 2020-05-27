@@ -156,7 +156,7 @@ func (q Query) serialize() redis.Args {
 
 	if q.InFields != nil {
 		args = args.Add("INFIELDS", len(q.InFields))
-		args = args.AddFlag(q.InFields)
+		args = args.AddFlat(q.InFields)
 	}
 
 	if q.ReturnFields != nil {
