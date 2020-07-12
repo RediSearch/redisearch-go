@@ -48,7 +48,7 @@ func NewClientFromPool(pool *redis.Pool, name string) *Client {
 
 // CreateIndex configues the index and creates it on redis
 func (i *Client) CreateIndex(s *Schema) (err error) {
-	args := redis.Args{i.name}
+	args := redis.Args{i.name, "ON", "HASH"}
 	// Set flags based on options
 	args, err = SerializeSchema(s, args)
 	if err != nil {
@@ -597,20 +597,4 @@ func (i *Client) SynDump(indexName string) (map[string][]int64, error) {
 		m[string(key)] = gids
 	}
 	return m, nil
-}
-
-// Adds a document to the index from an existing HASH key in Redis.
-func (i *Client) AddHash(docId string, score float32, language string, replace bool) (string, error) {
-	conn := i.pool.Get()
-	defer conn.Close()
-
-	args := redis.Args{i.name, docId, score}
-	if language != "" {
-		args = args.Add("LANGUAGE", language)
-	}
-
-	if replace {
-		args = args.Add("REPLACE")
-	}
-	return redis.String(conn.Do("FT.ADDHASH", args...))
 }

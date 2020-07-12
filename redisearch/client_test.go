@@ -513,24 +513,6 @@ func TestClient_SynDump(t *testing.T) {
 	assert.Equal(t, gid2, m["child"][0])
 }
 
-func TestClient_AddHash(t *testing.T) {
-	c := createClient("testAddHash")
-
-	sc := NewSchema(DefaultOptions).
-		AddField(NewTextField("name")).
-		AddField(NewTextField("addr"))
-	c.Drop()
-	err := c.CreateIndex(sc)
-	assert.Nil(t, err)
-
-	// Add a hash key
-	c.pool.Get().Do("HMSET", "myhash", "field1", "Hello")
-
-	ret, err := c.AddHash("myhash", 1, "english", false)
-	assert.Nil(t, err)
-	assert.Equal(t, "OK", ret)
-}
-
 func TestClient_AddField(t *testing.T) {
 	c := createClient("alterTest")
 	sc := NewSchema(DefaultOptions).
