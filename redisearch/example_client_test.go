@@ -50,7 +50,7 @@ func ExampleNewClient() {
 		SetReturnFields("title"))
 
 	fmt.Println(docs[0].Id, docs[0].Properties["title"], total, err)
-	// Output: doc1 Hello world 1 <nil>
+	// Output: ExampleNewClient:doc1 Hello world 1 <nil>
 }
 
 // exemplifies the NewClientFromPool function
@@ -93,7 +93,7 @@ func ExampleNewClientFromPool() {
 		SetReturnFields("title"))
 
 	fmt.Println(docs[0].Id, docs[0].Properties["title"], total, err)
-	// Output: doc2 Hello world 1 <nil>
+	// Output: ExampleNewClientFromPool:doc2 Hello world 1 <nil>
 }
 
 //Example of how to establish an SSL connection from your app to the RedisAI Server

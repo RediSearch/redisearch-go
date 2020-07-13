@@ -213,6 +213,7 @@ func TestNoIndex(t *testing.T) {
 
 func TestHighlight(t *testing.T) {
 	c := createClient("testung")
+	Flush(c)
 
 	sc := NewSchema(DefaultOptions).
 		AddField(NewTextField("foo")).

@@ -47,6 +47,6 @@ func ExampleCreateIndex_temporary() {
 	// Searching with limit and sorting
 	_, err = c.Info()
 	fmt.Println(err)
-	// Output: doc1 Hello world 1 <nil>
+	// Output: ExampleCreateIndex_temporary:doc1 Hello world 1 <nil>
 	// Unknown Index name
 }
