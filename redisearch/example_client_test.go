@@ -4,12 +4,13 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"github.com/RediSearch/redisearch-go/redisearch"
-	"github.com/gomodule/redigo/redis"
 	"io/ioutil"
 	"log"
 	"os"
 	"time"
+
+	"github.com/RediSearch/redisearch-go/redisearch"
+	"github.com/gomodule/redigo/redis"
 )
 
 // exemplifies the NewClient function
@@ -33,7 +34,7 @@ func ExampleNewClient() {
 	}
 
 	// Create a document with an id and given score
-	doc := redisearch.NewDocument("doc1", 1.0)
+	doc := redisearch.NewDocument("ExampleNewClient:doc1", 1.0)
 	doc.Set("title", "Hello world").
 		Set("body", "foo bar").
 		Set("date", time.Now().Unix())
@@ -76,7 +77,7 @@ func ExampleNewClientFromPool() {
 	}
 
 	// Create a document with an id and given score
-	doc := redisearch.NewDocument("doc1", 1.0)
+	doc := redisearch.NewDocument("ExampleNewClientFromPool:doc2", 1.0)
 	doc.Set("title", "Hello world").
 		Set("body", "foo bar").
 		Set("date", time.Now().Unix())
@@ -92,7 +93,7 @@ func ExampleNewClientFromPool() {
 		SetReturnFields("title"))
 
 	fmt.Println(docs[0].Id, docs[0].Properties["title"], total, err)
-	// Output: doc1 Hello world 1 <nil>
+	// Output: doc2 Hello world 1 <nil>
 }
 
 //Example of how to establish an SSL connection from your app to the RedisAI Server
@@ -163,7 +164,7 @@ func ExampleNewClientFromPool_ssl() {
 	}
 
 	// Create a document with an id and given score
-	doc := redisearch.NewDocument("doc1", 1.0)
+	doc := redisearch.NewDocument("ExampleNewClientFromPool_ssl:doc3", 1.0)
 	doc.Set("title", "Hello world").
 		Set("body", "foo bar").
 		Set("date", time.Now().Unix())

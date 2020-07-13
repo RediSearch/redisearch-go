@@ -2,11 +2,12 @@ package redisearch
 
 import (
 	"fmt"
-	"github.com/gomodule/redigo/redis"
 	"log"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/gomodule/redigo/redis"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -43,6 +44,12 @@ func createClient(indexName string) *Client {
 	}
 }
 
+func Flush(c *Client) (err error) {
+	conn := c.pool.Get()
+	defer conn.Close()
+	return conn.Send("FLUSHALL")
+}
+
 func createAutocompleter(dictName string) *Autocompleter {
 	host, password := getTestConnectionDetails()
 	if password != "" {
@@ -67,7 +74,8 @@ func TestClient(t *testing.T) {
 
 	sc := NewSchema(DefaultOptions).
 		AddField(NewTextField("foo"))
-	c.Drop()
+	Flush(c)
+
 	if err := c.CreateIndex(sc); err != nil {
 		t.Fatal(err)
 	}
@@ -108,7 +116,8 @@ func TestInfo(t *testing.T) {
 	sc := NewSchema(DefaultOptions).
 		AddField(NewTextField("foo")).
 		AddField(NewSortableNumericField("bar"))
-	c.Drop()
+	Flush(c)
+
 	assert.Nil(t, c.CreateIndex(sc))
 
 	_, err := c.Info()
@@ -121,7 +130,8 @@ func TestNumeric(t *testing.T) {
 	sc := NewSchema(DefaultOptions).
 		AddField(NewTextField("foo")).
 		AddField(NewSortableNumericField("bar"))
-	c.Drop()
+	Flush(c)
+
 	assert.Nil(t, c.CreateIndex(sc))
 
 	docs := make([]Document, 100)
@@ -164,7 +174,7 @@ func TestNumeric(t *testing.T) {
 
 func TestNoIndex(t *testing.T) {
 	c := createClient("testung")
-	c.Drop()
+	Flush(c)
 
 	sc := NewSchema(DefaultOptions).
 		AddField(NewTextFieldOptions("f1", TextFieldOptions{Sortable: true, NoIndex: true, Weight: 1.0})).
@@ -207,7 +217,7 @@ func TestHighlight(t *testing.T) {
 	sc := NewSchema(DefaultOptions).
 		AddField(NewTextField("foo")).
 		AddField(NewTextField("bar"))
-	c.Drop()
+
 	assert.Nil(t, c.CreateIndex(sc))
 
 	docs := make([]Document, 100)
@@ -247,7 +257,7 @@ func TestHighlight(t *testing.T) {
 		assert.Equal(t, "hello world foo bar baz", d.Properties["bar"])
 	}
 
-	c.Drop()
+	Flush(c)
 }
 
 func TestSummarize(t *testing.T) {
@@ -256,7 +266,8 @@ func TestSummarize(t *testing.T) {
 	sc := NewSchema(DefaultOptions).
 		AddField(NewTextField("foo")).
 		AddField(NewTextField("bar"))
-	c.Drop()
+	Flush(c)
+
 	assert.Nil(t, c.CreateIndex(sc))
 
 	docs := make([]Document, 10)
@@ -303,8 +314,7 @@ func TestTags(t *testing.T) {
 		AddField(NewTagFieldOptions("tags", TagFieldOptions{Separator: ';'})).
 		AddField(NewTagField("tags2"))
 
-	// Drop an existing index. If the index does not exist an error is returned
-	c.Drop()
+	Flush(c)
 
 	// Create the index with the given schema
 	if err := c.CreateIndex(sc); err != nil {
@@ -349,7 +359,8 @@ func TestDelete(t *testing.T) {
 	sc := NewSchema(DefaultOptions).
 		AddField(NewTextField("foo"))
 
-	err := c.Drop()
+	err := Flush(c)
+
 	assert.Nil(t, err)
 	assert.Nil(t, c.CreateIndex(sc))
 
@@ -386,7 +397,8 @@ func TestSpellCheck(t *testing.T) {
 	countries := []string{"Spain", "Israel", "Portugal", "France", "England", "Angola"}
 	sc := NewSchema(DefaultOptions).
 		AddField(NewTextField("country"))
-	c.Drop()
+	Flush(c)
+
 	assert.Nil(t, c.CreateIndex(sc))
 
 	docs := make([]Document, len(countries))
@@ -431,8 +443,8 @@ func TestFilter(t *testing.T) {
 		AddField(NewNumericField("age")).
 		AddField(NewGeoFieldOptions("location", GeoFieldOptions{}))
 
-	// Drop an existing index. If the index does not exist an error is returned
-	c.Drop()
+	Flush(c)
+
 	assert.Nil(t, c.CreateIndex(sc))
 
 	// Create a document with an id and given score

@@ -2,9 +2,10 @@ package redisearch_test
 
 import (
 	"fmt"
-	"github.com/RediSearch/redisearch-go/redisearch"
 	"log"
 	"time"
+
+	"github.com/RediSearch/redisearch-go/redisearch"
 )
 
 // exemplifies the CreateIndex function with a temporary index specification
@@ -25,7 +26,7 @@ func ExampleCreateIndex_temporary() {
 	}
 
 	// Create a document with an id and given score
-	doc := redisearch.NewDocument("doc1", 1.0)
+	doc := redisearch.NewDocument("ExampleCreateIndex_temporary:doc1", 1.0)
 	doc.Set("title", "Hello world").
 		Set("body", "foo bar").
 		Set("date", time.Now().Unix())

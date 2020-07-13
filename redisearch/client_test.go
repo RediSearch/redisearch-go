@@ -12,7 +12,7 @@ import (
 func TestClient_Get(t *testing.T) {
 
 	c := createClient("test-get")
-	c.Drop()
+	Flush(c)
 
 	sc := NewSchema(DefaultOptions).
 		AddField(NewTextField("foo"))
@@ -74,7 +74,7 @@ func TestClient_Get(t *testing.T) {
 func TestClient_MultiGet(t *testing.T) {
 
 	c := createClient("test-get")
-	c.Drop()
+	Flush(c)
 
 	sc := NewSchema(DefaultOptions).
 		AddField(NewTextField("foo"))
@@ -279,7 +279,7 @@ func TestClient_AliasAdd(t *testing.T) {
 	sc := NewSchema(DefaultOptions).
 		AddField(NewTextField("foo")).
 		AddField(NewTextField("bar"))
-	c.Drop()
+	Flush(c)
 	assert.Nil(t, c.CreateIndex(sc))
 
 	docs := make([]Document, 100)
@@ -326,7 +326,7 @@ func TestClient_AliasDel(t *testing.T) {
 	sc := NewSchema(DefaultOptions).
 		AddField(NewTextField("foo")).
 		AddField(NewTextField("bar"))
-	c.Drop()
+	Flush(c)
 	err := c.CreateIndex(sc)
 	assert.Nil(t, err)
 
@@ -375,7 +375,7 @@ func TestClient_AliasUpdate(t *testing.T) {
 	sc := NewSchema(DefaultOptions).
 		AddField(NewTextField("foo")).
 		AddField(NewTextField("bar"))
-	c.Drop()
+	Flush(c)
 	err := c.CreateIndex(sc)
 	assert.Nil(t, err)
 
@@ -453,7 +453,7 @@ func TestClient_GetTagVals(t *testing.T) {
 		AddField(NewTextField("name")).
 		AddField(NewTagField("tags"))
 
-	c.Drop()
+	Flush(c)
 	c.CreateIndex(sc)
 
 	docs := make([]Document, 1)
@@ -477,7 +477,7 @@ func TestClient_SynAdd(t *testing.T) {
 	sc := NewSchema(DefaultOptions).
 		AddField(NewTextField("name")).
 		AddField(NewTextField("addr"))
-	c.Drop()
+	Flush(c)
 	err := c.CreateIndex(sc)
 	assert.Nil(t, err)
 
@@ -495,7 +495,7 @@ func TestClient_SynDump(t *testing.T) {
 	sc := NewSchema(DefaultOptions).
 		AddField(NewTextField("name")).
 		AddField(NewTextField("addr"))
-	c.Drop()
+	Flush(c)
 	err := c.CreateIndex(sc)
 	assert.Nil(t, err)
 
@@ -518,7 +518,7 @@ func TestClient_AddField(t *testing.T) {
 	sc := NewSchema(DefaultOptions).
 		AddField(NewTextField("name")).
 		AddField(NewTextField("addr"))
-	c.Drop()
+	Flush(c)
 	err := c.CreateIndex(sc)
 	assert.Nil(t, err)
 	err = c.AddField(NewNumericField("age"))
