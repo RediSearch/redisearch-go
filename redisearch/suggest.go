@@ -7,6 +7,7 @@ type Suggestion struct {
 	Term    string
 	Score   float64
 	Payload string
+	Incr    bool
 }
 
 // SuggestOptions are options which are passed when recieving suggestions from the Autocompleter
