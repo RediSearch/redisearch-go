@@ -91,7 +91,7 @@ func main() {
 
 	// Create the index with the given schema
 	if err := c.CreateIndex(sc); err != nil {
-		log.Fatal(err)
+		log.Fatalf("Error while creating the index: %v", err)
 	}
 
 	// Create a document with an id and given score
@@ -102,14 +102,17 @@ func main() {
 
 	// Index the document. The API accepts multiple documents at a time
 	if err := c.Index([]redisearch.Document{doc}...); err != nil {
-		log.Fatal(err)
+		log.Fatalf("Error while indexing the document: %v", err)
 	}
 
 	// Searching with limit and sorting
 	docs, total, err := c.Search(redisearch.NewQuery("hello world").
 		Limit(0, 2).
 		SetReturnFields("title"))
+	if err != nil {
+		log.Fatalf("Error while searching with limit and sorting: %v", err)
+	}
 
-	fmt.Println(docs[0].Id, docs[0].Properties["title"], total, err)
-	// Output: doc1 Hello world 1 <nil>
+	fmt.Println(docs[0].Id, docs[0].Properties["title"], total)
+	// Output: doc1 Hello world 1
 }

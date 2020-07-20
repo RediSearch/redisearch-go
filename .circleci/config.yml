@@ -17,7 +17,7 @@ jobs:
       - run:
           name: Generate a root CA and a server certificate using redis helpers
           command: |
-            git clone git://github.com/antirez/redis.git --branch 6.0.1
+            git clone git://github.com/antirez/redis.git --branch 6.0.5
             cd redis
             ./utils/gen-test-certs.sh
             cd ..
@@ -45,7 +45,7 @@ jobs:
 
   build: # test with redisearch:edge
     docker:
-      - image: circleci/golang:1.9
+      - image: circleci/golang:1.14
       - image: redislabs/redisearch:edge
 
     working_directory: /go/src/github.com/RediSearch/redisearch-go
@@ -57,7 +57,7 @@ jobs:
 
   build_nightly: # test nightly with redisearch:edge
     docker:
-      - image: circleci/golang:1.9
+      - image: circleci/golang:1.14
       - image: redislabs/redisearch:edge
 
     working_directory: /go/src/github.com/RediSearch/redisearch-go
