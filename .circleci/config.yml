@@ -22,20 +22,16 @@ jobs:
             ./utils/gen-test-certs.sh
             cd ..
       - run:
-          name: Copy RediSearch
-          command: |
-            docker run --rm --entrypoint cat redislabs/redisearch:edge  /usr/lib/redis/modules/redisearch.so > redisearch.so
-            chmod 755 redisearch.so
-      - run:
           name: Run RediSearch with tls support
           command: |
-            docker run -d -v $(pwd)/redisearch.so:/data/redisearch.so \
+            docker run -d \
                        -v $(pwd)/redis/tests/tls/:/data \
-                       -p 6379:6379 redis redis-server --tls-port 6379 --port 0  \
+                       -p 6379:6379 redislabs/redisearch:edge redis-server --tls-port 6379 --port 0  \
                        --tls-cert-file /data/redis.crt  \
                        --tls-key-file /data/redis.key  \
                        --tls-ca-cert-file /data/ca.crt \
-                       --tls-auth-clients no  --loadmodule /data/redisearch.so
+                       --tls-auth-clients no  --loadmodule /usr/lib/redis/modules/redisearch.so
+      - run: make get
       - run:
           name: Run Examples
           command: |
