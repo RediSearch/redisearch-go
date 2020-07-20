@@ -7,6 +7,7 @@ jobs:
     machine:
       enabled: true
       image: ubuntu-1604:202004-01
+    working_directory: $HOME/go/src/github.com/RediSearch/redisearch-go
     steps:
       - checkout
       - run:
