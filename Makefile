@@ -6,6 +6,7 @@ GOCLEAN=$(GOCMD) clean
 GOTEST=$(GOCMD) test
 GOGET=$(GOCMD) get
 GOMOD=$(GOCMD) mod
+GOFMT=$(GOCMD) fmt
 
 .PHONY: all test coverage
 all: test coverage examples
@@ -17,6 +18,15 @@ TLS_CERT ?= redis.crt
 TLS_KEY ?= redis.key
 TLS_CACERT ?= ca.crt
 REDISEARCH_TEST_HOST ?= 127.0.0.1:6379
+
+checkfmt:
+	@echo 'Checking gofmt';\
+ 	bash -c "diff -u <(echo -n) <(gofmt -d .)";\
+	EXIT_CODE=$$?;\
+	if [ "$$EXIT_CODE"  -ne 0 ]; then \
+		echo '$@: Go files must be formatted with gofmt'; \
+	fi && \
+	exit $$EXIT_CODE
 
 examples: get
 	@echo " "
@@ -31,6 +41,7 @@ examples: get
 						 --host $(REDISEARCH_TEST_HOST)
 
 test: get
+	$(GOFMT) ./...
 	$(GOTEST) -race -covermode=atomic ./...
 
 coverage: get test

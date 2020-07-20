@@ -16,7 +16,6 @@ import (
 	"testing"
 )
 
-
 // Game struct which contains a Asin, a Description, a Title, a Price, and a list of categories
 // a type and a list of social links
 
@@ -29,7 +28,6 @@ type Game struct {
 	Price       float32  `json:"price"`
 	Categories  []string `json:"categories"`
 }
-
 
 func init() {
 	/* load test data */
@@ -317,9 +315,9 @@ func TestCursor_Serialize(t *testing.T) {
 		fields fields
 		want   redis.Args
 	}{
-		{"TestCursor_Serialize_1", fields{1, 0, 0,}, redis.Args{"WITHCURSOR"}},
-		{"TestCursor_Serialize_2_MAXIDLE", fields{1, 0, 30000,}, redis.Args{"WITHCURSOR", "MAXIDLE", 30000}},
-		{"TestCursor_Serialize_3_COUNT_MAXIDLE", fields{1, 10, 30000,}, redis.Args{"WITHCURSOR", "COUNT", 10, "MAXIDLE", 30000}},
+		{"TestCursor_Serialize_1", fields{1, 0, 0}, redis.Args{"WITHCURSOR"}},
+		{"TestCursor_Serialize_2_MAXIDLE", fields{1, 0, 30000}, redis.Args{"WITHCURSOR", "MAXIDLE", 30000}},
+		{"TestCursor_Serialize_3_COUNT_MAXIDLE", fields{1, 10, 30000}, redis.Args{"WITHCURSOR", "COUNT", 10, "MAXIDLE", 30000}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -352,7 +350,7 @@ func TestGroupBy_AddFields(t *testing.T) {
 	}{
 		{"TestGroupBy_AddFields_1",
 			fields{[]string{}, nil, nil},
-			args{"a",},
+			args{"a"},
 			&GroupBy{[]string{"a"}, nil, nil},
 		},
 	}
@@ -651,8 +649,8 @@ func TestProcessAggResponse(t *testing.T) {
 		args args
 		want [][]string
 	}{
-		{"empty-reply", args{[]interface{}{}}, [][]string{},},
-		{"1-element-reply", args{[]interface{}{[]interface{}{"userFullName", "berge, julius", "count", "2783"}}}, [][]string{{"userFullName", "berge, julius", "count", "2783"}},},
+		{"empty-reply", args{[]interface{}{}}, [][]string{}},
+		{"1-element-reply", args{[]interface{}{[]interface{}{"userFullName", "berge, julius", "count", "2783"}}}, [][]string{{"userFullName", "berge, julius", "count", "2783"}}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

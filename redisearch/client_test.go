@@ -541,7 +541,7 @@ func TestClient_AddField(t *testing.T) {
 	assert.Nil(t, err)
 	err = c.AddField(NewNumericField("age"))
 	assert.Nil(t, err)
-	err = c.Index(NewDocument("doc-n1",1.0).Set("age",15 ))
+	err = c.Index(NewDocument("doc-n1", 1.0).Set("age", 15))
 	assert.Nil(t, err)
 }
 

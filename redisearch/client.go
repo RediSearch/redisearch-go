@@ -2,11 +2,11 @@ package redisearch
 
 import (
 	"errors"
+	"github.com/gomodule/redigo/redis"
 	"log"
 	"reflect"
 	"strconv"
 	"strings"
-	"github.com/gomodule/redigo/redis"
 )
 
 // Client is an interface to redisearch's redis commands
@@ -65,7 +65,7 @@ func (i *Client) CreateIndex(s *Schema) (err error) {
 func (i *Client) AddField(f Field) error {
 	args := redis.Args{i.name}
 	args = append(args, "SCHEMA", "ADD")
-	args,err := serializeField(f,args)
+	args, err := serializeField(f, args)
 	if err != nil {
 		return err
 	}

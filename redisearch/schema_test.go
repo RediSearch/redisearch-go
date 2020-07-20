@@ -46,7 +46,7 @@ func TestSerializeSchema(t *testing.T) {
 
 		{"default-args", args{NewSchema(DefaultOptions), redis.Args{}}, redis.Args{"SCHEMA"}, false},
 		{"default-args-with-different-constructor", args{NewSchema(*NewOptions()), redis.Args{}}, redis.Args{"SCHEMA"}, false},
-		{"temporary", args{NewSchema(*NewOptions().SetTemporaryPeriod(60)), redis.Args{}}, redis.Args{"TEMPORARY",60,"SCHEMA"}, false},
+		{"temporary", args{NewSchema(*NewOptions().SetTemporaryPeriod(60)), redis.Args{}}, redis.Args{"TEMPORARY", 60, "SCHEMA"}, false},
 		{"no-frequencies", args{NewSchema(Options{NoFrequencies: true}), redis.Args{}}, redis.Args{"NOFREQS", "SCHEMA"}, false},
 		{"no-fields", args{NewSchema(Options{NoFieldFlags: true}), redis.Args{}}, redis.Args{"NOFIELDS", "SCHEMA"}, false},
 		{"custom-stopwords", args{NewSchema(Options{Stopwords: []string{"custom"}}), redis.Args{}}, redis.Args{"STOPWORDS", 1, "custom", "SCHEMA"}, false},
