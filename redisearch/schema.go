@@ -246,7 +246,7 @@ func SerializeSchema(s *Schema, args redis.Args) (argsOut redis.Args, err error)
 		argsOut = append(argsOut, "NOOFFSETS")
 	}
 	if s.Options.Temporary {
-		argsOut = append(argsOut, "TEMPORARY",s.Options.TemporaryPeriod)
+		argsOut = append(argsOut, "TEMPORARY", s.Options.TemporaryPeriod)
 	}
 	if s.Options.NoFieldFlags {
 		argsOut = append(argsOut, "NOFIELDS")
