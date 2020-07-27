@@ -1,10 +1,12 @@
 package redisearch
 
 import (
+	"math"
 	"reflect"
 	"testing"
 
 	"github.com/gomodule/redigo/redis"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestPaging_serialize(t *testing.T) {
@@ -129,4 +131,37 @@ func TestQuery_serialize(t *testing.T) {
 			}
 		})
 	}
+}
+
+func Test_appendNumArgs(t *testing.T) {
+	type args struct {
+		num     float64
+		exclude bool
+		args    redis.Args
+	}
+	tests := []struct {
+		name string
+		args args
+		want redis.Args
+	}{
+		{"1 arg", args{ 1.0,false,redis.Args{} }, redis.Args{1.0} },
+		{"1 excluded arg", args{ 1.0,true,redis.Args{} }, redis.Args{"(",1.0} },
+		{"+inf", args{ math.Inf(1),false,redis.Args{} }, redis.Args{"+inf"} },
+		{"+inf", args{ math.Inf(-1),false,redis.Args{} }, redis.Args{"-inf"} },
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := appendNumArgs(tt.args.num, tt.args.exclude, tt.args.args); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("appendNumArgs() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestQuery_SetInKeys_InFields(t *testing.T) {
+	q := NewQuery("")
+	q.SetInKeys("abc")
+	assert.Equal(t, q.InKeys, []string{"abc"})
+	q.SetInFields("field1")
+	assert.Equal(t, q.InFields, []string{"field1"})
 }
