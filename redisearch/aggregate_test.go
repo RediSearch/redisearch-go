@@ -5,8 +5,6 @@ import (
 	"compress/bzip2"
 	"encoding/json"
 	"fmt"
-	"github.com/gomodule/redigo/redis"
-	"github.com/stretchr/testify/assert"
 	"log"
 	"math/rand"
 	"os"
@@ -14,6 +12,9 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/gomodule/redigo/redis"
+	"github.com/stretchr/testify/assert"
 )
 
 // Game struct which contains a Asin, a Description, a Title, a Price, and a list of categories
@@ -48,7 +49,7 @@ func init() {
 		ndocs := 10000
 		docs := make([]Document, ndocs)
 		for i := 0; i < ndocs; i++ {
-			docs[i] = NewDocument(fmt.Sprintf("doc%d", i), 1).Set("foo", "hello world")
+			docs[i] = NewDocument(fmt.Sprintf("bench.ft.aggregate.doc%d", i), 1).Set("foo", "hello world")
 		}
 
 		if err := c.IndexOptions(DefaultIndexingOptions, docs...); err != nil {
