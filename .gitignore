@@ -1,6 +1,8 @@
 *
 !/**/
 !**/*.go
+!**/go.mod
+!**/go.sum
 !.gitignore
 !.circleci/config.yml
 !/tests/*.bz2

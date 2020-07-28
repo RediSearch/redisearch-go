@@ -1,9 +1,10 @@
 # Go parameters
-GOCMD=go
+GOCMD=GO111MODULE=on go
+
 GOBUILD=$(GOCMD) build
 GOINSTALL=$(GOCMD) install
 GOCLEAN=$(GOCMD) clean
-GOTEST=$(GOCMD) test
+GOTEST=$(GOCMD) test -count=1
 GOGET=$(GOCMD) get
 GOMOD=$(GOCMD) mod
 
