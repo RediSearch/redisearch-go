@@ -61,7 +61,7 @@ func TestSuggest(t *testing.T) {
 	terms := make([]Suggestion, 10)
 	for i := 0; i < 10; i++ {
 		terms[i] = Suggestion{Term: fmt.Sprintf("foo %d", i),
-			Score: 1.0, Payload: fmt.Sprintf("bar %d", i)}
+			Score: 1.0, Payload: fmt.Sprintf("bar %d", i), Incr: true}
 	}
 	err := a.AddTerms(terms...)
 	assert.Nil(t, err)
@@ -86,5 +86,27 @@ func TestSuggest(t *testing.T) {
 		assert.Contains(t, suggestion.Term, "foo")
 		assert.Contains(t, suggestion.Payload, "bar")
 		assert.NotZero(t, suggestion.Score)
+	}
+
+	// Ensure score is incremented according to INCR
+	oldScore := suggestions[0].Score
+
+	err = a.AddTerms(terms...)
+	suggestions, err = a.SuggestOpts("f", SuggestOptions{Num: 10, WithScores: true, WithPayloads: true})
+	assert.Nil(t, err)
+	for _, suggestion := range suggestions {
+		assert.Greater(t, suggestion.Score, oldScore)
+	}
+
+	// Now, replace scores by disabling INCR
+	for i := 0; i < len(terms); i++ {
+		terms[i].Incr = false
+	}
+
+	err = a.AddTerms(terms...)
+	suggestions, err = a.SuggestOpts("f", SuggestOptions{Num: 10, WithScores: true, WithPayloads: true})
+	assert.Nil(t, err)
+	for _, suggestion := range suggestions {
+		assert.Equal(t, suggestion.Score, oldScore)
 	}
 }

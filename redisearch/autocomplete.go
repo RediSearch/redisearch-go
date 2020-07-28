@@ -44,6 +44,9 @@ func (a *Autocompleter) AddTerms(terms ...Suggestion) error {
 	for _, term := range terms {
 
 		args := redis.Args{a.name, term.Term, term.Score}
+		if term.Incr {
+			args = append(args, "INCR")
+		}
 		if term.Payload != "" {
 			args = append(args, "PAYLOAD", term.Payload)
 		}
