@@ -44,7 +44,6 @@ func createClient(indexName string) *Client {
 	}
 }
 
-
 func createAutocompleter(dictName string) *Autocompleter {
 	host, password := getTestConnectionDetails()
 	if password != "" {

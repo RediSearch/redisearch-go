@@ -144,10 +144,10 @@ func Test_appendNumArgs(t *testing.T) {
 		args args
 		want redis.Args
 	}{
-		{"1 arg", args{ 1.0,false,redis.Args{} }, redis.Args{1.0} },
-		{"1 excluded arg", args{ 1.0,true,redis.Args{} }, redis.Args{"(",1.0} },
-		{"+inf", args{ math.Inf(1),false,redis.Args{} }, redis.Args{"+inf"} },
-		{"+inf", args{ math.Inf(-1),false,redis.Args{} }, redis.Args{"-inf"} },
+		{"1 arg", args{1.0, false, redis.Args{}}, redis.Args{1.0}},
+		{"1 excluded arg", args{1.0, true, redis.Args{}}, redis.Args{"(", 1.0}},
+		{"+inf", args{math.Inf(1), false, redis.Args{}}, redis.Args{"+inf"}},
+		{"+inf", args{math.Inf(-1), false, redis.Args{}}, redis.Args{"-inf"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

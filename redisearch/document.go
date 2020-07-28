@@ -20,21 +20,20 @@ type Document struct {
 	Properties map[string]interface{}
 }
 
-
 // IndexingOptions represent the options for indexing a single document
 type IndexingOptions struct {
 
 	// If set, we use a stemmer for the supplied language during indexing. If set to "", we Default to English.
-	Language         string
+	Language string
 
 	// If set to true, we will not save the actual document in the database and only index it.
-	NoSave           bool
+	NoSave bool
 
 	//  If set, we will do an UPSERT style insertion - and delete an older version of the document if it exists.
-	Replace          bool
+	Replace bool
 
 	// (only applicable with Replace): If set, you do not have to specify all fields for reindexing.
-	Partial          bool
+	Partial bool
 
 	// Applicable only in conjunction with Replace and optionally Partial
 	// Update the document only if a boolean expression applies to the document before the update
@@ -79,9 +78,9 @@ func (d Document) Set(name string, value interface{}) Document {
 // to signify an actual backslash, so the actual text in redis-cli for example, will be entered as `hello\\-world`.
 // Underscores (`_`) are not used as separators in either document or query.
 // So the text `hello_world` will remain as is after tokenization.
-func EscapeTextFileString(value string) (string) {
+func EscapeTextFileString(value string) string {
 	for _, char := range field_tokenization {
-		value = strings.Replace(value, string(char), ("\\"+string(char)), -1 )
+		value = strings.Replace(value, string(char), ("\\" + string(char)), -1)
 	}
 	return value
 }
@@ -111,9 +110,8 @@ func loadDocument(arr []interface{}, idIdx, scoreIdx, payloadIdx, fieldsIdx int)
 	return doc, nil
 }
 
-
 // SetPayload Sets the document payload
-func (d *Document) loadFields(lst []interface{}) *Document{
+func (d *Document) loadFields(lst []interface{}) *Document {
 	for i := 0; i < len(lst); i += 2 {
 		var prop string
 		switch lst[i].(type) {
@@ -130,7 +128,7 @@ func (d *Document) loadFields(lst []interface{}) *Document{
 		default:
 			val = v
 		}
-		*d = d.Set(prop,val)
+		*d = d.Set(prop, val)
 	}
 	return d
 }

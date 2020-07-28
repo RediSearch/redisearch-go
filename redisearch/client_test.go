@@ -160,7 +160,7 @@ func TestClient_DictAdd(t *testing.T) {
 	}{
 		{"empty-error", fields{pool: c.pool, name: c.name}, args{"dict1", []string{}}, 0, true},
 		{"1-term", fields{pool: c.pool, name: c.name}, args{"dict1", []string{"term1"}}, 1, false},
-		{"2nd-time-term", fields{pool: c.pool, name: c.name}, args{"dict1", []string{"term1","term1"}}, 1, false},
+		{"2nd-time-term", fields{pool: c.pool, name: c.name}, args{"dict1", []string{"term1", "term1"}}, 1, false},
 		{"multi-term", fields{pool: c.pool, name: c.name}, args{"dict-multi-term", []string{"t1", "t2", "t3", "t4", "t5"}}, 5, false},
 	}
 	for _, tt := range tests {
@@ -551,7 +551,7 @@ func TestClient_AddField(t *testing.T) {
 	assert.Nil(t, err)
 	err = c.AddField(NewNumericField("age"))
 	assert.Nil(t, err)
-	err = c.Index(NewDocument("doc-n1",1.0).Set("age",15 ))
+	err = c.Index(NewDocument("doc-n1", 1.0).Set("age", 15))
 	assert.Nil(t, err)
 }
 
