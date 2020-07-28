@@ -185,7 +185,8 @@ func TestClient_DictAdd(t *testing.T) {
 func TestClient_DictDel(t *testing.T) {
 
 	c := createClient("TestClient_DictDel_Index")
-	c.Drop()
+	// dict tests require flushall
+	flush(c)
 
 	terms := make([]string, 10)
 	for i := 0; i < 10; i++ {
@@ -233,7 +234,8 @@ func TestClient_DictDel(t *testing.T) {
 
 func TestClient_DictDump(t *testing.T) {
 	c := createClient("TestClient_DictDump_Index")
-	c.Drop()
+	// dict tests require flushall
+	flush(c)
 
 	terms1 := make([]string, 10)
 	for i := 0; i < 10; i++ {
