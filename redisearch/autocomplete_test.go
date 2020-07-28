@@ -34,11 +34,11 @@ func TestAutocompleter_Serialize(t *testing.T) {
 		want   redis.Args
 		want1  int
 	}{
-		{"default options", fields{"key1"}, args{"ab", DefaultSuggestOptions,}, redis.Args{"key1", "ab", "MAX", 5}, 1},
-		{"FUZZY", fields{"key1"}, args{"ab", fuzzy,}, redis.Args{"key1", "ab", "MAX", 5, "FUZZY"}, 1},
-		{"WITHSCORES", fields{"key1"}, args{"ab", withscores,}, redis.Args{"key1", "ab", "MAX", 5, "WITHSCORES"}, 2},
-		{"WITHPAYLOADS", fields{"key1"}, args{"ab", withpayloads,}, redis.Args{"key1", "ab", "MAX", 5, "WITHPAYLOADS"}, 2},
-		{"all", fields{"key1"}, args{"ab", all,}, redis.Args{"key1", "ab", "MAX", 5, "FUZZY", "WITHSCORES", "WITHPAYLOADS"}, 3},
+		{"default options", fields{"key1"}, args{"ab", DefaultSuggestOptions}, redis.Args{"key1", "ab", "MAX", 5}, 1},
+		{"FUZZY", fields{"key1"}, args{"ab", fuzzy}, redis.Args{"key1", "ab", "MAX", 5, "FUZZY"}, 1},
+		{"WITHSCORES", fields{"key1"}, args{"ab", withscores}, redis.Args{"key1", "ab", "MAX", 5, "WITHSCORES"}, 2},
+		{"WITHPAYLOADS", fields{"key1"}, args{"ab", withpayloads}, redis.Args{"key1", "ab", "MAX", 5, "WITHPAYLOADS"}, 2},
+		{"all", fields{"key1"}, args{"ab", all}, redis.Args{"key1", "ab", "MAX", 5, "FUZZY", "WITHSCORES", "WITHPAYLOADS"}, 3},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

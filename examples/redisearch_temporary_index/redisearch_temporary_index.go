@@ -51,7 +51,7 @@ func main() {
 	fmt.Println(docs[0].Id, docs[0].Properties["title"], total, err)
 	// Output: doc1 Hello world 1 <nil>
 
-	time.Sleep(15*time.Second)
+	time.Sleep(15 * time.Second)
 	// Searching with limit and sorting
 	_, err = c.Info()
 	fmt.Println(err)

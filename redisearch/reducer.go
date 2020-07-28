@@ -61,7 +61,7 @@ func NewReducer(name GroupByReducers, args []string) *Reducer {
 }
 
 // NewReducer creates a new Reducer object
-func NewReducerAlias(name GroupByReducers, args []string, alias string ) *Reducer {
+func NewReducerAlias(name GroupByReducers, args []string, alias string) *Reducer {
 	return &Reducer{
 		Name:  name,
 		Alias: alias,

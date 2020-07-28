@@ -9,6 +9,12 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func flush(c *Client) (err error) {
+	conn := c.pool.Get()
+	defer conn.Close()
+	return conn.Send("FLUSHALL")
+}
+
 func TestClient_Get(t *testing.T) {
 
 	c := createClient("test-get")
@@ -72,7 +78,6 @@ func TestClient_Get(t *testing.T) {
 }
 
 func TestClient_MultiGet(t *testing.T) {
-
 	c := createClient("test-get")
 	c.Drop()
 
@@ -134,9 +139,9 @@ func TestClient_MultiGet(t *testing.T) {
 }
 
 func TestClient_DictAdd(t *testing.T) {
-	c := createClient("test-get")
-	_, err := c.pool.Get().Do("FLUSHALL")
-	assert.Nil(t, err)
+	c := createClient("TestClient_DictAdd_Index")
+	// dict tests require flushall
+	flush(c)
 
 	type fields struct {
 		pool ConnPool
@@ -155,8 +160,8 @@ func TestClient_DictAdd(t *testing.T) {
 	}{
 		{"empty-error", fields{pool: c.pool, name: c.name}, args{"dict1", []string{}}, 0, true},
 		{"1-term", fields{pool: c.pool, name: c.name}, args{"dict1", []string{"term1"}}, 1, false},
-		{"2nd-time-term", fields{pool: c.pool, name: c.name}, args{"dict1", []string{"term1"}}, 0, false},
-		{"multi-term", fields{pool: c.pool, name: c.name}, args{"dict1", []string{"t1", "t2", "t3", "t4", "t5"}}, 5, false},
+		{"2nd-time-term", fields{pool: c.pool, name: c.name}, args{"dict1", []string{"term1", "term1"}}, 1, false},
+		{"multi-term", fields{pool: c.pool, name: c.name}, args{"dict-multi-term", []string{"t1", "t2", "t3", "t4", "t5"}}, 5, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -172,15 +177,16 @@ func TestClient_DictAdd(t *testing.T) {
 			if gotNewTerms != tt.wantNewTerms {
 				t.Errorf("DictAdd() gotNewTerms = %v, want %v", gotNewTerms, tt.wantNewTerms)
 			}
+			i.DictDel(tt.args.dictionaryName, tt.args.terms)
 		})
 	}
 }
 
 func TestClient_DictDel(t *testing.T) {
 
-	c := createClient("test-get")
-	_, err := c.pool.Get().Do("FLUSHALL")
-	assert.Nil(t, err)
+	c := createClient("TestClient_DictDel_Index")
+	// dict tests require flushall
+	flush(c)
 
 	terms := make([]string, 10)
 	for i := 0; i < 10; i++ {
@@ -227,15 +233,15 @@ func TestClient_DictDel(t *testing.T) {
 }
 
 func TestClient_DictDump(t *testing.T) {
-	c := createClient("test-get")
-	_, err := c.pool.Get().Do("FLUSHALL")
-	assert.Nil(t, err)
+	c := createClient("TestClient_DictDump_Index")
+	// dict tests require flushall
+	flush(c)
 
 	terms1 := make([]string, 10)
 	for i := 0; i < 10; i++ {
 		terms1[i] = fmt.Sprintf("term%d", i)
 	}
-	c.DictAdd("dict1", terms1)
+	c.DictAdd("dictdump-dict1", terms1)
 
 	type fields struct {
 		pool ConnPool
@@ -252,7 +258,7 @@ func TestClient_DictDump(t *testing.T) {
 		wantErr   bool
 	}{
 		{"empty-error", fields{pool: c.pool, name: c.name}, args{"dontexist"}, []string{}, true},
-		{"dict1", fields{pool: c.pool, name: c.name}, args{"dict1"}, terms1, false},
+		{"dictdump-dict1", fields{pool: c.pool, name: c.name}, args{"dictdump-dict1"}, terms1, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -381,7 +387,7 @@ func TestClient_AliasUpdate(t *testing.T) {
 
 	docs := make([]Document, 100)
 	for i := 0; i < 100; i++ {
-		docs[i] = NewDocument(fmt.Sprintf("doc-alias-del-%d", i), 1).Set("foo", "hello world").Set("bar", "hello world foo bar baz")
+		docs[i] = NewDocument(fmt.Sprintf("doc-alias-update-%d", i), 1).Set("foo", "hello world").Set("bar", "hello world foo bar baz")
 	}
 	err = c.Index(docs...)
 
@@ -418,7 +424,7 @@ func TestClient_AliasUpdate(t *testing.T) {
 
 func TestClient_Config(t *testing.T) {
 	c := createClient("testconfigindex")
-
+	c.Drop()
 	ret, err := c.SetConfig("TIMEOUT", "100")
 	assert.Nil(t, err)
 	assert.Equal(t, "OK", ret)
@@ -527,8 +533,12 @@ func TestClient_AddHash(t *testing.T) {
 	c.pool.Get().Do("HMSET", "myhash", "field1", "Hello")
 
 	ret, err := c.AddHash("myhash", 1, "english", false)
-	assert.Nil(t, err)
-	assert.Equal(t, "OK", ret)
+	// Given that FT.ADDHASH is no longer valid for search2+ we assert it's error
+	if err != nil {
+		assert.Equal(t, "ERR unknown command `FT.ADDHASH`, with args beginning with: `testAddHash`, `myhash`, `1`, `LANGUAGE`, `english`, ", err.Error())
+	} else {
+		assert.Equal(t, "OK", ret)
+	}
 }
 
 func TestClient_AddField(t *testing.T) {
@@ -541,7 +551,7 @@ func TestClient_AddField(t *testing.T) {
 	assert.Nil(t, err)
 	err = c.AddField(NewNumericField("age"))
 	assert.Nil(t, err)
-	err = c.Index(NewDocument("doc-n1",1.0).Set("age",15 ))
+	err = c.Index(NewDocument("doc-n1", 1.0).Set("age", 15))
 	assert.Nil(t, err)
 }
 

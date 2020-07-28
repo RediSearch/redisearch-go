@@ -2,11 +2,12 @@ package redisearch
 
 import (
 	"fmt"
-	"github.com/gomodule/redigo/redis"
 	"log"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/gomodule/redigo/redis"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -68,13 +69,14 @@ func TestClient(t *testing.T) {
 	sc := NewSchema(DefaultOptions).
 		AddField(NewTextField("foo"))
 	c.Drop()
+
 	if err := c.CreateIndex(sc); err != nil {
 		t.Fatal(err)
 	}
 
 	docs := make([]Document, 100)
 	for i := 0; i < 100; i++ {
-		docs[i] = NewDocument(fmt.Sprintf("doc%d", i), float32(i)/float32(100)).Set("foo", "hello world")
+		docs[i] = NewDocument(fmt.Sprintf("TestClient-doc%d", i), float32(i)/float32(100)).Set("foo", "hello world")
 	}
 
 	if err := c.IndexOptions(DefaultIndexingOptions, docs...); err != nil {
@@ -109,6 +111,7 @@ func TestInfo(t *testing.T) {
 		AddField(NewTextField("foo")).
 		AddField(NewSortableNumericField("bar"))
 	c.Drop()
+
 	assert.Nil(t, c.CreateIndex(sc))
 
 	_, err := c.Info()
@@ -122,11 +125,12 @@ func TestNumeric(t *testing.T) {
 		AddField(NewTextField("foo")).
 		AddField(NewSortableNumericField("bar"))
 	c.Drop()
+
 	assert.Nil(t, c.CreateIndex(sc))
 
 	docs := make([]Document, 100)
 	for i := 0; i < 100; i++ {
-		docs[i] = NewDocument(fmt.Sprintf("doc%d", i), 1).Set("foo", "hello world").Set("bar", i)
+		docs[i] = NewDocument(fmt.Sprintf("TestNumeric-doc%d", i), 1).Set("foo", "hello world").Set("bar", i)
 	}
 
 	assert.Nil(t, c.Index(docs...))
@@ -140,9 +144,9 @@ func TestNumeric(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, 10, len(docs))
 	assert.Equal(t, 51, total)
-	assert.Equal(t, "doc90", docs[0].Id)
-	assert.Equal(t, "doc89", docs[1].Id)
-	assert.Equal(t, "doc81", docs[9].Id)
+	assert.Equal(t, "TestNumeric-doc90", docs[0].Id)
+	assert.Equal(t, "TestNumeric-doc89", docs[1].Id)
+	assert.Equal(t, "TestNumeric-doc81", docs[9].Id)
 
 	docs, total, err = c.Search(NewQuery("hello world @bar:[40 90]").
 		SetSortBy("bar", true).
@@ -150,11 +154,11 @@ func TestNumeric(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, 10, len(docs))
 	assert.Equal(t, 51, total)
-	assert.Equal(t, "doc40", docs[0].Id)
+	assert.Equal(t, "TestNumeric-doc40", docs[0].Id)
 	assert.Equal(t, "hello world", docs[0].Properties["foo"])
 	assert.Nil(t, docs[0].Properties["bar"])
-	assert.Equal(t, "doc41", docs[1].Id)
-	assert.Equal(t, "doc49", docs[9].Id)
+	assert.Equal(t, "TestNumeric-doc41", docs[1].Id)
+	assert.Equal(t, "TestNumeric-doc49", docs[9].Id)
 
 	// Try "Explain"
 	explain, err := c.Explain(NewQuery("hello world @bar:[40 90]"))
@@ -177,12 +181,12 @@ func TestNoIndex(t *testing.T) {
 	props["f1"] = "MarkZZ"
 	props["f2"] = "MarkZZ"
 
-	err = c.Index(Document{Id: "doc1", Properties: props})
+	err = c.Index(Document{Id: "TestNoIndex-doc1", Properties: props})
 	assert.Nil(t, err)
 
 	props["f1"] = "MarkAA"
 	props["f2"] = "MarkAA"
-	err = c.Index(Document{Id: "doc2", Properties: props})
+	err = c.Index(Document{Id: "TestNoIndex-doc2", Properties: props})
 	assert.Nil(t, err)
 
 	_, total, err := c.Search(NewQuery("@f1:Mark*"))
@@ -194,20 +198,21 @@ func TestNoIndex(t *testing.T) {
 
 	docs, total, err := c.Search(NewQuery("@f2:Mark*").SetSortBy("f1", false))
 	assert.Equal(t, 2, total)
-	assert.Equal(t, "doc1", docs[0].Id)
+	assert.Equal(t, "TestNoIndex-doc1", docs[0].Id)
 
 	docs, total, err = c.Search(NewQuery("@f2:Mark*").SetSortBy("f1", true))
 	assert.Equal(t, 2, total)
-	assert.Equal(t, "doc2", docs[0].Id)
+	assert.Equal(t, "TestNoIndex-doc2", docs[0].Id)
 }
 
 func TestHighlight(t *testing.T) {
 	c := createClient("testung")
+	c.Drop()
 
 	sc := NewSchema(DefaultOptions).
 		AddField(NewTextField("foo")).
 		AddField(NewTextField("bar"))
-	c.Drop()
+
 	assert.Nil(t, c.CreateIndex(sc))
 
 	docs := make([]Document, 100)
@@ -257,11 +262,12 @@ func TestSummarize(t *testing.T) {
 		AddField(NewTextField("foo")).
 		AddField(NewTextField("bar"))
 	c.Drop()
+
 	assert.Nil(t, c.CreateIndex(sc))
 
 	docs := make([]Document, 10)
 	for i := 0; i < 10; i++ {
-		docs[i] = NewDocument(fmt.Sprintf("doc%d", i), 1).
+		docs[i] = NewDocument(fmt.Sprintf("TestSummarize-doc%d", i), 1).
 			Set("foo", "There are two sub-commands commands used for highlighting. One is HIGHLIGHT which surrounds matching text with an open and/or close tag; and the other is SUMMARIZE which splits a field into contextual fragments surrounding the found terms. It is possible to summarize a field, highlight a field, or perform both actions in the same query.").Set("bar", "hello world foo bar baz")
 	}
 	c.Index(docs...)
@@ -295,7 +301,7 @@ func TestSummarize(t *testing.T) {
 }
 
 func TestTags(t *testing.T) {
-	c := createClient("myIndex")
+	c := createClient("TestTagsIdx")
 
 	// Create a schema
 	sc := NewSchema(DefaultOptions).
@@ -303,7 +309,6 @@ func TestTags(t *testing.T) {
 		AddField(NewTagFieldOptions("tags", TagFieldOptions{Separator: ';'})).
 		AddField(NewTagField("tags2"))
 
-	// Drop an existing index. If the index does not exist an error is returned
 	c.Drop()
 
 	// Create the index with the given schema
@@ -312,7 +317,7 @@ func TestTags(t *testing.T) {
 	}
 
 	// Create a document with an id and given score
-	doc := NewDocument("doc1", 1.0)
+	doc := NewDocument("TestTags-doc1", 1.0)
 	doc.Set("title", "Hello world").
 		Set("tags", "foo bar;bar,baz;  hello world").
 		Set("tags2", "foo bar;bar,baz;  hello world")
@@ -344,13 +349,13 @@ func TestTags(t *testing.T) {
 }
 
 func TestDelete(t *testing.T) {
-	c := createClient("testung")
+	c := createClient("TestDelete-testung")
 
 	sc := NewSchema(DefaultOptions).
 		AddField(NewTextField("foo"))
 
 	err := c.Drop()
-	assert.Nil(t, err)
+
 	assert.Nil(t, c.CreateIndex(sc))
 
 	var info *IndexInfo
@@ -360,7 +365,7 @@ func TestDelete(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, uint64(0), info.DocCount)
 
-	doc := NewDocument("doc1", 1.0)
+	doc := NewDocument("TestDelete-doc1", 1.0)
 	doc.Set("foo", "Hello world")
 
 	err = c.IndexOptions(DefaultIndexingOptions, doc)
@@ -372,7 +377,7 @@ func TestDelete(t *testing.T) {
 	assert.Equal(t, uint64(1), info.DocCount)
 
 	// delete the document from the index
-	err = c.Delete("doc1", true)
+	err = c.Delete("TestDelete-doc1", true)
 	assert.Nil(t, err)
 
 	// validate that the index is empty again
@@ -387,12 +392,13 @@ func TestSpellCheck(t *testing.T) {
 	sc := NewSchema(DefaultOptions).
 		AddField(NewTextField("country"))
 	c.Drop()
+
 	assert.Nil(t, c.CreateIndex(sc))
 
 	docs := make([]Document, len(countries))
 
 	for i := 0; i < len(countries); i++ {
-		docs[i] = NewDocument(fmt.Sprintf("doc%d", i), 1).Set("country", countries[i])
+		docs[i] = NewDocument(fmt.Sprintf("TestSpellCheck-doc%d", i), 1).Set("country", countries[i])
 	}
 
 	assert.Nil(t, c.Index(docs...))
@@ -431,12 +437,12 @@ func TestFilter(t *testing.T) {
 		AddField(NewNumericField("age")).
 		AddField(NewGeoFieldOptions("location", GeoFieldOptions{}))
 
-	// Drop an existing index. If the index does not exist an error is returned
 	c.Drop()
+
 	assert.Nil(t, c.CreateIndex(sc))
 
 	// Create a document with an id and given score
-	doc := NewDocument("doc1", 1.0)
+	doc := NewDocument("TestFilter-doc1", 1.0)
 	doc.Set("title", "Hello world").
 		Set("body", "foo bar").
 		Set("age", 18).

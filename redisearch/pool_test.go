@@ -15,8 +15,8 @@ func TestNewMultiHostPool(t *testing.T) {
 		name string
 		args args
 	}{
-		{"multi-host single address", args{[]string{host,},},},
-		{"multi-host several addresses", args{[]string{host, host,},},},
+		{"multi-host single address", args{[]string{host}}},
+		{"multi-host several addresses", args{[]string{host, host}}},
 	}
 	if password == "" {
 		for _, tt := range tests {
@@ -37,14 +37,14 @@ func TestMultiHostPool_Close(t *testing.T) {
 	host, password := getTestConnectionDetails()
 	// Test a simple flow
 	if password == "" {
-		oneMulti := NewMultiHostPool([]string{host,})
+		oneMulti := NewMultiHostPool([]string{host})
 		conn := oneMulti.Get()
 		assert.NotNil(t, conn)
 		err := oneMulti.Close()
 		assert.Nil(t, err)
 		err = oneMulti.Close()
 		assert.NotNil(t, conn)
-		severalMulti := NewMultiHostPool([]string{host, host,})
+		severalMulti := NewMultiHostPool([]string{host, host})
 		connMulti := severalMulti.Get()
 		assert.NotNil(t, connMulti)
 		err = severalMulti.Close()
@@ -70,9 +70,9 @@ func TestMultiHostPool_Close(t *testing.T) {
 		fields  fields
 		wantErr bool
 	}{
-		{"empty", fields{map[string]*redis.Pool{}, []string{}}, false,},
-		{"normal", fields{map[string]*redis.Pool{"hostpool1": pool1}, []string{"hostpool1"}}, false,},
-		{"pool3-already-close", fields{map[string]*redis.Pool{"hostpool2": pool2, "hostpool3": pool3, "hostpool4": pool4,}, []string{"hostpool2", "hostpool3", "hostpool3"}}, false,},
+		{"empty", fields{map[string]*redis.Pool{}, []string{}}, false},
+		{"normal", fields{map[string]*redis.Pool{"hostpool1": pool1}, []string{"hostpool1"}}, false},
+		{"pool3-already-close", fields{map[string]*redis.Pool{"hostpool2": pool2, "hostpool3": pool3, "hostpool4": pool4}, []string{"hostpool2", "hostpool3", "hostpool3"}}, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
