@@ -15,6 +15,38 @@ func flush(c *Client) (err error) {
 	return conn.Send("FLUSHALL")
 }
 
+// getRediSearchVersion returns RediSearch version by issuing "MODULE LIST" command
+// and iterating through the availabe modules up until "ft" is found as the name property
+func (c *Client) getRediSearchVersion() (version int64, err error) {
+	conn := c.pool.Get()
+	defer conn.Close()
+	var values []interface{}
+	var moduleInfo []interface{}
+	var moduleName string
+	values, err = redis.Values(conn.Do("MODULE", "LIST"))
+	if err != nil {
+		return
+	}
+	for _, rawModule := range values {
+		moduleInfo, err = redis.Values(rawModule, err)
+		if err != nil {
+			return
+		}
+		moduleName, err = redis.String(moduleInfo[1], err)
+		if err != nil {
+			return
+		}
+		if moduleName == "ft" {
+			version, err = redis.Int64(moduleInfo[3], err)
+		}
+	}
+	return
+}
+
+func teardown(c *Client) {
+	flush(c)
+}
+
 func TestClient_Get(t *testing.T) {
 
 	c := createClient("test-get")
@@ -75,6 +107,7 @@ func TestClient_Get(t *testing.T) {
 
 		})
 	}
+	teardown(c)
 }
 
 func TestClient_MultiGet(t *testing.T) {
@@ -136,6 +169,7 @@ func TestClient_MultiGet(t *testing.T) {
 			}
 		})
 	}
+	teardown(c)
 }
 
 func TestClient_DictAdd(t *testing.T) {
@@ -180,6 +214,7 @@ func TestClient_DictAdd(t *testing.T) {
 			i.DictDel(tt.args.dictionaryName, tt.args.terms)
 		})
 	}
+	teardown(c)
 }
 
 func TestClient_DictDel(t *testing.T) {
@@ -230,6 +265,7 @@ func TestClient_DictDel(t *testing.T) {
 			}
 		})
 	}
+	teardown(c)
 }
 
 func TestClient_DictDump(t *testing.T) {
@@ -276,6 +312,7 @@ func TestClient_DictDump(t *testing.T) {
 			}
 		})
 	}
+	teardown(c)
 }
 
 func TestClient_AliasAdd(t *testing.T) {
@@ -323,6 +360,7 @@ func TestClient_AliasAdd(t *testing.T) {
 			}
 		})
 	}
+	teardown(c)
 }
 
 func TestClient_AliasDel(t *testing.T) {
@@ -373,6 +411,7 @@ func TestClient_AliasDel(t *testing.T) {
 			}
 		})
 	}
+	teardown(c)
 }
 
 func TestClient_AliasUpdate(t *testing.T) {
@@ -420,6 +459,7 @@ func TestClient_AliasUpdate(t *testing.T) {
 			}
 		})
 	}
+	teardown(c)
 }
 
 func TestClient_Config(t *testing.T) {
@@ -435,6 +475,7 @@ func TestClient_Config(t *testing.T) {
 
 	kvs, _ = c.GetConfig("*")
 	assert.Equal(t, "100", kvs["TIMEOUT"])
+	teardown(c)
 }
 
 func TestNewClientFromPool(t *testing.T) {
@@ -449,6 +490,7 @@ func TestNewClientFromPool(t *testing.T) {
 	err2 := client2.pool.Close()
 	assert.Nil(t, err1)
 	assert.Nil(t, err2)
+	teardown(client1)
 }
 
 func TestClient_GetTagVals(t *testing.T) {
@@ -475,48 +517,58 @@ func TestClient_GetTagVals(t *testing.T) {
 	tags, err = c.GetTagVals("notexit", "tags")
 	assert.NotNil(t, err)
 	assert.Nil(t, tags)
+	teardown(c)
 }
 
 func TestClient_SynAdd(t *testing.T) {
 	c := createClient("testsynadd")
+	version, err := c.getRediSearchVersion()
+	assert.Nil(t, err)
+	if version <= 10699 {
+		sc := NewSchema(DefaultOptions).
+			AddField(NewTextField("name")).
+			AddField(NewTextField("addr"))
+		c.Drop()
+		err := c.CreateIndex(sc)
+		assert.Nil(t, err)
 
-	sc := NewSchema(DefaultOptions).
-		AddField(NewTextField("name")).
-		AddField(NewTextField("addr"))
-	c.Drop()
-	err := c.CreateIndex(sc)
-	assert.Nil(t, err)
-
-	gid, err := c.SynAdd("testsynadd", []string{"girl", "baby"})
-	assert.Nil(t, err)
-	assert.True(t, gid >= 0)
-	ret, err := c.SynUpdate("testsynadd", gid, []string{"girl", "baby"})
-	assert.Nil(t, err)
-	assert.Equal(t, "OK", ret)
+		gid, err := c.SynAdd("testsynadd", []string{"girl", "baby"})
+		assert.Nil(t, err)
+		assert.True(t, gid >= 0)
+		ret, err := c.SynUpdate("testsynadd", gid, []string{"girl", "baby"})
+		assert.Nil(t, err)
+		assert.Equal(t, "OK", ret)
+	}
+	teardown(c)
 }
 
 func TestClient_SynDump(t *testing.T) {
 	c := createClient("testsyndump")
-
-	sc := NewSchema(DefaultOptions).
-		AddField(NewTextField("name")).
-		AddField(NewTextField("addr"))
-	c.Drop()
-	err := c.CreateIndex(sc)
+	version, err := c.getRediSearchVersion()
 	assert.Nil(t, err)
+	if version <= 10699 {
 
-	gid, err := c.SynAdd("testsyndump", []string{"girl", "baby"})
-	assert.Nil(t, err)
-	assert.True(t, gid >= 0)
+		sc := NewSchema(DefaultOptions).
+			AddField(NewTextField("name")).
+			AddField(NewTextField("addr"))
+		c.Drop()
+		err := c.CreateIndex(sc)
+		assert.Nil(t, err)
 
-	gid2, err := c.SynAdd("testsyndump", []string{"child"})
+		gid, err := c.SynAdd("testsyndump", []string{"girl", "baby"})
+		assert.Nil(t, err)
+		assert.True(t, gid >= 0)
 
-	m, err := c.SynDump("testsyndump")
-	assert.Contains(t, m, "baby")
-	assert.Contains(t, m, "girl")
-	assert.Contains(t, m, "child")
-	assert.Equal(t, gid, m["baby"][0])
-	assert.Equal(t, gid2, m["child"][0])
+		gid2, err := c.SynAdd("testsyndump", []string{"child"})
+
+		m, err := c.SynDump("testsyndump")
+		assert.Contains(t, m, "baby")
+		assert.Contains(t, m, "girl")
+		assert.Contains(t, m, "child")
+		assert.Equal(t, gid, m["baby"][0])
+		assert.Equal(t, gid2, m["child"][0])
+	}
+	teardown(c)
 }
 
 func TestClient_AddHash(t *testing.T) {
@@ -539,6 +591,7 @@ func TestClient_AddHash(t *testing.T) {
 	} else {
 		assert.Equal(t, "OK", ret)
 	}
+	teardown(c)
 }
 
 func TestClient_AddField(t *testing.T) {
@@ -553,33 +606,11 @@ func TestClient_AddField(t *testing.T) {
 	assert.Nil(t, err)
 	err = c.Index(NewDocument("doc-n1", 1.0).Set("age", 15))
 	assert.Nil(t, err)
+	teardown(c)
 }
 
-func TestClient_CreateIndex(t *testing.T) {
-	type fields struct {
-		pool ConnPool
-		name string
-	}
-	type args struct {
-		s *Schema
-	}
-	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		wantErr bool
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			i := &Client{
-				pool: tt.fields.pool,
-				name: tt.fields.name,
-			}
-			if err := i.CreateIndex(tt.args.s); (err != nil) != tt.wantErr {
-				t.Errorf("CreateIndex() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-	}
+func TestClient_GetRediSearchVersion(t *testing.T) {
+	c := createClient("version-test")
+	_, err := c.getRediSearchVersion()
+	assert.Nil(t, err)
 }

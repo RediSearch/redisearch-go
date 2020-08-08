@@ -44,6 +44,13 @@ func ExampleNewClient() {
 		log.Fatal(err)
 	}
 
+	// Wait for all documents to be indexed
+	info, _ := c.Info()
+	for info.IsIndexing {
+		time.Sleep(time.Second)
+		info, _ = c.Info()
+	}
+
 	// Searching with limit and sorting
 	docs, total, err := c.Search(redisearch.NewQuery("hello world").
 		Limit(0, 2).
@@ -51,6 +58,9 @@ func ExampleNewClient() {
 
 	fmt.Println(docs[0].Id, docs[0].Properties["title"], total, err)
 	// Output: ExampleNewClient:doc1 Hello world 1 <nil>
+
+	// Drop the existing index
+	c.Drop()
 }
 
 // exemplifies the NewClientFromPool function
@@ -94,6 +104,9 @@ func ExampleNewClientFromPool() {
 
 	fmt.Println(docs[0].Id, docs[0].Properties["title"], total, err)
 	// Output: ExampleNewClientFromPool:doc2 Hello world 1 <nil>
+
+	// Drop the existing index
+	c.Drop()
 }
 
 //Example of how to establish an SSL connection from your app to the RedisAI Server
@@ -180,6 +193,9 @@ func ExampleNewClientFromPool_ssl() {
 		SetReturnFields("title"))
 
 	fmt.Println(docs[0].Id, docs[0].Properties["title"], total, err)
+
+	// Drop the existing index
+	c.Drop()
 }
 
 func getConnectionDetails() (host string, password string) {

@@ -340,7 +340,7 @@ func (i *Client) Explain(q *Query) (string, error) {
 	return redis.String(conn.Do("FT.EXPLAIN", args...))
 }
 
-// Drop the  Currentl just flushes the DB - note that this will delete EVERYTHING on the redis instance
+//  Deletes the index and all the keys associated with it.
 func (i *Client) Drop() error {
 	conn := i.pool.Get()
 	defer conn.Close()
@@ -380,6 +380,13 @@ func (info *IndexInfo) setTarget(key string, value interface{}) error {
 			case reflect.Float64:
 				f, _ := redis.Float64(value, nil)
 				targetInfo.SetFloat(f)
+			case reflect.Bool:
+				f, _ := redis.Uint64(value, nil)
+				if f == 0 {
+					targetInfo.SetBool(false)
+				} else {
+					targetInfo.SetBool(true)
+				}
 			default:
 				panic("Tag set without handler")
 			}
