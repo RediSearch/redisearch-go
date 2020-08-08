@@ -365,7 +365,8 @@ func TestDelete(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, uint64(0), info.DocCount)
 
-	doc := NewDocument("TestDelete-doc1", 1.0)
+	docName := "TestDelete-doc1"
+	doc := NewDocument(docName, 1.0)
 	doc.Set("foo", "Hello world")
 
 	err = c.IndexOptions(DefaultIndexingOptions, doc)
@@ -376,14 +377,36 @@ func TestDelete(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, uint64(1), info.DocCount)
 
-	// delete the document from the index
-	err = c.Delete("TestDelete-doc1", true)
+	// delete the document reference from the index
+	// and the document itself
+	err = c.Delete(docName, true)
 	assert.Nil(t, err)
 
 	// validate that the index is empty again
 	info, err = c.Info()
 	assert.Nil(t, err)
 	assert.Equal(t, uint64(0), info.DocCount)
+	// and that the document was deleted
+	conn := c.pool.Get()
+	defer conn.Close()
+	docExists, err := redis.Bool(conn.Do("EXISTS", docName))
+	assert.Nil(t, err)
+	assert.False(t, docExists)
+
+	// Re-add the document to the index
+	// This time, only remove the reference
+	err = c.IndexOptions(DefaultIndexingOptions, doc)
+	assert.Nil(t, err)
+	err = c.Delete(docName, false)
+	assert.Nil(t, err)
+	// validate that the index is empty again
+	info, err = c.Info()
+	assert.Nil(t, err)
+	assert.Equal(t, uint64(0), info.DocCount)
+	// and that the document remains
+	docExists, err = redis.Bool(conn.Do("EXISTS", docName))
+	assert.Nil(t, err)
+	assert.True(t, docExists)
 }
 
 func TestSpellCheck(t *testing.T) {

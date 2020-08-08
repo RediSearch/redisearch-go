@@ -356,9 +356,9 @@ func (i *Client) Delete(docId string, deleteDocument bool) (err error) {
 	defer conn.Close()
 
 	if deleteDocument {
-		_, err = conn.Do("FT.DEL", i.name, docId)
-	} else {
 		_, err = conn.Do("FT.DEL", i.name, docId, "DD")
+	} else {
+		_, err = conn.Do("FT.DEL", i.name, docId)
 	}
 
 	return
