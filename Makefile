@@ -41,8 +41,10 @@ examples: get
 						 --tls-ca-cert-file $(TLS_CACERT) \
 						 --host $(REDISEARCH_TEST_HOST)
 
-test: get
+fmt:
 	$(GOFMT) ./...
+
+test: get fmt
 	$(GOTEST) -race -covermode=atomic ./...
 
 coverage: get test

@@ -614,3 +614,46 @@ func TestClient_GetRediSearchVersion(t *testing.T) {
 	_, err := c.getRediSearchVersion()
 	assert.Nil(t, err)
 }
+
+func TestClient_CreateIndexWithIndexDefinition(t *testing.T) {
+	i := createClient("index-definition-test")
+	version, err := i.getRediSearchVersion()
+	assert.Nil(t, err)
+	if version >= 20000 {
+
+		type args struct {
+			schema     *Schema
+			definition *IndexDefinition
+		}
+		tests := []struct {
+			name    string
+			args    args
+			wantErr bool
+		}{
+			{"no-indexDefinition", args{NewSchema(DefaultOptions).
+				AddField(NewTextField("name")).
+				AddField(NewTextField("addr")), nil}, false},
+			{"default-indexDefinition", args{NewSchema(DefaultOptions).
+				AddField(NewTextField("name")).
+				AddField(NewTextField("addr")), NewIndexDefinition()}, false},
+			{"score-indexDefinition", args{NewSchema(DefaultOptions).
+				AddField(NewTextField("name")).
+				AddField(NewTextField("addr")), NewIndexDefinition().SetScore(0.25)}, false},
+			{"language-indexDefinition", args{NewSchema(DefaultOptions).
+				AddField(NewTextField("name")).
+				AddField(NewTextField("addr")), NewIndexDefinition().SetLanguage("portuguese")}, false},
+			{"language_field-indexDefinition", args{NewSchema(DefaultOptions).
+				AddField(NewTextField("name")).
+				AddField(NewTextField("lang")).
+				AddField(NewTextField("addr")), NewIndexDefinition().SetLanguageField("lang")}, false},
+		}
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				if err := i.CreateIndexWithIndexDefinition(tt.args.schema, tt.args.definition); (err != nil) != tt.wantErr {
+					t.Errorf("CreateIndexWithIndexDefinition() error = %v, wantErr %v", err, tt.wantErr)
+				}
+				teardown(i)
+			})
+		}
+	}
+}

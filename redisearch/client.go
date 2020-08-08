@@ -46,15 +46,29 @@ func NewClientFromPool(pool *redis.Pool, name string) *Client {
 	return ret
 }
 
-// CreateIndex configues the index and creates it on redis
-func (i *Client) CreateIndex(s *Schema) (err error) {
+// CreateIndex configures the index and creates it on redis
+func (i *Client) CreateIndex(schema *Schema) (err error) {
+	return i.indexWithDefinition(i.name, schema, nil, err)
+}
+
+// CreateIndexWithIndexDefinition configures the index and creates it on redis
+// IndexDefinition is used to define a index definition for automatic indexing on Hash update
+func (i *Client) CreateIndexWithIndexDefinition(schema *Schema, definition *IndexDefinition) (err error) {
+	return i.indexWithDefinition(i.name, schema, definition, err)
+}
+
+// internal method
+func (i *Client) indexWithDefinition(indexName string, schema *Schema, definition *IndexDefinition, errIn error) (err error) {
+	err = errIn
 	args := redis.Args{i.name}
+	if definition != nil {
+		args = definition.Serialize(args)
+	}
 	// Set flags based on options
-	args, err = SerializeSchema(s, args)
+	args, err = SerializeSchema(schema, args)
 	if err != nil {
 		return
 	}
-
 	conn := i.pool.Get()
 	defer conn.Close()
 	_, err = conn.Do("FT.CREATE", args...)

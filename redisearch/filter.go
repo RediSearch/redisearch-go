@@ -6,7 +6,7 @@ type Filter struct {
 	Options interface{}
 }
 
-// Filter the results to a given radius from lon and lat. Radius is given as a number and units
+// FilterExpression the results to a given radius from lon and lat. Radius is given as a number and units
 type GeoFilterOptions struct {
 	Lon    float64
 	Lat    float64
