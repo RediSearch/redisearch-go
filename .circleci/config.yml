@@ -56,6 +56,39 @@ jobs:
       - run: make coverage
       - run: bash <(curl -s https://codecov.io/bash) -t ${CODECOV_TOKEN}
 
+  build-latest:
+    docker:
+      - image: circleci/golang:1.12
+      - image: redislabs/redisearch:latest
+
+    working_directory: /go/src/github.com/RediSearch/redisearch-go
+    steps:
+      - checkout
+      - run: make get
+      - run: make test
+
+  build-v16:
+    docker:
+      - image: circleci/golang:1.12
+      - image: redislabs/redisearch:1.6.13
+
+    working_directory: /go/src/github.com/RediSearch/redisearch-go
+    steps:
+      - checkout
+      - run: make get
+      - run: make test
+
+  build-v14:
+    docker:
+      - image: circleci/golang:1.12
+      - image: redislabs/redisearch:1.4.28
+
+    working_directory: /go/src/github.com/RediSearch/redisearch-go
+    steps:
+      - checkout
+      - run: make get
+      - run: make test
+
   build_nightly: # test nightly with redisearch:edge
     docker:
       - image: circleci/golang:1.12
@@ -73,6 +106,9 @@ workflows:
     jobs:
       - build
       - build-tls
+      - build-latest
+      - build-v16
+      - build-v14
   nightly:
     triggers:
       - schedule:
@@ -84,3 +120,6 @@ workflows:
     jobs:
       - build_nightly
       - build-tls
+      - build-latest
+      - build-v16
+      - build-v14
