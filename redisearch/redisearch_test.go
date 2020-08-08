@@ -95,8 +95,17 @@ func TestClient(t *testing.T) {
 		}
 	}
 
-	docs, _, err := c.Search(NewQuery("hello world"))
+	// Wait for all documents to be indexed
+	info, _ := c.Info()
+	for info.IsIndexing {
+		time.Sleep(time.Second)
+		info, _ = c.Info()
+	}
+
+	docs, total, err := c.Search(NewQuery("hello world"))
 	assert.Nil(t, err)
+	assert.Equal(t, 100, total)
+	assert.Equal(t, 10, len(docs))
 	teardown(c)
 }
 
@@ -364,7 +373,7 @@ func TestDelete(t *testing.T) {
 	// validate that the index is empty
 	info, err = c.Info()
 	assert.Nil(t, err)
-	if info.IsIndexing == false {
+	if !info.IsIndexing {
 		assert.Equal(t, uint64(0), info.DocCount)
 	}
 
@@ -377,7 +386,7 @@ func TestDelete(t *testing.T) {
 	// now we should have 1 document (id = doc1)
 	info, err = c.Info()
 	assert.Nil(t, err)
-	if info.IsIndexing == false {
+	if !info.IsIndexing {
 		assert.Equal(t, uint64(1), info.DocCount)
 	}
 
