@@ -442,7 +442,7 @@ func TestFilter(t *testing.T) {
 	sc := NewSchema(DefaultOptions).
 		AddField(NewTextField("body")).
 		AddField(NewTextFieldOptions("title", TextFieldOptions{Weight: 5.0, Sortable: true})).
-		AddField(NewNumericField("age")).
+		AddField(NewNumericFieldOptions("age", NumericFieldOptions{Sortable: true})).
 		AddField(NewGeoFieldOptions("location", GeoFieldOptions{}))
 
 	c.Drop()
