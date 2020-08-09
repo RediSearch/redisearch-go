@@ -46,6 +46,34 @@ func NewClientFromPool(pool *redis.Pool, name string) *Client {
 	return ret
 }
 
+// GetRediSearchVersion returns RediSearch version by issuing "MODULE LIST" command
+// and iterating through the availabe modules up until "ft" is found as the name property
+func (c *Client) GetRediSearchVersion() (version int64, err error) {
+	conn := c.pool.Get()
+	defer conn.Close()
+	var values []interface{}
+	var moduleInfo []interface{}
+	var moduleName string
+	values, err = redis.Values(conn.Do("MODULE", "LIST"))
+	if err != nil {
+		return
+	}
+	for _, rawModule := range values {
+		moduleInfo, err = redis.Values(rawModule, err)
+		if err != nil {
+			return
+		}
+		moduleName, err = redis.String(moduleInfo[1], err)
+		if err != nil {
+			return
+		}
+		if moduleName == "ft" {
+			version, err = redis.Int64(moduleInfo[3], err)
+		}
+	}
+	return
+}
+
 // CreateIndex configures the index and creates it on redis
 func (i *Client) CreateIndex(schema *Schema) (err error) {
 	return i.indexWithDefinition(i.name, schema, nil, err)

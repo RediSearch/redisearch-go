@@ -15,34 +15,6 @@ func flush(c *Client) (err error) {
 	return conn.Send("FLUSHALL")
 }
 
-// getRediSearchVersion returns RediSearch version by issuing "MODULE LIST" command
-// and iterating through the availabe modules up until "ft" is found as the name property
-func (c *Client) getRediSearchVersion() (version int64, err error) {
-	conn := c.pool.Get()
-	defer conn.Close()
-	var values []interface{}
-	var moduleInfo []interface{}
-	var moduleName string
-	values, err = redis.Values(conn.Do("MODULE", "LIST"))
-	if err != nil {
-		return
-	}
-	for _, rawModule := range values {
-		moduleInfo, err = redis.Values(rawModule, err)
-		if err != nil {
-			return
-		}
-		moduleName, err = redis.String(moduleInfo[1], err)
-		if err != nil {
-			return
-		}
-		if moduleName == "ft" {
-			version, err = redis.Int64(moduleInfo[3], err)
-		}
-	}
-	return
-}
-
 func teardown(c *Client) {
 	flush(c)
 }
@@ -522,7 +494,7 @@ func TestClient_GetTagVals(t *testing.T) {
 
 func TestClient_SynAdd(t *testing.T) {
 	c := createClient("testsynadd")
-	version, err := c.getRediSearchVersion()
+	version, err := c.GetRediSearchVersion()
 	assert.Nil(t, err)
 	if version <= 10699 {
 		sc := NewSchema(DefaultOptions).
@@ -544,7 +516,7 @@ func TestClient_SynAdd(t *testing.T) {
 
 func TestClient_SynDump(t *testing.T) {
 	c := createClient("testsyndump")
-	version, err := c.getRediSearchVersion()
+	version, err := c.GetRediSearchVersion()
 	assert.Nil(t, err)
 	if version <= 10699 {
 
@@ -611,13 +583,13 @@ func TestClient_AddField(t *testing.T) {
 
 func TestClient_GetRediSearchVersion(t *testing.T) {
 	c := createClient("version-test")
-	_, err := c.getRediSearchVersion()
+	_, err := c.GetRediSearchVersion()
 	assert.Nil(t, err)
 }
 
 func TestClient_CreateIndexWithIndexDefinition(t *testing.T) {
 	i := createClient("index-definition-test")
-	version, err := i.getRediSearchVersion()
+	version, err := i.GetRediSearchVersion()
 	assert.Nil(t, err)
 	if version >= 20000 {
 

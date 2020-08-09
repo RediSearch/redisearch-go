@@ -74,6 +74,13 @@ func ExampleClient_CreateIndexWithIndexDefinition() {
 		return redis.Dial("tcp", host, redis.DialPassword(password))
 	}}
 	c := redisearch.NewClientFromPool(pool, "products-from-hashes")
+
+	version, _ := c.GetRediSearchVersion()
+
+	// IndexDefinition is available for RediSearch 2.0+
+	if version < 20000 {
+		return
+	}
 	// Drop an existing index. If the index does not exist an error is returned
 	c.Drop()
 
@@ -106,7 +113,6 @@ func ExampleClient_CreateIndexWithIndexDefinition() {
 	_, total, _ := c.Search(redisearch.NewQuery("description"))
 
 	fmt.Printf("Total documents containing \"description\": %d.\n", total)
-	// Output: Total documents containing "description": 100.
 }
 
 // exemplifies the NewClientFromPool function
