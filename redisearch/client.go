@@ -575,6 +575,7 @@ func (i *Client) GetTagVals(index string, filedName string) ([]string, error) {
 }
 
 // Adds a synonym group.
+// Deprecated: This function  is not longer supported on RediSearch 2.0 and above, use SynUpdate instead
 func (i *Client) SynAdd(indexName string, terms []string) (int64, error) {
 	conn := i.pool.Get()
 	defer conn.Close()
@@ -621,6 +622,8 @@ func (i *Client) SynDump(indexName string) (map[string][]int64, error) {
 }
 
 // Adds a document to the index from an existing HASH key in Redis.
+// Deprecated: This function  is not longer supported on RediSearch 2.0 and above, use HSET instead
+// See the example ExampleClient_CreateIndexWithIndexDefinition for a deeper understanding on how to move towards using hashes on your application
 func (i *Client) AddHash(docId string, score float32, language string, replace bool) (string, error) {
 	conn := i.pool.Get()
 	defer conn.Close()

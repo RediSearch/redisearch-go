@@ -137,6 +137,8 @@ func (defintion *IndexDefinition) Serialize(args redis.Args) redis.Args {
 
 func SerializeIndexingOptions(opts IndexingOptions, args redis.Args) redis.Args {
 	// apply options
+
+	// As of RediSearch 2.0 and above NOSAVE is no longer supported.
 	if opts.NoSave {
 		args = append(args, "NOSAVE")
 	}

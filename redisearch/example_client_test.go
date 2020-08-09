@@ -63,6 +63,52 @@ func ExampleNewClient() {
 	c.Drop()
 }
 
+// RediSearch 2.0, marks the re-architecture of the way indices are kept in sync with the data.
+// Instead of having to write data through the index (using the FT.ADD command),
+// RediSearch will now follow the data written in hashes and automatically index it.
+// The following example illustrates how to achieve it with the go client
+func ExampleClient_CreateIndexWithIndexDefinition() {
+	host := "localhost:6379"
+	password := ""
+	pool := &redis.Pool{Dial: func() (redis.Conn, error) {
+		return redis.Dial("tcp", host, redis.DialPassword(password))
+	}}
+	c := redisearch.NewClientFromPool(pool, "products-from-hashes")
+	// Drop an existing index. If the index does not exist an error is returned
+	c.Drop()
+
+	// Create a schema
+	schema := redisearch.NewSchema(redisearch.DefaultOptions).
+		AddField(redisearch.NewTextFieldOptions("name", redisearch.TextFieldOptions{Sortable: true})).
+		AddField(redisearch.NewTextFieldOptions("description", redisearch.TextFieldOptions{Weight: 5.0, Sortable: true})).
+		AddField(redisearch.NewNumericField("price"))
+
+	// Create a index definition for automatic indexing on Hash updates.
+	// In this example we will only index keys started by product:
+	indexDefinition := redisearch.NewIndexDefinition().AddPrefix("product:")
+
+	// Add the Index Definition
+	c.CreateIndexWithIndexDefinition(schema, indexDefinition)
+
+	// Get a vanilla connection and create 100 hashes
+	vanillaConnection := pool.Get()
+	for productNumber := 0; productNumber < 100; productNumber++ {
+		vanillaConnection.Do("HSET", fmt.Sprintf("product:%d", productNumber), "name", fmt.Sprintf("product name %d", productNumber), "description", "product description", "price", 10.99)
+	}
+
+	// Wait for all documents to be indexed
+	info, _ := c.Info()
+	for info.IsIndexing {
+		time.Sleep(time.Second)
+		info, _ = c.Info()
+	}
+
+	_, total, _ := c.Search(redisearch.NewQuery("description"))
+
+	fmt.Printf("Total documents containing \"description\": %d.\n", total)
+	// Output: Total documents containing "description": 100.
+}
+
 // exemplifies the NewClientFromPool function
 func ExampleNewClientFromPool() {
 	host := "localhost:6379"

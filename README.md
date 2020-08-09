@@ -78,7 +78,6 @@ func ExampleClient() {
 | :---          |  ----: |
 | [FT.CREATE](https://oss.redislabs.com/redisearch/Commands.html#ftcreate) |   [CreateIndex](https://godoc.org/github.com/RediSearch/redisearch-go/redisearch#Client.CreateIndex)          |
 | [FT.ADD](https://oss.redislabs.com/redisearch/Commands.html#ftadd) |   [IndexOptions](https://godoc.org/github.com/RediSearch/redisearch-go/redisearch#Client.IndexOptions)          |
-| [FT.ADDHASH](https://oss.redislabs.com/redisearch/Commands.html#ftaddhash) | [AddHash](https://godoc.org/github.com/RediSearch/redisearch-go/redisearch#Client.AddHash) |
 | [FT.ALTER](https://oss.redislabs.com/redisearch/Commands.html#ftalter) |    [AddField](https://godoc.org/github.com/RediSearch/redisearch-go/redisearch#Client.AddField) |
 | [FT.ALIASADD](https://oss.redislabs.com/redisearch/Commands.html#ftaliasadd) |  [AliasAdd](https://godoc.org/github.com/RediSearch/redisearch-go/redisearch#Client.AliasAdd)         |
 | [FT.ALIASUPDATE](https://oss.redislabs.com/redisearch/Commands.html#ftaliasupdate) |     [AliasUpdate](https://godoc.org/github.com/RediSearch/redisearch-go/redisearch#Client.AliasUpdate)          |
@@ -97,7 +96,6 @@ func ExampleClient() {
 | [FT.SUGGET](https://oss.redislabs.com/redisearch/Commands.html#ftsugget) |    [SuggestOpts](https://godoc.org/github.com/RediSearch/redisearch-go/redisearch#Autocompleter.SuggestOpts)  |
 | [FT.SUGDEL](https://oss.redislabs.com/redisearch/Commands.html#ftsugdel) |    [DeleteTerms](https://godoc.org/github.com/RediSearch/redisearch-go/redisearch#Autocompleter.DeleteTerms)  |
 | [FT.SUGLEN](https://oss.redislabs.com/redisearch/Commands.html#ftsuglen) |    [Autocompleter.Length](https://godoc.org/github.com/RediSearch/redisearch-go/redisearch#Autocompleter.Length)  |
-| [FT.SYNADD](https://oss.redislabs.com/redisearch/Commands.html#ftsynadd) |    [SynAdd](https://godoc.org/github.com/RediSearch/redisearch-go/redisearch#Client.SynAdd) |
 | [FT.SYNUPDATE](https://oss.redislabs.com/redisearch/Commands.html#ftsynupdate) |    [SynUpdate](https://godoc.org/github.com/RediSearch/redisearch-go/redisearch#Client.SynUpdate) |
 | [FT.SYNDUMP](https://oss.redislabs.com/redisearch/Commands.html#ftsyndump) |    [SynDump](https://godoc.org/github.com/RediSearch/redisearch-go/redisearch#Client.SynDump) |
 | [FT.SPELLCHECK](https://oss.redislabs.com/redisearch/Commands.html#ftspellcheck) |  [SpellCheck](https://godoc.org/github.com/RediSearch/redisearch-go/redisearch#Client.SpellCheck)        |
