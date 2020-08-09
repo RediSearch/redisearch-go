@@ -383,23 +383,35 @@ func TestDelete(t *testing.T) {
 	err = c.IndexOptions(DefaultIndexingOptions, doc)
 	assert.Nil(t, err)
 
+	// Wait for all documents to be indexed
+	info, err = c.Info()
+	assert.Nil(t, err)
+	for info.IsIndexing {
+		time.Sleep(time.Second)
+		info, err = c.Info()
+		assert.Nil(t, err)
+	}
+
 	// now we should have 1 document (id = doc1)
 	info, err = c.Info()
 	assert.Nil(t, err)
-	if !info.IsIndexing {
-		assert.Equal(t, uint64(1), info.DocCount)
-	}
+	assert.Equal(t, uint64(1), info.DocCount)
 
 	// delete the document from the index
 	err = c.Delete("TestDelete-doc1", true)
 	assert.Nil(t, err)
 
-	// validate that the index is empty again
+	// Wait for all documents to be indexed
 	info, err = c.Info()
 	assert.Nil(t, err)
-	if !info.IsIndexing {
-		assert.Equal(t, uint64(0), info.DocCount)
+	for info.IsIndexing {
+		time.Sleep(time.Second)
+		info, err = c.Info()
+		assert.Nil(t, err)
 	}
+
+	assert.Nil(t, err)
+	assert.Equal(t, uint64(0), info.DocCount)
 	teardown(c)
 }
 
