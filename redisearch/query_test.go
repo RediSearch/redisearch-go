@@ -50,6 +50,7 @@ func Test_serializeIndexingOptions(t *testing.T) {
 	}{
 		{"default with args", args{DefaultIndexingOptions, redis.Args{"idx1", "doc1", 1.0}}, redis.Args{"idx1", "doc1", 1.0}},
 		{"default", args{DefaultIndexingOptions, redis.Args{}}, redis.Args{}},
+		{"default + language", args{IndexingOptions{Language: "portuguese"}, redis.Args{}}, redis.Args{"LANGUAGE", "portuguese"}},
 		{"replace full doc", args{IndexingOptions{Replace: true}, redis.Args{}}, redis.Args{"REPLACE"}},
 		{"replace partial", args{IndexingOptions{Replace: true, Partial: true}, redis.Args{}}, redis.Args{"REPLACE", "PARTIAL"}},
 		{"replace if", args{IndexingOptions{Replace: true, ReplaceCondition: "@timestamp < 23323234234"}, redis.Args{}}, redis.Args{"REPLACE", "IF", "@timestamp < 23323234234"}},
