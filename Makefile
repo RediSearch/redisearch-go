@@ -44,9 +44,12 @@ examples: get
 fmt:
 	$(GOFMT) ./...
 
-test: get fmt
-	$(GOTEST) -race -covermode=atomic ./...
+godoc_examples: get fmt
+	$(GOTEST) -race -covermode=atomic -v ./redisearch
 
-coverage: get test
-	$(GOTEST) -race -coverprofile=coverage.txt -covermode=atomic ./redisearch
+test: get fmt
+	$(GOTEST) -race -covermode=atomic -run "Test" -v ./redisearch
+
+coverage: get
+	$(GOTEST) -race -coverprofile=coverage.txt -covermode=atomic -v ./redisearch
 

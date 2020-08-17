@@ -75,21 +75,13 @@ func ExampleClient_CreateIndexWithIndexDefinition() {
 	}}
 	c := redisearch.NewClientFromPool(pool, "products-from-hashes")
 
-	version, _ := c.GetRediSearchVersion()
-
-	// IndexDefinition is available for RediSearch 2.0+
-	if version < 20000 {
-		return
-	}
-	// Drop an existing index. If the index does not exist an error is returned
-	c.Drop()
-
 	// Create a schema
 	schema := redisearch.NewSchema(redisearch.DefaultOptions).
 		AddField(redisearch.NewTextFieldOptions("name", redisearch.TextFieldOptions{Sortable: true})).
 		AddField(redisearch.NewTextFieldOptions("description", redisearch.TextFieldOptions{Weight: 5.0, Sortable: true})).
 		AddField(redisearch.NewNumericField("price"))
 
+	// IndexDefinition is available for RediSearch 2.0+
 	// Create a index definition for automatic indexing on Hash updates.
 	// In this example we will only index keys started by product:
 	indexDefinition := redisearch.NewIndexDefinition().AddPrefix("product:")

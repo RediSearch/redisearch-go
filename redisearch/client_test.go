@@ -19,6 +19,34 @@ func teardown(c *Client) {
 	flush(c)
 }
 
+// getRediSearchVersion returns RediSearch version by issuing "MODULE LIST" command
+// and iterating through the availabe modules up until "ft" is found as the name property
+func (c *Client) getRediSearchVersion() (version int64, err error) {
+	conn := c.pool.Get()
+	defer conn.Close()
+	var values []interface{}
+	var moduleInfo []interface{}
+	var moduleName string
+	values, err = redis.Values(conn.Do("MODULE", "LIST"))
+	if err != nil {
+		return
+	}
+	for _, rawModule := range values {
+		moduleInfo, err = redis.Values(rawModule, err)
+		if err != nil {
+			return
+		}
+		moduleName, err = redis.String(moduleInfo[1], err)
+		if err != nil {
+			return
+		}
+		if moduleName == "ft" {
+			version, err = redis.Int64(moduleInfo[3], err)
+		}
+	}
+	return
+}
+
 func TestClient_Get(t *testing.T) {
 
 	c := createClient("test-get")
@@ -494,7 +522,7 @@ func TestClient_GetTagVals(t *testing.T) {
 
 func TestClient_SynAdd(t *testing.T) {
 	c := createClient("testsynadd")
-	version, err := c.GetRediSearchVersion()
+	version, err := c.getRediSearchVersion()
 	assert.Nil(t, err)
 	if version <= 10699 {
 		sc := NewSchema(DefaultOptions).
@@ -516,7 +544,7 @@ func TestClient_SynAdd(t *testing.T) {
 
 func TestClient_SynDump(t *testing.T) {
 	c := createClient("testsyndump")
-	version, err := c.GetRediSearchVersion()
+	version, err := c.getRediSearchVersion()
 	assert.Nil(t, err)
 	sc := NewSchema(DefaultOptions).
 		AddField(NewTextField("name")).
@@ -589,13 +617,13 @@ func TestClient_AddField(t *testing.T) {
 
 func TestClient_GetRediSearchVersion(t *testing.T) {
 	c := createClient("version-test")
-	_, err := c.GetRediSearchVersion()
+	_, err := c.getRediSearchVersion()
 	assert.Nil(t, err)
 }
 
 func TestClient_CreateIndexWithIndexDefinition(t *testing.T) {
 	i := createClient("index-definition-test")
-	version, err := i.GetRediSearchVersion()
+	version, err := i.getRediSearchVersion()
 	assert.Nil(t, err)
 	if version >= 20000 {
 
@@ -653,7 +681,7 @@ func TestClient_SynUpdate(t *testing.T) {
 	sc := NewSchema(DefaultOptions).
 		AddField(NewTextField("name")).
 		AddField(NewTextField("addr"))
-	version, err := c.GetRediSearchVersion()
+	version, err := c.getRediSearchVersion()
 	assert.Nil(t, err)
 
 	type args struct {
