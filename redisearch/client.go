@@ -612,7 +612,7 @@ func (i *Client) SynAdd(indexName string, terms []string) (int64, error) {
 	return redis.Int64(conn.Do("FT.SYNADD", args...))
 }
 
-// Updates a synonym group.
+// Updates a synonym group, with additional terms.
 func (i *Client) SynUpdate(indexName string, synonymGroupId int64, terms []string) (string, error) {
 	conn := i.pool.Get()
 	defer conn.Close()

@@ -516,30 +516,25 @@ func TestClient_SynAdd(t *testing.T) {
 
 func TestClient_SynDump(t *testing.T) {
 	c := createClient("testsyndump")
-	version, err := c.GetRediSearchVersion()
+
+	sc := NewSchema(DefaultOptions).
+		AddField(NewTextField("name")).
+		AddField(NewTextField("addr"))
+	c.Drop()
+	err := c.CreateIndex(sc)
 	assert.Nil(t, err)
-	if version <= 10699 {
+	ret, err := c.SynUpdate("testsyndump", 1, []string{"girl", "baby"})
+	assert.Nil(t, err)
+	assert.Equal(t, "OK", ret)
 
-		sc := NewSchema(DefaultOptions).
-			AddField(NewTextField("name")).
-			AddField(NewTextField("addr"))
-		c.Drop()
-		err := c.CreateIndex(sc)
-		assert.Nil(t, err)
+	_, err = c.SynUpdate("testsyndump", 2, []string{"child"})
+	assert.Nil(t, err)
+	assert.Equal(t, "OK", ret)
 
-		gid, err := c.SynAdd("testsyndump", []string{"girl", "baby"})
-		assert.Nil(t, err)
-		assert.True(t, gid >= 0)
-
-		gid2, err := c.SynAdd("testsyndump", []string{"child"})
-
-		m, err := c.SynDump("testsyndump")
-		assert.Contains(t, m, "baby")
-		assert.Contains(t, m, "girl")
-		assert.Contains(t, m, "child")
-		assert.Equal(t, gid, m["baby"][0])
-		assert.Equal(t, gid2, m["child"][0])
-	}
+	m, err := c.SynDump("testsyndump")
+	assert.Contains(t, m, "baby")
+	assert.Contains(t, m, "girl")
+	assert.Contains(t, m, "child")
 	teardown(c)
 }
 
@@ -618,6 +613,18 @@ func TestClient_CreateIndexWithIndexDefinition(t *testing.T) {
 				AddField(NewTextField("name")).
 				AddField(NewTextField("lang")).
 				AddField(NewTextField("addr")), NewIndexDefinition().SetLanguageField("lang")}, false},
+			{"score_field-indexDefinition", args{NewSchema(DefaultOptions).
+				AddField(NewTextField("name")).
+				AddField(NewTextField("addr")).AddField(NewNumericField("score")), NewIndexDefinition().SetScoreField("score")}, false},
+			{"payload_field-indexDefinition", args{NewSchema(DefaultOptions).
+				AddField(NewTextField("name")).
+				AddField(NewTextField("addr")).AddField(NewNumericField("score")).AddField(NewTextField("payload")), NewIndexDefinition().SetPayloadField("payload")}, false},
+			{"prefix-indexDefinition", args{NewSchema(DefaultOptions).
+				AddField(NewTextField("name")).
+				AddField(NewTextField("addr")).AddField(NewNumericField("score")).AddField(NewTextField("payload")), NewIndexDefinition().AddPrefix("doc:*")}, false},
+			{"filter-indexDefinition", args{NewSchema(DefaultOptions).
+				AddField(NewTextField("name")).
+				AddField(NewTextField("addr")).AddField(NewNumericField("score")).AddField(NewTextField("payload")), NewIndexDefinition().SetFilterExpression("@score > 0")}, false},
 		}
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
@@ -627,5 +634,45 @@ func TestClient_CreateIndexWithIndexDefinition(t *testing.T) {
 				teardown(i)
 			})
 		}
+	}
+}
+
+func TestClient_SynUpdate(t *testing.T) {
+	c := createClient("syn-update-test")
+	sc := NewSchema(DefaultOptions).
+		AddField(NewTextField("name")).
+		AddField(NewTextField("addr"))
+
+	type args struct {
+		indexName      string
+		synonymGroupId int64
+		terms          []string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    string
+		wantErr bool
+	}{
+		{"1-syn", args{"syn-update-test", 1, []string{"abc"}}, "OK", false},
+		{"3-syn", args{"syn-update-test", 1, []string{"abc", "def", "ghi"}}, "OK", false},
+		{"err-empty-syn", args{"syn-update-test", 1, []string{}}, "", true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c.Drop()
+			err := c.CreateIndex(sc)
+			assert.Nil(t, err)
+
+			got, err := c.SynUpdate(tt.args.indexName, tt.args.synonymGroupId, tt.args.terms)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("SynUpdate() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("SynUpdate() got = %v, want %v", got, tt.want)
+			}
+			teardown(c)
+		})
 	}
 }
