@@ -516,20 +516,31 @@ func TestClient_SynAdd(t *testing.T) {
 
 func TestClient_SynDump(t *testing.T) {
 	c := createClient("testsyndump")
-
+	version, err := c.GetRediSearchVersion()
+	assert.Nil(t, err)
 	sc := NewSchema(DefaultOptions).
 		AddField(NewTextField("name")).
 		AddField(NewTextField("addr"))
 	c.Drop()
-	err := c.CreateIndex(sc)
-	assert.Nil(t, err)
-	ret, err := c.SynUpdate("testsyndump", 1, []string{"girl", "baby"})
-	assert.Nil(t, err)
-	assert.Equal(t, "OK", ret)
+	err = c.CreateIndex(sc)
+	var gId1 int64 = 1
+	var gId2 int64 = 2
 
-	_, err = c.SynUpdate("testsyndump", 2, []string{"child"})
 	assert.Nil(t, err)
-	assert.Equal(t, "OK", ret)
+	// For RediSearch < v2.0 we need to use SYNADD. For Redisearch >= v2.0 we need to use SYNUPDATE
+	if version <= 10699 {
+		gId1, err = c.SynAdd("testsyndump", []string{"girl", "baby"})
+		assert.Nil(t, err)
+		gId2, err = c.SynAdd("testsyndump", []string{"child"})
+		assert.Nil(t, err)
+	} else {
+		ret, err := c.SynUpdate("testsyndump", gId1, []string{"girl", "baby"})
+		assert.Nil(t, err)
+		assert.Equal(t, "OK", ret)
+		_, err = c.SynUpdate("testsyndump", gId2, []string{"child"})
+		assert.Nil(t, err)
+		assert.Equal(t, "OK", ret)
+	}
 
 	m, err := c.SynDump("testsyndump")
 	assert.Contains(t, m, "baby")
@@ -642,6 +653,8 @@ func TestClient_SynUpdate(t *testing.T) {
 	sc := NewSchema(DefaultOptions).
 		AddField(NewTextField("name")).
 		AddField(NewTextField("addr"))
+	version, err := c.GetRediSearchVersion()
+	assert.Nil(t, err)
 
 	type args struct {
 		indexName      string
@@ -663,8 +676,15 @@ func TestClient_SynUpdate(t *testing.T) {
 			c.Drop()
 			err := c.CreateIndex(sc)
 			assert.Nil(t, err)
+			gId := tt.args.synonymGroupId
 
-			got, err := c.SynUpdate(tt.args.indexName, tt.args.synonymGroupId, tt.args.terms)
+			// For older version of RediSearch we first need to use SYNADD then SYNUPDATE
+			if version <= 10699 {
+				gId, err = c.SynAdd(tt.args.indexName, []string{"workaround"})
+				assert.Nil(t, err)
+			}
+
+			got, err := c.SynUpdate(tt.args.indexName, gId, tt.args.terms)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("SynUpdate() error = %v, wantErr %v", err, tt.wantErr)
 				return
