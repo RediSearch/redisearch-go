@@ -364,16 +364,15 @@ func (i *Client) Drop() error {
 }
 
 // Delete the document from the index, optionally delete the actual document
+// WARNING: As of RediSearch 2.0 and above, FT.DEL always deletes the underlying document.
 func (i *Client) Delete(docId string, deleteDocument bool) (err error) {
 	conn := i.pool.Get()
 	defer conn.Close()
-
 	if deleteDocument {
 		_, err = conn.Do("FT.DEL", i.name, docId, "DD")
 	} else {
 		_, err = conn.Do("FT.DEL", i.name, docId)
 	}
-
 	return
 }
 

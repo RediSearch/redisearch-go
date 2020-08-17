@@ -724,3 +724,45 @@ func TestClient_SynUpdate(t *testing.T) {
 		})
 	}
 }
+
+func TestClient_Delete(t *testing.T) {
+	c := createClient("ft.del-test")
+	sc := NewSchema(DefaultOptions).
+		AddField(NewTextField("name")).
+		AddField(NewTextField("addr"))
+	version, err := c.getRediSearchVersion()
+	assert.Nil(t, err)
+
+	type args struct {
+		docId          string
+		deleteDocument bool
+	}
+	tests := []struct {
+		name                string
+		args                args
+		wantErr             bool
+		documentShouldExist bool
+	}{
+		{"persist-doc", args{"doc1", false}, false, true},
+		{"delete-doc", args{"doc1", true}, false, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c.Drop()
+			err := c.CreateIndex(sc)
+			assert.Nil(t, err)
+			err = c.Index(NewDocument(tt.args.docId, 1.0).Set("name", "Jon Doe"))
+			assert.Nil(t, err)
+			if err := c.Delete(tt.args.docId, tt.args.deleteDocument); (err != nil) != tt.wantErr {
+				t.Errorf("Delete() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			docExists, err := redis.Bool(c.pool.Get().Do("EXISTS", tt.args.docId))
+			assert.Nil(t, err)
+			if version <= 10699 {
+				assert.Equal(t, tt.documentShouldExist, docExists)
+			} else {
+				assert.Equal(t, false, docExists)
+			}
+		})
+	}
+}
