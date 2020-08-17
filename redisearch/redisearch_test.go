@@ -358,63 +358,6 @@ func TestTags(t *testing.T) {
 	teardown(c)
 }
 
-func TestDelete(t *testing.T) {
-	c := createClient("TestDelete-testung")
-
-	sc := NewSchema(DefaultOptions).
-		AddField(NewTextField("foo"))
-
-	err := c.Drop()
-
-	assert.Nil(t, c.CreateIndex(sc))
-
-	var info *IndexInfo
-
-	// validate that the index is empty
-	info, err = c.Info()
-	assert.Nil(t, err)
-	if !info.IsIndexing {
-		assert.Equal(t, uint64(0), info.DocCount)
-	}
-
-	doc := NewDocument("TestDelete-doc1", 1.0)
-	doc.Set("foo", "Hello world")
-
-	err = c.IndexOptions(DefaultIndexingOptions, doc)
-	assert.Nil(t, err)
-
-	// Wait for all documents to be indexed
-	info, err = c.Info()
-	assert.Nil(t, err)
-	for info.IsIndexing {
-		time.Sleep(time.Second)
-		info, err = c.Info()
-		assert.Nil(t, err)
-	}
-
-	// now we should have 1 document (id = doc1)
-	info, err = c.Info()
-	assert.Nil(t, err)
-	assert.Equal(t, uint64(1), info.DocCount)
-
-	// delete the document from the index
-	err = c.Delete("TestDelete-doc1", true)
-	assert.Nil(t, err)
-
-	// Wait for all documents to be indexed
-	info, err = c.Info()
-	assert.Nil(t, err)
-	for info.IsIndexing {
-		time.Sleep(time.Second)
-		info, err = c.Info()
-		assert.Nil(t, err)
-	}
-
-	assert.Nil(t, err)
-	assert.Equal(t, uint64(0), info.DocCount)
-	teardown(c)
-}
-
 func TestSpellCheck(t *testing.T) {
 	c := createClient("testung")
 	countries := []string{"Spain", "Israel", "Portugal", "France", "England", "Angola"}

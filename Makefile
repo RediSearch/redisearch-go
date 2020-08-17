@@ -45,11 +45,11 @@ fmt:
 	$(GOFMT) ./...
 
 godoc_examples: get fmt
-	$(GOTEST) -race -covermode=atomic -v ./redisearch
+	$(GOTEST) -race -covermode=atomic ./redisearch
 
 test: get fmt
-	$(GOTEST) -race -covermode=atomic -run "Test" -v ./redisearch
+	$(GOTEST) -race -covermode=atomic -run "Test" ./redisearch
 
 coverage: get
-	$(GOTEST) -race -coverprofile=coverage.txt -covermode=atomic -v ./redisearch
+	$(GOTEST) -race -coverprofile=coverage.txt -covermode=atomic ./redisearch
 
