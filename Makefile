@@ -41,10 +41,15 @@ examples: get
 						 --tls-ca-cert-file $(TLS_CACERT) \
 						 --host $(REDISEARCH_TEST_HOST)
 
-test: get
+fmt:
 	$(GOFMT) ./...
-	$(GOTEST) -race -covermode=atomic ./...
 
-coverage: get test
-	$(GOTEST) -race -coverprofile=coverage.txt -covermode=atomic ./redisearch
+godoc_examples: get fmt
+	$(GOTEST) -race -covermode=atomic -v ./redisearch
+
+test: get fmt
+	$(GOTEST) -race -covermode=atomic -run "Test" -v ./redisearch
+
+coverage: get
+	$(GOTEST) -race -coverprofile=coverage.txt -covermode=atomic -v ./redisearch
 

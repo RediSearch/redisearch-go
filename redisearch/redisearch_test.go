@@ -92,16 +92,21 @@ func TestClient(t *testing.T) {
 		} else {
 			assert.Equal(t, 100, len(merr))
 			assert.NotEmpty(t, merr)
-			//fmt.Println("Got errors: ", merr)
 		}
 	}
 
-	docs, total, err := c.Search(NewQuery("hello world"))
+	// Wait for all documents to be indexed
+	info, _ := c.Info()
+	for info.IsIndexing {
+		time.Sleep(time.Second)
+		info, _ = c.Info()
+	}
 
+	docs, total, err := c.Search(NewQuery("hello world"))
 	assert.Nil(t, err)
 	assert.Equal(t, 100, total)
 	assert.Equal(t, 10, len(docs))
-
+	teardown(c)
 }
 
 func TestInfo(t *testing.T) {
@@ -116,6 +121,7 @@ func TestInfo(t *testing.T) {
 
 	_, err := c.Info()
 	assert.Nil(t, err)
+	teardown(c)
 }
 
 func TestNumeric(t *testing.T) {
@@ -164,6 +170,7 @@ func TestNumeric(t *testing.T) {
 	explain, err := c.Explain(NewQuery("hello world @bar:[40 90]"))
 	assert.Nil(t, err)
 	assert.NotNil(t, explain)
+	teardown(c)
 }
 
 func TestNoIndex(t *testing.T) {
@@ -203,6 +210,7 @@ func TestNoIndex(t *testing.T) {
 	docs, total, err = c.Search(NewQuery("@f2:Mark*").SetSortBy("f1", true))
 	assert.Equal(t, 2, total)
 	assert.Equal(t, "TestNoIndex-doc2", docs[0].Id)
+	teardown(c)
 }
 
 func TestHighlight(t *testing.T) {
@@ -253,6 +261,7 @@ func TestHighlight(t *testing.T) {
 	}
 
 	c.Drop()
+	teardown(c)
 }
 
 func TestSummarize(t *testing.T) {
@@ -298,6 +307,7 @@ func TestSummarize(t *testing.T) {
 		assert.Equal(t, "are two sub-[commands] [commands] used for highlighting. One is\r\na [field] into contextual [fragments] surrounding the found terms. It is possible to summarize a [field], highlight a [field], or\r\n", d.Properties["foo"])
 		assert.Equal(t, "hello world foo bar baz", d.Properties["bar"])
 	}
+	teardown(c)
 }
 
 func TestTags(t *testing.T) {
@@ -345,7 +355,7 @@ func TestTags(t *testing.T) {
 	assertNumResults("@tags:{hello world}", 1)
 	assertNumResults("@tags:{hello world} @tags2:{foo\\ bar\\;bar}", 1)
 	assertNumResults("hello world", 1)
-
+	teardown(c)
 }
 
 func TestDelete(t *testing.T) {
@@ -363,13 +373,24 @@ func TestDelete(t *testing.T) {
 	// validate that the index is empty
 	info, err = c.Info()
 	assert.Nil(t, err)
-	assert.Equal(t, uint64(0), info.DocCount)
+	if !info.IsIndexing {
+		assert.Equal(t, uint64(0), info.DocCount)
+	}
 
 	doc := NewDocument("TestDelete-doc1", 1.0)
 	doc.Set("foo", "Hello world")
 
 	err = c.IndexOptions(DefaultIndexingOptions, doc)
 	assert.Nil(t, err)
+
+	// Wait for all documents to be indexed
+	info, err = c.Info()
+	assert.Nil(t, err)
+	for info.IsIndexing {
+		time.Sleep(time.Second)
+		info, err = c.Info()
+		assert.Nil(t, err)
+	}
 
 	// now we should have 1 document (id = doc1)
 	info, err = c.Info()
@@ -380,10 +401,18 @@ func TestDelete(t *testing.T) {
 	err = c.Delete("TestDelete-doc1", true)
 	assert.Nil(t, err)
 
-	// validate that the index is empty again
+	// Wait for all documents to be indexed
 	info, err = c.Info()
 	assert.Nil(t, err)
+	for info.IsIndexing {
+		time.Sleep(time.Second)
+		info, err = c.Info()
+		assert.Nil(t, err)
+	}
+
+	assert.Nil(t, err)
 	assert.Equal(t, uint64(0), info.DocCount)
+	teardown(c)
 }
 
 func TestSpellCheck(t *testing.T) {
@@ -425,7 +454,7 @@ func TestSpellCheck(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(sugs))
 	assert.Equal(t, 1, total)
-
+	teardown(c)
 }
 
 func TestFilter(t *testing.T) {
@@ -434,7 +463,7 @@ func TestFilter(t *testing.T) {
 	sc := NewSchema(DefaultOptions).
 		AddField(NewTextField("body")).
 		AddField(NewTextFieldOptions("title", TextFieldOptions{Weight: 5.0, Sortable: true})).
-		AddField(NewNumericField("age")).
+		AddField(NewNumericFieldOptions("age", NumericFieldOptions{Sortable: true})).
 		AddField(NewGeoFieldOptions("location", GeoFieldOptions{}))
 
 	c.Drop()
@@ -473,4 +502,5 @@ func TestFilter(t *testing.T) {
 		SetReturnFields("body"))
 	assert.Nil(t, err)
 	assert.Equal(t, 0, total)
+	teardown(c)
 }

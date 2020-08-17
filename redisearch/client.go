@@ -46,19 +46,32 @@ func NewClientFromPool(pool *redis.Pool, name string) *Client {
 	return ret
 }
 
-// CreateIndex configues the index and creates it on redis
-func (i *Client) CreateIndex(s *Schema) (err error) {
+// CreateIndex configures the index and creates it on redis
+func (i *Client) CreateIndex(schema *Schema) (err error) {
+	return i.indexWithDefinition(i.name, schema, nil)
+}
+
+// CreateIndexWithIndexDefinition configures the index and creates it on redis
+// IndexDefinition is used to define a index definition for automatic indexing on Hash update
+func (i *Client) CreateIndexWithIndexDefinition(schema *Schema, definition *IndexDefinition) (err error) {
+	return i.indexWithDefinition(i.name, schema, definition)
+}
+
+// internal method
+func (i *Client) indexWithDefinition(indexName string, schema *Schema, definition *IndexDefinition) (err error) {
 	args := redis.Args{i.name}
+	if definition != nil {
+		args = definition.Serialize(args)
+	}
 	// Set flags based on options
-	args, err = SerializeSchema(s, args)
+	args, err = SerializeSchema(schema, args)
 	if err != nil {
 		return
 	}
-
 	conn := i.pool.Get()
 	defer conn.Close()
 	_, err = conn.Do("FT.CREATE", args...)
-	return err
+	return
 }
 
 // AddField Adds a new field to the index.
@@ -340,7 +353,7 @@ func (i *Client) Explain(q *Query) (string, error) {
 	return redis.String(conn.Do("FT.EXPLAIN", args...))
 }
 
-// Drop the  Currentl just flushes the DB - note that this will delete EVERYTHING on the redis instance
+//  Deletes the index and all the keys associated with it.
 func (i *Client) Drop() error {
 	conn := i.pool.Get()
 	defer conn.Close()
@@ -380,6 +393,13 @@ func (info *IndexInfo) setTarget(key string, value interface{}) error {
 			case reflect.Float64:
 				f, _ := redis.Float64(value, nil)
 				targetInfo.SetFloat(f)
+			case reflect.Bool:
+				f, _ := redis.Uint64(value, nil)
+				if f == 0 {
+					targetInfo.SetBool(false)
+				} else {
+					targetInfo.SetBool(true)
+				}
 			default:
 				panic("Tag set without handler")
 			}
@@ -554,6 +574,7 @@ func (i *Client) GetTagVals(index string, filedName string) ([]string, error) {
 }
 
 // Adds a synonym group.
+// Deprecated: This function  is not longer supported on RediSearch 2.0 and above, use SynUpdate instead
 func (i *Client) SynAdd(indexName string, terms []string) (int64, error) {
 	conn := i.pool.Get()
 	defer conn.Close()
@@ -562,7 +583,7 @@ func (i *Client) SynAdd(indexName string, terms []string) (int64, error) {
 	return redis.Int64(conn.Do("FT.SYNADD", args...))
 }
 
-// Updates a synonym group.
+// Updates a synonym group, with additional terms.
 func (i *Client) SynUpdate(indexName string, synonymGroupId int64, terms []string) (string, error) {
 	conn := i.pool.Get()
 	defer conn.Close()
@@ -600,6 +621,8 @@ func (i *Client) SynDump(indexName string) (map[string][]int64, error) {
 }
 
 // Adds a document to the index from an existing HASH key in Redis.
+// Deprecated: This function  is not longer supported on RediSearch 2.0 and above, use HSET instead
+// See the example ExampleClient_CreateIndexWithIndexDefinition for a deeper understanding on how to move towards using hashes on your application
 func (i *Client) AddHash(docId string, score float32, language string, replace bool) (string, error) {
 	conn := i.pool.Get()
 	defer conn.Close()
