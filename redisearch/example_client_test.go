@@ -44,6 +44,13 @@ func ExampleNewClient() {
 		log.Fatal(err)
 	}
 
+	// Wait for all documents to be indexed
+	info, _ := c.Info()
+	for info.IsIndexing {
+		time.Sleep(time.Second)
+		info, _ = c.Info()
+	}
+
 	// Searching with limit and sorting
 	docs, total, err := c.Search(redisearch.NewQuery("hello world").
 		Limit(0, 2).
@@ -51,6 +58,53 @@ func ExampleNewClient() {
 
 	fmt.Println(docs[0].Id, docs[0].Properties["title"], total, err)
 	// Output: ExampleNewClient:doc1 Hello world 1 <nil>
+
+	// Drop the existing index
+	c.Drop()
+}
+
+// RediSearch 2.0, marks the re-architecture of the way indices are kept in sync with the data.
+// Instead of having to write data through the index (using the FT.ADD command),
+// RediSearch will now follow the data written in hashes and automatically index it.
+// The following example illustrates how to achieve it with the go client
+func ExampleClient_CreateIndexWithIndexDefinition() {
+	host := "localhost:6379"
+	password := ""
+	pool := &redis.Pool{Dial: func() (redis.Conn, error) {
+		return redis.Dial("tcp", host, redis.DialPassword(password))
+	}}
+	c := redisearch.NewClientFromPool(pool, "products-from-hashes")
+
+	// Create a schema
+	schema := redisearch.NewSchema(redisearch.DefaultOptions).
+		AddField(redisearch.NewTextFieldOptions("name", redisearch.TextFieldOptions{Sortable: true})).
+		AddField(redisearch.NewTextFieldOptions("description", redisearch.TextFieldOptions{Weight: 5.0, Sortable: true})).
+		AddField(redisearch.NewNumericField("price"))
+
+	// IndexDefinition is available for RediSearch 2.0+
+	// Create a index definition for automatic indexing on Hash updates.
+	// In this example we will only index keys started by product:
+	indexDefinition := redisearch.NewIndexDefinition().AddPrefix("product:")
+
+	// Add the Index Definition
+	c.CreateIndexWithIndexDefinition(schema, indexDefinition)
+
+	// Get a vanilla connection and create 100 hashes
+	vanillaConnection := pool.Get()
+	for productNumber := 0; productNumber < 100; productNumber++ {
+		vanillaConnection.Do("HSET", fmt.Sprintf("product:%d", productNumber), "name", fmt.Sprintf("product name %d", productNumber), "description", "product description", "price", 10.99)
+	}
+
+	// Wait for all documents to be indexed
+	info, _ := c.Info()
+	for info.IsIndexing {
+		time.Sleep(time.Second)
+		info, _ = c.Info()
+	}
+
+	_, total, _ := c.Search(redisearch.NewQuery("description"))
+
+	fmt.Printf("Total documents containing \"description\": %d.\n", total)
 }
 
 // exemplifies the NewClientFromPool function
@@ -94,6 +148,9 @@ func ExampleNewClientFromPool() {
 
 	fmt.Println(docs[0].Id, docs[0].Properties["title"], total, err)
 	// Output: ExampleNewClientFromPool:doc2 Hello world 1 <nil>
+
+	// Drop the existing index
+	c.Drop()
 }
 
 //Example of how to establish an SSL connection from your app to the RedisAI Server
@@ -180,6 +237,9 @@ func ExampleNewClientFromPool_ssl() {
 		SetReturnFields("title"))
 
 	fmt.Println(docs[0].Id, docs[0].Properties["title"], total, err)
+
+	// Drop the existing index
+	c.Drop()
 }
 
 func getConnectionDetails() (host string, password string) {

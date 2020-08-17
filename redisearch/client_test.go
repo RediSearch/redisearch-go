@@ -15,6 +15,38 @@ func flush(c *Client) (err error) {
 	return conn.Send("FLUSHALL")
 }
 
+func teardown(c *Client) {
+	flush(c)
+}
+
+// getRediSearchVersion returns RediSearch version by issuing "MODULE LIST" command
+// and iterating through the availabe modules up until "ft" is found as the name property
+func (c *Client) getRediSearchVersion() (version int64, err error) {
+	conn := c.pool.Get()
+	defer conn.Close()
+	var values []interface{}
+	var moduleInfo []interface{}
+	var moduleName string
+	values, err = redis.Values(conn.Do("MODULE", "LIST"))
+	if err != nil {
+		return
+	}
+	for _, rawModule := range values {
+		moduleInfo, err = redis.Values(rawModule, err)
+		if err != nil {
+			return
+		}
+		moduleName, err = redis.String(moduleInfo[1], err)
+		if err != nil {
+			return
+		}
+		if moduleName == "ft" {
+			version, err = redis.Int64(moduleInfo[3], err)
+		}
+	}
+	return
+}
+
 func TestClient_Get(t *testing.T) {
 
 	c := createClient("test-get")
@@ -75,6 +107,7 @@ func TestClient_Get(t *testing.T) {
 
 		})
 	}
+	teardown(c)
 }
 
 func TestClient_MultiGet(t *testing.T) {
@@ -136,6 +169,7 @@ func TestClient_MultiGet(t *testing.T) {
 			}
 		})
 	}
+	teardown(c)
 }
 
 func TestClient_DictAdd(t *testing.T) {
@@ -180,6 +214,7 @@ func TestClient_DictAdd(t *testing.T) {
 			i.DictDel(tt.args.dictionaryName, tt.args.terms)
 		})
 	}
+	teardown(c)
 }
 
 func TestClient_DictDel(t *testing.T) {
@@ -230,6 +265,7 @@ func TestClient_DictDel(t *testing.T) {
 			}
 		})
 	}
+	teardown(c)
 }
 
 func TestClient_DictDump(t *testing.T) {
@@ -276,6 +312,7 @@ func TestClient_DictDump(t *testing.T) {
 			}
 		})
 	}
+	teardown(c)
 }
 
 func TestClient_AliasAdd(t *testing.T) {
@@ -323,6 +360,7 @@ func TestClient_AliasAdd(t *testing.T) {
 			}
 		})
 	}
+	teardown(c)
 }
 
 func TestClient_AliasDel(t *testing.T) {
@@ -373,6 +411,7 @@ func TestClient_AliasDel(t *testing.T) {
 			}
 		})
 	}
+	teardown(c)
 }
 
 func TestClient_AliasUpdate(t *testing.T) {
@@ -420,6 +459,7 @@ func TestClient_AliasUpdate(t *testing.T) {
 			}
 		})
 	}
+	teardown(c)
 }
 
 func TestClient_Config(t *testing.T) {
@@ -435,6 +475,7 @@ func TestClient_Config(t *testing.T) {
 
 	kvs, _ = c.GetConfig("*")
 	assert.Equal(t, "100", kvs["TIMEOUT"])
+	teardown(c)
 }
 
 func TestNewClientFromPool(t *testing.T) {
@@ -449,6 +490,7 @@ func TestNewClientFromPool(t *testing.T) {
 	err2 := client2.pool.Close()
 	assert.Nil(t, err1)
 	assert.Nil(t, err2)
+	teardown(client1)
 }
 
 func TestClient_GetTagVals(t *testing.T) {
@@ -475,48 +517,64 @@ func TestClient_GetTagVals(t *testing.T) {
 	tags, err = c.GetTagVals("notexit", "tags")
 	assert.NotNil(t, err)
 	assert.Nil(t, tags)
+	teardown(c)
 }
 
 func TestClient_SynAdd(t *testing.T) {
 	c := createClient("testsynadd")
+	version, err := c.getRediSearchVersion()
+	assert.Nil(t, err)
+	if version <= 10699 {
+		sc := NewSchema(DefaultOptions).
+			AddField(NewTextField("name")).
+			AddField(NewTextField("addr"))
+		c.Drop()
+		err := c.CreateIndex(sc)
+		assert.Nil(t, err)
 
-	sc := NewSchema(DefaultOptions).
-		AddField(NewTextField("name")).
-		AddField(NewTextField("addr"))
-	c.Drop()
-	err := c.CreateIndex(sc)
-	assert.Nil(t, err)
-
-	gid, err := c.SynAdd("testsynadd", []string{"girl", "baby"})
-	assert.Nil(t, err)
-	assert.True(t, gid >= 0)
-	ret, err := c.SynUpdate("testsynadd", gid, []string{"girl", "baby"})
-	assert.Nil(t, err)
-	assert.Equal(t, "OK", ret)
+		gid, err := c.SynAdd("testsynadd", []string{"girl", "baby"})
+		assert.Nil(t, err)
+		assert.True(t, gid >= 0)
+		ret, err := c.SynUpdate("testsynadd", gid, []string{"girl", "baby"})
+		assert.Nil(t, err)
+		assert.Equal(t, "OK", ret)
+	}
+	teardown(c)
 }
 
 func TestClient_SynDump(t *testing.T) {
 	c := createClient("testsyndump")
-
+	version, err := c.getRediSearchVersion()
+	assert.Nil(t, err)
 	sc := NewSchema(DefaultOptions).
 		AddField(NewTextField("name")).
 		AddField(NewTextField("addr"))
 	c.Drop()
-	err := c.CreateIndex(sc)
-	assert.Nil(t, err)
+	err = c.CreateIndex(sc)
+	var gId1 int64 = 1
+	var gId2 int64 = 2
 
-	gid, err := c.SynAdd("testsyndump", []string{"girl", "baby"})
 	assert.Nil(t, err)
-	assert.True(t, gid >= 0)
-
-	gid2, err := c.SynAdd("testsyndump", []string{"child"})
+	// For RediSearch < v2.0 we need to use SYNADD. For Redisearch >= v2.0 we need to use SYNUPDATE
+	if version <= 10699 {
+		gId1, err = c.SynAdd("testsyndump", []string{"girl", "baby"})
+		assert.Nil(t, err)
+		gId2, err = c.SynAdd("testsyndump", []string{"child"})
+		assert.Nil(t, err)
+	} else {
+		ret, err := c.SynUpdate("testsyndump", gId1, []string{"girl", "baby"})
+		assert.Nil(t, err)
+		assert.Equal(t, "OK", ret)
+		_, err = c.SynUpdate("testsyndump", gId2, []string{"child"})
+		assert.Nil(t, err)
+		assert.Equal(t, "OK", ret)
+	}
 
 	m, err := c.SynDump("testsyndump")
 	assert.Contains(t, m, "baby")
 	assert.Contains(t, m, "girl")
 	assert.Contains(t, m, "child")
-	assert.Equal(t, gid, m["baby"][0])
-	assert.Equal(t, gid2, m["child"][0])
+	teardown(c)
 }
 
 func TestClient_AddHash(t *testing.T) {
@@ -539,6 +597,7 @@ func TestClient_AddHash(t *testing.T) {
 	} else {
 		assert.Equal(t, "OK", ret)
 	}
+	teardown(c)
 }
 
 func TestClient_AddField(t *testing.T) {
@@ -553,33 +612,115 @@ func TestClient_AddField(t *testing.T) {
 	assert.Nil(t, err)
 	err = c.Index(NewDocument("doc-n1", 1.0).Set("age", 15))
 	assert.Nil(t, err)
+	teardown(c)
 }
 
-func TestClient_CreateIndex(t *testing.T) {
-	type fields struct {
-		pool ConnPool
-		name string
+func TestClient_GetRediSearchVersion(t *testing.T) {
+	c := createClient("version-test")
+	_, err := c.getRediSearchVersion()
+	assert.Nil(t, err)
+}
+
+func TestClient_CreateIndexWithIndexDefinition(t *testing.T) {
+	i := createClient("index-definition-test")
+	version, err := i.getRediSearchVersion()
+	assert.Nil(t, err)
+	if version >= 20000 {
+
+		type args struct {
+			schema     *Schema
+			definition *IndexDefinition
+		}
+		tests := []struct {
+			name    string
+			args    args
+			wantErr bool
+		}{
+			{"no-indexDefinition", args{NewSchema(DefaultOptions).
+				AddField(NewTextField("name")).
+				AddField(NewTextField("addr")), nil}, false},
+			{"default-indexDefinition", args{NewSchema(DefaultOptions).
+				AddField(NewTextField("name")).
+				AddField(NewTextField("addr")), NewIndexDefinition()}, false},
+			{"score-indexDefinition", args{NewSchema(DefaultOptions).
+				AddField(NewTextField("name")).
+				AddField(NewTextField("addr")), NewIndexDefinition().SetScore(0.25)}, false},
+			{"language-indexDefinition", args{NewSchema(DefaultOptions).
+				AddField(NewTextField("name")).
+				AddField(NewTextField("addr")), NewIndexDefinition().SetLanguage("portuguese")}, false},
+			{"language_field-indexDefinition", args{NewSchema(DefaultOptions).
+				AddField(NewTextField("name")).
+				AddField(NewTextField("lang")).
+				AddField(NewTextField("addr")), NewIndexDefinition().SetLanguageField("lang")}, false},
+			{"score_field-indexDefinition", args{NewSchema(DefaultOptions).
+				AddField(NewTextField("name")).
+				AddField(NewTextField("addr")).AddField(NewNumericField("score")), NewIndexDefinition().SetScoreField("score")}, false},
+			{"payload_field-indexDefinition", args{NewSchema(DefaultOptions).
+				AddField(NewTextField("name")).
+				AddField(NewTextField("addr")).AddField(NewNumericField("score")).AddField(NewTextField("payload")), NewIndexDefinition().SetPayloadField("payload")}, false},
+			{"prefix-indexDefinition", args{NewSchema(DefaultOptions).
+				AddField(NewTextField("name")).
+				AddField(NewTextField("addr")).AddField(NewNumericField("score")).AddField(NewTextField("payload")), NewIndexDefinition().AddPrefix("doc:*")}, false},
+			{"filter-indexDefinition", args{NewSchema(DefaultOptions).
+				AddField(NewTextField("name")).
+				AddField(NewTextField("addr")).AddField(NewNumericField("score")).AddField(NewTextField("payload")), NewIndexDefinition().SetFilterExpression("@score > 0")}, false},
+		}
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				if err := i.CreateIndexWithIndexDefinition(tt.args.schema, tt.args.definition); (err != nil) != tt.wantErr {
+					t.Errorf("CreateIndexWithIndexDefinition() error = %v, wantErr %v", err, tt.wantErr)
+				}
+				teardown(i)
+			})
+		}
 	}
+}
+
+func TestClient_SynUpdate(t *testing.T) {
+	c := createClient("syn-update-test")
+	sc := NewSchema(DefaultOptions).
+		AddField(NewTextField("name")).
+		AddField(NewTextField("addr"))
+	version, err := c.getRediSearchVersion()
+	assert.Nil(t, err)
+
 	type args struct {
-		s *Schema
+		indexName      string
+		synonymGroupId int64
+		terms          []string
 	}
 	tests := []struct {
 		name    string
-		fields  fields
 		args    args
+		want    string
 		wantErr bool
 	}{
-		// TODO: Add test cases.
+		{"1-syn", args{"syn-update-test", 1, []string{"abc"}}, "OK", false},
+		{"3-syn", args{"syn-update-test", 1, []string{"abc", "def", "ghi"}}, "OK", false},
+		{"err-empty-syn", args{"syn-update-test", 1, []string{}}, "", true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			i := &Client{
-				pool: tt.fields.pool,
-				name: tt.fields.name,
+			c.Drop()
+			err := c.CreateIndex(sc)
+			assert.Nil(t, err)
+			gId := tt.args.synonymGroupId
+
+			// For older version of RediSearch we first need to use SYNADD then SYNUPDATE
+			if version <= 10699 {
+				gId, err = c.SynAdd(tt.args.indexName, []string{"workaround"})
+				assert.Nil(t, err)
 			}
-			if err := i.CreateIndex(tt.args.s); (err != nil) != tt.wantErr {
-				t.Errorf("CreateIndex() error = %v, wantErr %v", err, tt.wantErr)
+
+			got, err := c.SynUpdate(tt.args.indexName, gId, tt.args.terms)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("SynUpdate() error = %v, wantErr %v", err, tt.wantErr)
+				return
 			}
+			if got != tt.want {
+				t.Errorf("SynUpdate() got = %v, want %v", got, tt.want)
+			}
+			teardown(c)
 		})
 	}
 }

@@ -27,6 +27,7 @@ type IndexingOptions struct {
 	Language string
 
 	// If set to true, we will not save the actual document in the database and only index it.
+	// As of RediSearch 2.0 and above NOSAVE is no longer supported, and will have no effect
 	NoSave bool
 
 	//  If set, we will do an UPSERT style insertion - and delete an older version of the document if it exists.

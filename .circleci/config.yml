@@ -17,7 +17,7 @@ jobs:
       - run:
           name: Generate a root CA and a server certificate using redis helpers
           command: |
-            git clone git://github.com/antirez/redis.git --branch 6.0.5
+            git clone git://github.com/antirez/redis.git --branch 6.0.6
             cd redis
             ./utils/gen-test-certs.sh
             cd ..
@@ -53,8 +53,40 @@ jobs:
       - checkout
       - run: make get
       - run: make checkfmt
+      - run: make test
+      - run: make godoc_examples
       - run: make coverage
       - run: bash <(curl -s https://codecov.io/bash) -t ${CODECOV_TOKEN}
+
+  build-latest:
+    docker:
+      - image: circleci/golang:1.12
+      - image: redislabs/redisearch:latest
+
+    working_directory: /go/src/github.com/RediSearch/redisearch-go
+    steps:
+      - checkout
+      - run: make test
+
+  build-v16:
+    docker:
+      - image: circleci/golang:1.12
+      - image: redislabs/redisearch:1.6.13
+
+    working_directory: /go/src/github.com/RediSearch/redisearch-go
+    steps:
+      - checkout
+      - run: make test
+
+  build-v14:
+    docker:
+      - image: circleci/golang:1.12
+      - image: redislabs/redisearch:1.4.28
+
+    working_directory: /go/src/github.com/RediSearch/redisearch-go
+    steps:
+      - checkout
+      - run: make test
 
   build_nightly: # test nightly with redisearch:edge
     docker:
@@ -64,7 +96,6 @@ jobs:
     working_directory: /go/src/github.com/RediSearch/redisearch-go
     steps:
       - checkout
-      - run: make get
       - run: make test
 
 workflows:
@@ -73,6 +104,9 @@ workflows:
     jobs:
       - build
       - build-tls
+      - build-latest
+      - build-v16
+      - build-v14
   nightly:
     triggers:
       - schedule:
@@ -84,3 +118,6 @@ workflows:
     jobs:
       - build_nightly
       - build-tls
+      - build-latest
+      - build-v16
+      - build-v14
