@@ -763,6 +763,45 @@ func TestClient_Delete(t *testing.T) {
 			} else {
 				assert.Equal(t, false, docExists)
 			}
+			teardown(c)
+		})
+	}
+}
+
+func TestClient_DeleteDocument(t *testing.T) {
+	c := createClient("ft.DeleteDocument-test")
+	sc := NewSchema(DefaultOptions).
+		AddField(NewTextField("name")).
+		AddField(NewTextField("addr"))
+
+	type args struct {
+		docId          string
+		docIdsToAddIdx []string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		{"doc-exists", args{"doc1", []string{"doc1", "doc2"}}, false},
+		{"doc-not-exists", args{"doc3", []string{"doc1", "doc2"}}, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c.Drop()
+			err := c.CreateIndex(sc)
+			assert.Nil(t, err)
+			for _, docId := range tt.args.docIdsToAddIdx {
+				err = c.Index(NewDocument(docId, 1.0).Set("name", "Jon Doe"))
+				assert.Nil(t, err)
+			}
+			if err := c.DeleteDocument(tt.args.docId); (err != nil) != tt.wantErr {
+				t.Errorf("DeleteDocument() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			docExists, err := redis.Bool(c.pool.Get().Do("EXISTS", tt.args.docId))
+			assert.Nil(t, err)
+			assert.False(t, docExists)
+			teardown(c)
 		})
 	}
 }

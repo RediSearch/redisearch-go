@@ -365,7 +365,18 @@ func (i *Client) Drop() error {
 
 // Delete the document from the index, optionally delete the actual document
 // WARNING: As of RediSearch 2.0 and above, FT.DEL always deletes the underlying document.
+// Deprecated: This function  is deprecated on RediSearch 2.0 and above, use DeleteDocument() instead
 func (i *Client) Delete(docId string, deleteDocument bool) (err error) {
+	return i.delDoc(docId, deleteDocument)
+}
+
+// Delete the document from the index and also delete the HASH key in which the document is stored
+func (i *Client) DeleteDocument(docId string) (err error) {
+	return i.delDoc(docId, true)
+}
+
+// Internal method to be used by Delete() and DeleteDocument()
+func (i *Client) delDoc(docId string, deleteDocument bool) (err error) {
 	conn := i.pool.Get()
 	defer conn.Close()
 	if deleteDocument {
