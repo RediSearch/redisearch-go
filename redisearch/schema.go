@@ -41,6 +41,11 @@ type Options struct {
 	// Because such indexes are lightweight, you can create thousands of such indexes without negative performance implications.
 	Temporary       bool
 	TemporaryPeriod int
+
+	// For efficiency, RediSearch encodes indexes differently if they are created with less than 32 text fields.
+	// If set to true This option forces RediSearch to encode indexes as if there were more than 32 text fields,
+	// which allows you to add additional fields (beyond 32).
+	MaxTextFieldsFlag bool
 }
 
 func NewOptions() *Options {
@@ -73,15 +78,24 @@ func (options *Options) SetStopWords(stopwords []string) *Options {
 	return options
 }
 
+// For efficiency, RediSearch encodes indexes differently if they are created with less than 32 text fields.
+// If set to true, this flag forces RediSearch to encode indexes as if there were more than 32 text fields,
+// which allows you to add additional fields (beyond 32).
+func (options *Options) SetMaxTextFieldsFlag(flag bool) *Options {
+	options.MaxTextFieldsFlag = flag
+	return options
+}
+
 // DefaultOptions represents the default options
 var DefaultOptions = Options{
-	NoSave:          false,
-	NoFieldFlags:    false,
-	NoFrequencies:   false,
-	NoOffsetVectors: false,
-	Stopwords:       nil,
-	Temporary:       false,
-	TemporaryPeriod: 0,
+	NoSave:            false,
+	NoFieldFlags:      false,
+	NoFrequencies:     false,
+	NoOffsetVectors:   false,
+	Stopwords:         nil,
+	Temporary:         false,
+	TemporaryPeriod:   0,
+	MaxTextFieldsFlag: false,
 }
 
 const (
@@ -242,6 +256,9 @@ func (m *Schema) AddField(f Field) *Schema {
 
 func SerializeSchema(s *Schema, args redis.Args) (argsOut redis.Args, err error) {
 	argsOut = args
+	if s.Options.MaxTextFieldsFlag {
+		argsOut = append(argsOut, "MAXTEXTFIELDS")
+	}
 	if s.Options.NoOffsetVectors {
 		argsOut = append(argsOut, "NOOFFSETS")
 	}

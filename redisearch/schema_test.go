@@ -45,6 +45,8 @@ func TestSerializeSchema(t *testing.T) {
 	}{
 
 		{"default-args", args{NewSchema(DefaultOptions), redis.Args{}}, redis.Args{"SCHEMA"}, false},
+		{"maxtextfields", args{NewSchema(Options{MaxTextFieldsFlag: true}), redis.Args{}}, redis.Args{"MAXTEXTFIELDS", "SCHEMA"}, false},
+		{"maxtextfields-with-different-consturctor", args{NewSchema(*NewOptions().SetMaxTextFieldsFlag(true)), redis.Args{}}, redis.Args{"MAXTEXTFIELDS", "SCHEMA"}, false},
 		{"default-args-with-different-constructor", args{NewSchema(*NewOptions()), redis.Args{}}, redis.Args{"SCHEMA"}, false},
 		{"temporary", args{NewSchema(*NewOptions().SetTemporaryPeriod(60)), redis.Args{}}, redis.Args{"TEMPORARY", 60, "SCHEMA"}, false},
 		{"no-frequencies", args{NewSchema(Options{NoFrequencies: true}), redis.Args{}}, redis.Args{"NOFREQS", "SCHEMA"}, false},
