@@ -40,7 +40,7 @@ func (c *Client) getRediSearchVersion() (version int64, err error) {
 		if err != nil {
 			return
 		}
-		if moduleName == "ft" {
+		if moduleName == "search" {
 			version, err = redis.Int64(moduleInfo[3], err)
 		}
 	}
