@@ -48,7 +48,7 @@ godoc_examples: get fmt
 	$(GOTEST) -race -covermode=atomic ./redisearch
 
 test: get fmt
-	$(GOTEST) -race -covermode=atomic -run "Test" ./redisearch
+	$(GOTEST) -run "Test" ./redisearch
 
 coverage: get
 	$(GOTEST) -race -coverprofile=coverage.txt -covermode=atomic ./redisearch
