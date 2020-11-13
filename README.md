@@ -4,11 +4,11 @@
 [![Codecov](https://codecov.io/gh/RediSearch/redisearch-go/branch/master/graph/badge.svg)](https://codecov.io/gh/RediSearch/redisearch-go)
 [![Go Report Card](https://goreportcard.com/badge/github.com/RediSearch/redisearch-go)](https://goreportcard.com/report/github.com/RediSearch/redisearch-go)
 [![GoDoc](https://godoc.org/github.com/RediSearch/redisearch-go?status.svg)](https://godoc.org/github.com/RediSearch/redisearch-go)
-
+[![Total alerts](https://img.shields.io/lgtm/alerts/g/RediSearch/redisearch-go.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/RediSearch/redisearch-go/alerts/)
 
 # RediSearch Go Client
 [![Forum](https://img.shields.io/badge/Forum-RediSearch-blue)](https://forum.redislabs.com/c/modules/redisearch/)
-[![Gitter](https://badges.gitter.im/RedisLabs/RediSearch.svg)](https://gitter.im/RedisLabs/RediSearch?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
+[![Discord](https://img.shields.io/discord/697882427875393627?style=flat-square)](https://discord.gg/xTbqgTB)
 
 Go client for [RediSearch](http://redisearch.io), based on redigo.
 
