@@ -44,7 +44,8 @@ func NewClientFromPool(pool *redis.Pool, name string) *Client {
 		pool: pool,
 		name: name,
 	}
-
+	a := ConnectionPool{}
+	a.ConfigPoolSearch()
 	return ret
 }
 
