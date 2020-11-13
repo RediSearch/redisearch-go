@@ -37,6 +37,7 @@ func init() {
 	if exists && value != "" {
 		requiresDatagen = false
 	}
+
 	if requiresDatagen {
 		c := createClient("bench.ft.aggregate")
 
@@ -74,22 +75,22 @@ func benchmarkAggregateCursor(c *Client, q *AggregateQuery, b *testing.B) {
 	}
 }
 
-func BenchmarkAgg_1(b *testing.B) {
-	c := createClient("bench.ft.aggregate")
-	q := NewAggregateQuery().
-		SetQuery(NewQuery("*"))
-	b.ResetTimer()
-	benchmarkAggregate(c, q, b)
-}
+// func BenchmarkAgg_1(b *testing.B) {
+// 	c := createClient("bench.ft.aggregate")
+// 	q := NewAggregateQuery().
+// 		SetQuery(NewQuery("*"))
+// 	b.ResetTimer()
+// 	benchmarkAggregate(c, q, b)
+// }
 
-func BenchmarkAggCursor_1(b *testing.B) {
-	c := createClient("bench.ft.aggregate")
-	q := NewAggregateQuery().
-		SetQuery(NewQuery("*")).
-		SetCursor(NewCursor())
-	b.ResetTimer()
-	benchmarkAggregateCursor(c, q, b)
-}
+// func BenchmarkAggCursor_1(b *testing.B) {
+// 	c := createClient("bench.ft.aggregate")
+// 	q := NewAggregateQuery().
+// 		SetQuery(NewQuery("*")).
+// 		SetCursor(NewCursor())
+// 	b.ResetTimer()
+// 	benchmarkAggregateCursor(c, q, b)
+// }
 
 func AddValues(c *Client) {
 	// Open our jsonFile
