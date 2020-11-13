@@ -2,11 +2,12 @@ package redisearch
 
 import (
 	"errors"
-	"github.com/gomodule/redigo/redis"
 	"log"
 	"reflect"
 	"strconv"
 	"strings"
+
+	"github.com/gomodule/redigo/redis"
 )
 
 // Client is an interface to redisearch's redis commands
@@ -43,6 +44,7 @@ func NewClientFromPool(pool *redis.Pool, name string) *Client {
 		pool: pool,
 		name: name,
 	}
+
 	return ret
 }
 
