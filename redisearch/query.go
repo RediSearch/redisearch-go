@@ -1,6 +1,10 @@
 package redisearch
 
-import "github.com/gomodule/redigo/redis"
+import (
+	"math"
+
+	"github.com/gomodule/redigo/redis"
+)
 
 // Flag is a type for query flags
 type Flag uint64
@@ -77,8 +81,9 @@ type Query struct {
 	Flags  Flag
 	Slop   int
 
-	Filters       []Predicate
+	Filters       []Filter
 	InKeys        []string
+	InFields      []string
 	ReturnFields  []string
 	Language      string
 	Expander      string
@@ -118,7 +123,7 @@ func (p Paging) serialize() redis.Args {
 func NewQuery(raw string) *Query {
 	return &Query{
 		Raw:     raw,
-		Filters: []Predicate{},
+		Filters: []Filter{},
 		Paging:  Paging{DefaultOffset, DefaultNum},
 	}
 }
@@ -147,6 +152,11 @@ func (q Query) serialize() redis.Args {
 	if q.InKeys != nil {
 		args = args.Add("INKEYS", len(q.InKeys))
 		args = args.AddFlat(q.InKeys)
+	}
+
+	if q.InFields != nil {
+		args = args.Add("INFIELDS", len(q.InFields))
+		args = args.AddFlat(q.InFields)
 	}
 
 	if q.ReturnFields != nil {
@@ -195,7 +205,47 @@ func (q Query) serialize() redis.Args {
 			args = args.Add("SEPARATOR", q.SummarizeOpts.Separator)
 		}
 	}
+
+	if q.Filters != nil {
+		for _, f := range q.Filters {
+			if f.Options != nil {
+				switch f.Options.(type) {
+				case NumericFilterOptions:
+					opts, _ := f.Options.(NumericFilterOptions)
+					args = append(args, "FILTER", f.Field)
+					args = appendNumArgs(opts.Min, opts.ExclusiveMin, args)
+					args = appendNumArgs(opts.Max, opts.ExclusiveMax, args)
+				case GeoFilterOptions:
+					opts, _ := f.Options.(GeoFilterOptions)
+					args = append(args, "GEOFILTER", f.Field, opts.Lon, opts.Lat, opts.Radius, opts.Unit)
+				}
+			}
+		}
+	}
 	return args
+}
+
+func appendNumArgs(num float64, exclude bool, args redis.Args) redis.Args {
+	if math.IsInf(num, 1) {
+		return append(args, "+inf")
+	}
+	if math.IsInf(num, -1) {
+		return append(args, "-inf")
+	}
+
+	if exclude {
+		return append(args, "(", num)
+	}
+	return append(args, num)
+}
+
+// AddFilter adds a filter to the query
+func (q *Query) AddFilter(f Filter) *Query {
+	if q.Filters == nil {
+		q.Filters = []Filter{}
+	}
+	q.Filters = append(q.Filters, f)
+	return q
 }
 
 // // AddPredicate adds a predicate to the query's filters
@@ -221,6 +271,12 @@ func (q *Query) SetFlags(flags Flag) *Query {
 // SetInKeys sets the INKEYS argument of the query - limiting the search to a given set of IDs
 func (q *Query) SetInKeys(keys ...string) *Query {
 	q.InKeys = keys
+	return q
+}
+
+// SetInFields sets the INFIELDS argument of the query - filter the results to ones appearing only in specific fields of the document
+func (q *Query) SetInFields(fields ...string) *Query {
+	q.InFields = fields
 	return q
 }
 
@@ -293,4 +349,60 @@ func (q *Query) Summarize(fields ...string) *Query {
 func (q *Query) SummarizeOptions(opts SummaryOptions) *Query {
 	q.SummarizeOpts = &opts
 	return q
+}
+
+// IndexOptions indexes multiple documents on the index, with optional Options passed to options
+func (i *Client) IndexOptions(opts IndexingOptions, docs ...Document) error {
+
+	conn := i.pool.Get()
+	defer conn.Close()
+
+	n := 0
+	var merr MultiError
+
+	for ii, doc := range docs {
+		args := make(redis.Args, 0, 6+len(doc.Properties))
+		args = append(args, i.name, doc.Id, doc.Score)
+		args = SerializeIndexingOptions(opts, args)
+
+		if doc.Payload != nil {
+			args = args.Add("PAYLOAD", doc.Payload)
+		}
+
+		args = append(args, "FIELDS")
+
+		for k, f := range doc.Properties {
+			args = append(args, k, f)
+		}
+
+		if err := conn.Send("FT.ADD", args...); err != nil {
+			if merr == nil {
+				merr = NewMultiError(len(docs))
+			}
+			merr[ii] = err
+
+			return merr
+		}
+		n++
+	}
+
+	if err := conn.Flush(); err != nil {
+		return err
+	}
+
+	for n > 0 {
+		if _, err := conn.Receive(); err != nil {
+			if merr == nil {
+				merr = NewMultiError(len(docs))
+			}
+			merr[n-1] = err
+		}
+		n--
+	}
+
+	if merr == nil {
+		return nil
+	}
+
+	return merr
 }
