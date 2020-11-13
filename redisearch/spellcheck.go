@@ -95,7 +95,10 @@ func NewMisspelledTerm(term string) MisspelledTerm {
 
 func (l MisspelledTerm) Len() int { return len(l.MisspelledSuggestionList) }
 func (l MisspelledTerm) Swap(i, j int) {
-	l.MisspelledSuggestionList[i], l.MisspelledSuggestionList[j] = l.MisspelledSuggestionList[j], l.MisspelledSuggestionList[i]
+	maxLen := len(l.MisspelledSuggestionList)
+	if i < maxLen && j < maxLen {
+		l.MisspelledSuggestionList[i], l.MisspelledSuggestionList[j] = l.MisspelledSuggestionList[j], l.MisspelledSuggestionList[i]
+	}
 }
 func (l MisspelledTerm) Less(i, j int) bool {
 	return l.MisspelledSuggestionList[i].Score > l.MisspelledSuggestionList[j].Score
@@ -108,11 +111,20 @@ func (l MisspelledTerm) Sort() {
 
 // convert the result from a redis spelling correction on a query to a proper MisspelledTerm object
 func loadMisspelledTerm(arr []interface{}, termIdx, suggIdx int) (missT MisspelledTerm, err error) {
+	if len(arr) == 0 {
+		return MisspelledTerm{}, nil
+	}
+	if termIdx >= len(arr) {
+		return MisspelledTerm{}, fmt.Errorf("term index: (%d) is larger than reply size: %d", termIdx, len(arr))
+	}
 	term, err := redis.String(arr[termIdx], err)
 	if err != nil {
 		return MisspelledTerm{}, fmt.Errorf("Could not parse term: %s", err)
 	}
 	missT = NewMisspelledTerm(term)
+	if suggIdx >= len(arr) {
+		return MisspelledTerm{}, fmt.Errorf("suggestion index: (%d) is larger than reply size: %d", suggIdx, len(arr))
+	}
 	lst, err := redis.Values(arr[suggIdx], err)
 	if err != nil {
 		return MisspelledTerm{}, fmt.Errorf("Could not get the array of suggestions for spelling corrections on term %s. Error: %s", term, err)
@@ -121,6 +133,9 @@ func loadMisspelledTerm(arr []interface{}, termIdx, suggIdx int) (missT Misspell
 		innerLst, err := redis.Values(lst[i], err)
 		if err != nil {
 			return MisspelledTerm{}, fmt.Errorf("Could not get the inner array of suggestions for spelling corrections on term %s. Error: %s", term, err)
+		}
+		if len(innerLst) != 2 {
+			return MisspelledTerm{}, fmt.Errorf("expects 2 elements per inner-array")
 		}
 		score, err := redis.Float64(innerLst[0], err)
 		if err != nil {

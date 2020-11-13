@@ -7,6 +7,7 @@ type Suggestion struct {
 	Term    string
 	Score   float64
 	Payload string
+	Incr    bool
 }
 
 // SuggestOptions are options which are passed when recieving suggestions from the Autocompleter
@@ -15,6 +16,14 @@ type SuggestOptions struct {
 	Fuzzy        bool
 	WithPayloads bool
 	WithScores   bool
+}
+
+// DefaultIndexingOptions are the default options for document indexing
+var DefaultSuggestOptions = SuggestOptions{
+	Num:          5,
+	Fuzzy:        false,
+	WithPayloads: false,
+	WithScores:   false,
 }
 
 // SuggestionList is a sortable list of suggestions returned from an engine

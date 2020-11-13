@@ -3,34 +3,110 @@
 # Check https://circleci.com/docs/2.0/language-go/ for more details
 version: 2
 jobs:
-  build: # test with redisearch:latest
-    docker:
-      - image: circleci/golang:1.9
-      - image: redislabs/redisearch:latest
-
-    working_directory: /go/src/github.com/RediSearch/redisearch-go
+  build-tls:
+    machine:
+      enabled: true
+      image: ubuntu-1604:202004-01
     steps:
       - checkout
-      - run: go get -v -t -d ./...
-      - run: go test -v ./... -race -coverprofile=coverage.txt -covermode=atomic
-      - run: bash <(curl -s https://codecov.io/bash) -t ${CODECOV_TOKEN}
+      - run:
+          name: Setting GOPATH
+          command: |
+            go version
+            go env -w GOPATH=$HOME/go
+      - run:
+          name: Generate a root CA and a server certificate using redis helpers
+          command: |
+            git clone git://github.com/antirez/redis.git --branch 6.0.6
+            cd redis
+            ./utils/gen-test-certs.sh
+            cd ..
+      - run:
+          name: Copy RediSearch
+          command: |
+            docker run --rm --entrypoint cat redislabs/redisearch:edge  /usr/lib/redis/modules/redisearch.so > redisearch.so
+            chmod 755 redisearch.so
+      - run:
+          name: Run RediSearch with tls support
+          command: |
+            docker run -d -v $(pwd)/redisearch.so:/data/redisearch.so \
+                       -v $(pwd)/redis/tests/tls/:/data \
+                       -p 6379:6379 redis redis-server --tls-port 6379 --port 0  \
+                       --tls-cert-file /data/redis.crt  \
+                       --tls-key-file /data/redis.key  \
+                       --tls-ca-cert-file /data/ca.crt \
+                       --tls-auth-clients no  --loadmodule /data/redisearch.so
+      - run:
+          name: Run Examples
+          command: |
+            make examples TLS_CERT=redis/tests/tls/redis.crt \
+                          TLS_KEY=redis/tests/tls/redis.key \
+                          TLS_CACERT=redis/tests/tls/ca.crt
 
-  build_nightly: # test nightly with redisearch:edge 
+  build: # test with redisearch:edge
     docker:
-      - image: circleci/golang:1.9
+      - image: circleci/golang:1.12
       - image: redislabs/redisearch:edge
 
     working_directory: /go/src/github.com/RediSearch/redisearch-go
     steps:
       - checkout
-      - run: go get -v -t -d ./...
-      - run: go test -v ./... -race #no need for codecov on nightly
+      - run: make get
+      - run: make checkfmt
+      - run: make test
+      - run: make godoc_examples
+      - run: make coverage
+      - run: bash <(curl -s https://codecov.io/bash) -t ${CODECOV_TOKEN}
+
+  build-latest:
+    docker:
+      - image: circleci/golang:1.12
+      - image: redislabs/redisearch:latest
+
+    working_directory: /go/src/github.com/RediSearch/redisearch-go
+    steps:
+      - checkout
+      - run: make test
+
+  build-v16:
+    docker:
+      - image: circleci/golang:1.12
+      - image: redislabs/redisearch:1.6.13
+
+    working_directory: /go/src/github.com/RediSearch/redisearch-go
+    steps:
+      - checkout
+      - run: make test
+
+  build-v14:
+    docker:
+      - image: circleci/golang:1.12
+      - image: redislabs/redisearch:1.4.28
+
+    working_directory: /go/src/github.com/RediSearch/redisearch-go
+    steps:
+      - checkout
+      - run: make test
+
+  build_nightly: # test nightly with redisearch:edge
+    docker:
+      - image: circleci/golang:1.12
+      - image: redislabs/redisearch:edge
+
+    working_directory: /go/src/github.com/RediSearch/redisearch-go
+    steps:
+      - checkout
+      - run: make test
 
 workflows:
   version: 2
   commit:
     jobs:
       - build
+      - build-tls
+      - build-latest
+      - build-v16
+      - build-v14
   nightly:
     triggers:
       - schedule:
@@ -41,3 +117,7 @@ workflows:
                 - master
     jobs:
       - build_nightly
+      - build-tls
+      - build-latest
+      - build-v16
+      - build-v14
