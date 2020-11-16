@@ -7,3 +7,4 @@
 !.circleci/config.yml
 !/tests/*.bz2
 !Makefile
+!**/*.yml
