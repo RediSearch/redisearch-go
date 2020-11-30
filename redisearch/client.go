@@ -59,7 +59,7 @@ func (i *Client) CreateIndexWithIndexDefinition(schema *Schema, definition *Inde
 
 // internal method
 func (i *Client) indexWithDefinition(indexName string, schema *Schema, definition *IndexDefinition) (err error) {
-	args := redis.Args{i.name}
+	args := redis.Args{indexName}
 	if definition != nil {
 		args = definition.Serialize(args)
 	}

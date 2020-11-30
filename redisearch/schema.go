@@ -8,6 +8,9 @@ import (
 // FieldType is an enumeration of field/property types
 type FieldType int
 
+// PhoneticMatcherType is an enumeration of the phonetic algorithm and language used.
+type PhoneticMatcherType string
+
 // Options are flags passed to the the abstract Index call, which receives them as interface{}, allowing
 // for implementation specific options
 type Options struct {
@@ -98,6 +101,7 @@ var DefaultOptions = Options{
 	MaxTextFieldsFlag: false,
 }
 
+// Field Types
 const (
 	// TextField full-text field
 	TextField FieldType = iota
@@ -112,6 +116,14 @@ const (
 	TagField
 )
 
+// Phonetic Matchers
+const (
+	PhoneticDoubleMetaphoneEnglish    PhoneticMatcherType = "dm:en"
+	PhoneticDoubleMetaphoneFrench     PhoneticMatcherType = "dm:fr"
+	PhoneticDoubleMetaphonePortuguese PhoneticMatcherType = "dm:pt"
+	PhoneticDoubleMetaphoneSpanish    PhoneticMatcherType = "dm:es"
+)
+
 // Field represents a single field's Schema
 type Field struct {
 	Name     string
@@ -122,10 +134,11 @@ type Field struct {
 
 // TextFieldOptions Options for text fields - weight and stemming enabled/disabled.
 type TextFieldOptions struct {
-	Weight   float32
-	Sortable bool
-	NoStem   bool
-	NoIndex  bool
+	Weight          float32
+	Sortable        bool
+	NoStem          bool
+	NoIndex         bool
+	PhoneticMatcher PhoneticMatcherType
 }
 
 // TagFieldOptions options for indexing tag fields
@@ -305,6 +318,9 @@ func serializeField(f Field, args redis.Args) (argsOut redis.Args, err error) {
 			}
 			if opts.NoStem {
 				argsOut = append(argsOut, "NOSTEM")
+			}
+			if opts.PhoneticMatcher != "" {
+				argsOut = append(argsOut, "PHONETIC", string(opts.PhoneticMatcher))
 			}
 			if opts.Sortable {
 				argsOut = append(argsOut, "SORTABLE")

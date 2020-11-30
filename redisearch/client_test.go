@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/gomodule/redigo/redis"
 	"github.com/stretchr/testify/assert"
@@ -849,4 +850,47 @@ func TestClient_CreateIndexWithIndexDefinition1(t *testing.T) {
 		teardown(c)
 
 	}
+}
+
+func TestClient_CreateIndex(t *testing.T) {
+	c := createClient("create-index-phonetic")
+	version, err := c.getRediSearchVersion()
+	assert.Nil(t, err)
+	if version <= 10699 {
+		// IndexDefinition is available for RediSearch 2.0+
+		return
+	}
+
+	// Create a schema
+	schema := NewSchema(DefaultOptions).
+		AddField(NewTextFieldOptions("name", TextFieldOptions{Sortable: true, PhoneticMatcher: PhoneticDoubleMetaphoneEnglish})).
+		AddField(NewNumericField("age"))
+
+	// IndexDefinition is available for RediSearch 2.0+
+	// In this example we will only index keys started by product:
+	indexDefinition := NewIndexDefinition().AddPrefix("create-index-phonetic:")
+
+	// Add the Index Definition
+	c.CreateIndexWithIndexDefinition(schema, indexDefinition)
+	assert.Nil(t, err)
+
+	// Create docs with a name that has the same phonetic matcher
+	vanillaConnection := c.pool.Get()
+	vanillaConnection.Do("HSET", "create-index-phonetic:doc1", "name", "Jon", "age", 25)
+	vanillaConnection.Do("HSET", "create-index-phonetic:doc2", "name", "John", "age", 20)
+
+	// Wait for all documents to be indexed
+	info, _ := c.Info()
+	for info.IsIndexing {
+		time.Sleep(time.Second)
+		info, _ = c.Info()
+	}
+
+	docs, total, err := c.Search(NewQuery("Jon").
+		SetReturnFields("name"))
+	assert.Nil(t, err)
+	// Verify that the we've received 2 documents ( Jon and John )
+	assert.Equal(t, 2, total)
+	assert.Equal(t, "Jon", docs[0].Properties["name"])
+	assert.Equal(t, "John", docs[1].Properties["name"])
 }
