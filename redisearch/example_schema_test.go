@@ -2,6 +2,7 @@ package redisearch_test
 
 import (
 	"fmt"
+	"github.com/gomodule/redigo/redis"
 	"log"
 	"time"
 
@@ -49,4 +50,51 @@ func ExampleCreateIndex_temporary() {
 	fmt.Println(err)
 	// Output: ExampleCreateIndex_temporary:doc1 Hello world 1 <nil>
 	// Unknown Index name
+}
+
+// exemplifies the CreateIndex function with phonetic matching on it in searches by default
+func ExampleClient_CreateIndexWithIndexDefinition_phonetic() {
+	// Create a client
+	host := "localhost:6379"
+	password := ""
+	pool := &redis.Pool{Dial: func() (redis.Conn, error) {
+		return redis.Dial("tcp", host, redis.DialPassword(password))
+	}}
+	c := redisearch.NewClientFromPool(pool, "myPhoneticIndex")
+
+	// Create a schema
+	schema := redisearch.NewSchema(redisearch.DefaultOptions).
+		AddField(redisearch.NewTextFieldOptions("name", redisearch.TextFieldOptions{Sortable: true, PhoneticMatcher: redisearch.PhoneticDoubleMetaphoneEnglish})).
+		AddField(redisearch.NewNumericField("age"))
+
+	// IndexDefinition is available for RediSearch 2.0+
+	// Create a index definition for automatic indexing on Hash updates.
+	// In this example we will only index keys started by product:
+	indexDefinition := redisearch.NewIndexDefinition().AddPrefix("myPhoneticIndex:")
+
+	// Add the Index Definition
+	c.CreateIndexWithIndexDefinition(schema, indexDefinition)
+
+	// Create docs with a name that has the same phonetic matcher
+	vanillaConnection := pool.Get()
+	vanillaConnection.Do("HSET", "myPhoneticIndex:doc1", "name", "Jon", "age", 25)
+	// Create a second document with a name that has the same phonetic matcher
+	vanillaConnection.Do("HSET", "myPhoneticIndex:doc2", "name", "John", "age", 20)
+	// Create a third document with a name that does not have the same phonetic matcher
+	vanillaConnection.Do("HSET", "myPhoneticIndex:doc3", "name", "Pieter", "age", 30)
+
+	// Wait for all documents to be indexed
+	info, _ := c.Info()
+	for info.IsIndexing {
+		time.Sleep(time.Second)
+		info, _ = c.Info()
+	}
+
+	_, total, _ := c.Search(redisearch.NewQuery("Jon").
+		SetReturnFields("name"))
+
+	// Verify that the we've received 2 documents ( Jon and John )
+	fmt.Printf("Total docs replied %d\n", total)
+
+	// Output: Total docs replied 2
 }
