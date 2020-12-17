@@ -363,6 +363,19 @@ func (i *Client) Drop() error {
 
 }
 
+// Deletes the index
+func (i *Client) DropIndex(indexName string, deleteDocument bool) error {
+	conn := i.pool.Get()
+	defer conn.Close()
+	var err error = nil
+	if deleteDocument {
+		_, err = conn.Do("FT.DROPINDEX", indexName, "DD")
+	} else {
+		_, err = conn.Do("FT.DROPINDEX", indexName)
+	}
+	return err
+}
+
 // Delete the document from the index, optionally delete the actual document
 // WARNING: As of RediSearch 2.0 and above, FT.DEL always deletes the underlying document.
 // Deprecated: This function  is deprecated on RediSearch 2.0 and above, use DeleteDocument() instead
