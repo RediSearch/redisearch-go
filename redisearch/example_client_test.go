@@ -13,34 +13,6 @@ import (
 	"github.com/gomodule/redigo/redis"
 )
 
-func Example_NewClient_t1() {
-	c := redisearch.NewClient("localhost:6379", "myIndex")
-	defer c.Drop() // cleanup
-	sc := redisearch.NewSchema(redisearch.DefaultOptions).
-		AddField(redisearch.NewTextField("body")).
-		AddField(redisearch.NewTextFieldOptions("title", redisearch.TextFieldOptions{Weight: 5.0, Sortable: true})).
-		AddField(redisearch.NewNumericField("date"))
-	if err := c.CreateIndex(sc); err != nil {
-		log.Fatal(err)
-	}
-	doc := redisearch.NewDocument("doc1", 1.0)
-	doc.Set("title", "Hello world").
-		Set("body", "foo bar").
-		Set("date", time.Now().Unix())
-	// set payload
-	doc1 := &doc
-	doc1.SetPayload([]byte{1, 2, 3, 4, 5, 6, 7, 8, 9})
-	fmt.Printf("Index Document: %#v\n", doc)
-	if err := c.IndexOptions(redisearch.DefaultIndexingOptions, doc); err != nil {
-		log.Fatal(err)
-	}
-	docs, _, err := c.Search(redisearch.NewQuery("hello world"))
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Printf("Search Results: %#v\n", docs[0])
-}
-
 // exemplifies the NewClient function
 func ExampleNewClient() {
 	// Create a client. By default a client is schemaless
