@@ -13,6 +13,34 @@ import (
 	"github.com/gomodule/redigo/redis"
 )
 
+func Example_NewClient_t1() {
+	c := redisearch.NewClient("localhost:6379", "myIndex")
+	defer c.Drop() // cleanup
+	sc := redisearch.NewSchema(redisearch.DefaultOptions).
+		AddField(redisearch.NewTextField("body")).
+		AddField(redisearch.NewTextFieldOptions("title", redisearch.TextFieldOptions{Weight: 5.0, Sortable: true})).
+		AddField(redisearch.NewNumericField("date"))
+	if err := c.CreateIndex(sc); err != nil {
+		log.Fatal(err)
+	}
+	doc := redisearch.NewDocument("doc1", 1.0)
+	doc.Set("title", "Hello world").
+		Set("body", "foo bar").
+		Set("date", time.Now().Unix())
+	// set payload
+	doc1 := &doc
+	doc1.SetPayload([]byte{1, 2, 3, 4, 5, 6, 7, 8, 9})
+	fmt.Printf("Index Document: %#v\n", doc)
+	if err := c.IndexOptions(redisearch.DefaultIndexingOptions, doc); err != nil {
+		log.Fatal(err)
+	}
+	docs, _, err := c.Search(redisearch.NewQuery("hello world"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("Search Results: %#v\n", docs[0])
+}
+
 // exemplifies the NewClient function
 func ExampleNewClient() {
 	// Create a client. By default a client is schemaless
@@ -105,6 +133,54 @@ func ExampleClient_CreateIndexWithIndexDefinition() {
 	_, total, _ := c.Search(redisearch.NewQuery("description"))
 
 	fmt.Printf("Total documents containing \"description\": %d.\n", total)
+}
+
+// The following example illustrates an index creation and deletion.
+// By default, DropIndex() which is a wrapper for RediSearch FT.DROPINDEX does not delete the document hashes associated with the index.
+// Setting the argument deleteDocuments to true deletes the hashes as well.
+// Available since RediSearch 2.0
+func ExampleClient_DropIndex() {
+
+	host := "localhost:6379"
+	password := ""
+	pool := &redis.Pool{Dial: func() (redis.Conn, error) {
+		return redis.Dial("tcp", host, redis.DialPassword(password))
+	}}
+	c := redisearch.NewClientFromPool(pool, "products-from-hashes")
+
+	// Create a schema
+	schema := redisearch.NewSchema(redisearch.DefaultOptions).
+		AddField(redisearch.NewTextFieldOptions("name", redisearch.TextFieldOptions{Sortable: true})).
+		AddField(redisearch.NewTextFieldOptions("description", redisearch.TextFieldOptions{Weight: 5.0, Sortable: true})).
+		AddField(redisearch.NewNumericField("price"))
+
+	// IndexDefinition is available for RediSearch 2.0+
+	// Create a index definition for automatic indexing on Hash updates.
+	// In this example we will only index keys started by product:
+	indexDefinition := redisearch.NewIndexDefinition().AddPrefix("product:")
+
+	// Add the Index Definition
+	c.CreateIndexWithIndexDefinition(schema, indexDefinition)
+
+	// Get a vanilla connection and create 100 hashes
+	vanillaConnection := pool.Get()
+	for productNumber := 0; productNumber < 100; productNumber++ {
+		vanillaConnection.Do("HSET", fmt.Sprintf("product:%d", productNumber), "name", fmt.Sprintf("product name %d", productNumber), "description", "product description", "price", 10.99)
+	}
+
+	// Wait for all documents to be indexed
+	info, _ := c.Info()
+	for info.IsIndexing {
+		time.Sleep(time.Second)
+		info, _ = c.Info()
+	}
+
+	// Delete Index and Documents
+	err := c.DropIndex(true)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 }
 
 // exemplifies the NewClientFromPool function

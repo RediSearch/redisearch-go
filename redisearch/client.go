@@ -363,12 +363,17 @@ func (i *Client) Drop() error {
 
 }
 
-// Deletes the index
-func (i *Client) DropIndex(deleteDocument bool) error {
+// Deletes the secondary index and optionally the associated hashes
+//
+// Available since RediSearch 2.0.
+//
+// By default, DropIndex() which is a wrapper for RediSearch FT.DROPINDEX does not delete the document hashes associated with the index.
+// Setting the argument deleteDocuments to true deletes the hashes as well.
+func (i *Client) DropIndex(deleteDocuments bool) error {
 	conn := i.pool.Get()
 	defer conn.Close()
 	var err error = nil
-	if deleteDocument {
+	if deleteDocuments {
 		_, err = conn.Do("FT.DROPINDEX", i.name, "DD")
 	} else {
 		_, err = conn.Do("FT.DROPINDEX", i.name)
