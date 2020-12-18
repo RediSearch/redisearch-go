@@ -943,6 +943,14 @@ func TestClient_DropIndex(t *testing.T) {
 
 	// Create index again
 	err = c.CreateIndexWithIndexDefinition(schema, indexDefinition)
+
+	// Wait for all documents to be indexed again
+	info, _ = c.Info()
+	for info.IsIndexing {
+		time.Sleep(time.Second)
+		info, _ = c.Info()
+	}
+
 	assert.Nil(t, err)
 	// Drop index but keep docs
 	err = c.DropIndex(true)
