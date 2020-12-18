@@ -107,6 +107,54 @@ func ExampleClient_CreateIndexWithIndexDefinition() {
 	fmt.Printf("Total documents containing \"description\": %d.\n", total)
 }
 
+// The following example illustrates an index creation and deletion.
+// By default, DropIndex() which is a wrapper for RediSearch FT.DROPINDEX does not delete the document hashes associated with the index.
+// Setting the argument deleteDocuments to true deletes the hashes as well.
+// Available since RediSearch 2.0
+func ExampleClient_DropIndex() {
+
+	host := "localhost:6379"
+	password := ""
+	pool := &redis.Pool{Dial: func() (redis.Conn, error) {
+		return redis.Dial("tcp", host, redis.DialPassword(password))
+	}}
+	c := redisearch.NewClientFromPool(pool, "products-from-hashes")
+
+	// Create a schema
+	schema := redisearch.NewSchema(redisearch.DefaultOptions).
+		AddField(redisearch.NewTextFieldOptions("name", redisearch.TextFieldOptions{Sortable: true})).
+		AddField(redisearch.NewTextFieldOptions("description", redisearch.TextFieldOptions{Weight: 5.0, Sortable: true})).
+		AddField(redisearch.NewNumericField("price"))
+
+	// IndexDefinition is available for RediSearch 2.0+
+	// Create a index definition for automatic indexing on Hash updates.
+	// In this example we will only index keys started by product:
+	indexDefinition := redisearch.NewIndexDefinition().AddPrefix("product:")
+
+	// Add the Index Definition
+	c.CreateIndexWithIndexDefinition(schema, indexDefinition)
+
+	// Get a vanilla connection and create 100 hashes
+	vanillaConnection := pool.Get()
+	for productNumber := 0; productNumber < 100; productNumber++ {
+		vanillaConnection.Do("HSET", fmt.Sprintf("product:%d", productNumber), "name", fmt.Sprintf("product name %d", productNumber), "description", "product description", "price", 10.99)
+	}
+
+	// Wait for all documents to be indexed
+	info, _ := c.Info()
+	for info.IsIndexing {
+		time.Sleep(time.Second)
+		info, _ = c.Info()
+	}
+
+	// Delete Index and Documents
+	err := c.DropIndex(true)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+}
+
 // exemplifies the NewClientFromPool function
 func ExampleNewClientFromPool() {
 	host := "localhost:6379"
