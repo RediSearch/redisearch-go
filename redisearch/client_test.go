@@ -894,3 +894,66 @@ func TestClient_CreateIndex(t *testing.T) {
 	assert.Equal(t, "Jon", docs[0].Properties["name"])
 	assert.Equal(t, "John", docs[1].Properties["name"])
 }
+
+func TestClient_DropIndex(t *testing.T) {
+	c := createClient("drop-index-example")
+	version, err := c.getRediSearchVersion()
+	assert.Nil(t, err)
+	if version <= 10699 {
+		// DropIndex() is available for RediSearch 2.0+
+		return
+	}
+
+	// Create a schema
+	schema := NewSchema(DefaultOptions).
+		AddField(NewTextFieldOptions("name", TextFieldOptions{Sortable: true, PhoneticMatcher: PhoneticDoubleMetaphoneEnglish})).
+		AddField(NewNumericField("age"))
+
+	// IndexDefinition is available for RediSearch 2.0+
+	// In this example we will only index keys started by product:
+	indexDefinition := NewIndexDefinition().AddPrefix("drop-index:")
+
+	// Add the Index Definition
+	err = c.CreateIndexWithIndexDefinition(schema, indexDefinition)
+	assert.Nil(t, err)
+
+	// Create docs with a name that has the same phonetic matcher
+	vanillaConnection := c.pool.Get()
+	vanillaConnection.Do("HSET", "drop-index:doc1", "name", "Jon", "age", 25)
+	vanillaConnection.Do("HSET", "drop-index:doc2", "name", "John", "age", 20)
+
+	// Wait for all documents to be indexed
+	info, _ := c.Info()
+	for info.IsIndexing {
+		time.Sleep(time.Second)
+		info, _ = c.Info()
+	}
+
+	// Drop index but keep docs
+	err = c.DropIndex(false)
+	assert.Nil(t, err)
+	// Now that we don't have the index this should raise an error
+	_, err = c.Info()
+	assert.EqualError(t, err, "Unknown Index name")
+	// Assert hashes still exist
+	result, err := vanillaConnection.Do("EXISTS", "drop-index:doc1")
+	assert.Equal(t, int64(1), result)
+	result, err = vanillaConnection.Do("EXISTS", "drop-index:doc2")
+	assert.Equal(t, int64(1), result)
+
+	// Create index again
+	err = c.CreateIndexWithIndexDefinition(schema, indexDefinition)
+	assert.Nil(t, err)
+	// Drop index but keep docs
+	err = c.DropIndex(true)
+	assert.Nil(t, err)
+	// Now that we don't have the index this should raise an error
+	_, err = c.Info()
+	assert.EqualError(t, err, "Unknown Index name")
+	// Assert hashes still exist
+	result, err = vanillaConnection.Do("EXISTS", "drop-index:doc1")
+	assert.Equal(t, int64(0), result)
+	result, err = vanillaConnection.Do("EXISTS", "drop-index:doc2")
+	assert.Equal(t, int64(0), result)
+
+}
