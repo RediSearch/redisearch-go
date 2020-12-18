@@ -364,14 +364,14 @@ func (i *Client) Drop() error {
 }
 
 // Deletes the index
-func (i *Client) DropIndex(indexName string, deleteDocument bool) error {
+func (i *Client) DropIndex(deleteDocument bool) error {
 	conn := i.pool.Get()
 	defer conn.Close()
 	var err error = nil
 	if deleteDocument {
-		_, err = conn.Do("FT.DROPINDEX", indexName, "DD")
+		_, err = conn.Do("FT.DROPINDEX", i.name, "DD")
 	} else {
-		_, err = conn.Do("FT.DROPINDEX", indexName)
+		_, err = conn.Do("FT.DROPINDEX", i.name)
 	}
 	return err
 }
