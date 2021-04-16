@@ -965,3 +965,29 @@ func TestClient_DropIndex(t *testing.T) {
 	assert.Equal(t, int64(0), result)
 
 }
+
+func TestClient_ListIndex(t *testing.T) {
+	c := createClient("index-list-test")
+	version, err := c.getRediSearchVersion()
+	assert.Nil(t, err)
+	if version <= 10699 {
+		// IndexDefinition is available for RediSearch 2.0+
+		return
+	}
+	// Create a schema
+	schema := NewSchema(DefaultOptions).
+		AddField(NewTextFieldOptions("name", TextFieldOptions{Sortable: true, PhoneticMatcher: PhoneticDoubleMetaphoneEnglish})).
+		AddField(NewNumericField("age"))
+
+	// IndexDefinition is available for RediSearch 2.0+
+	// In this example we will only index keys started by product:
+	indexDefinition := NewIndexDefinition().AddPrefix("index-list-test:")
+
+	// Add the Index Definition
+	c.CreateIndexWithIndexDefinition(schema, indexDefinition)
+	assert.Nil(t, err)
+
+	indexes, err := c.List()
+	assert.Nil(t, err)
+	assert.Equal(t, "index-list-test", indexes[0])
+}
