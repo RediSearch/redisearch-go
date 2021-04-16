@@ -217,7 +217,7 @@ func (q Query) serialize() redis.Args {
 					args = appendNumArgs(opts.Max, opts.ExclusiveMax, args)
 				case GeoFilterOptions:
 					opts, _ := f.Options.(GeoFilterOptions)
-					args = append(args, "GEOFILTER", f.Field, opts.Lon, opts.Lat, opts.Radius, opts.Unit)
+					args = append(args, "GEOFILTER", f.Field, opts.Lat, opts.Lon, opts.Radius, opts.Unit)
 				}
 			}
 		}
