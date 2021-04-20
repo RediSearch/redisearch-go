@@ -2,11 +2,12 @@ package redisearch
 
 import (
 	"errors"
-	"github.com/gomodule/redigo/redis"
 	"log"
 	"reflect"
 	"strconv"
 	"strings"
+
+	"github.com/gomodule/redigo/redis"
 )
 
 // Client is an interface to redisearch's redis commands
@@ -664,4 +665,25 @@ func (i *Client) AddHash(docId string, score float32, language string, replace b
 		args = args.Add("REPLACE")
 	}
 	return redis.String(conn.Do("FT.ADDHASH", args...))
+}
+
+// Returns a list of all existing indexes.
+func (i *Client) List() ([]string, error) {
+	conn := i.pool.Get()
+	defer conn.Close()
+
+	res, err := redis.Values(conn.Do("FT._LIST"))
+	if err != nil {
+		return nil, err
+	}
+
+	var indexes []string
+
+	// Iterate over the values
+	for ii := 0; ii < len(res); ii += 1 {
+		key, _ := redis.String(res[ii], nil)
+		indexes = append(indexes, key)
+	}
+
+	return indexes, nil
 }
