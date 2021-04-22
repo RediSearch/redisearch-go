@@ -899,6 +899,7 @@ func TestClient_CreateIndex(t *testing.T) {
 
 func TestClient_CreateIndex_failure(t *testing.T) {
 	c := createClient("create-index-failure")
+	c.DropIndex(true)
 	version, err := c.getRediSearchVersion()
 	assert.Nil(t, err)
 	if version <= 10699 {
