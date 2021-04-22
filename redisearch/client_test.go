@@ -853,7 +853,8 @@ func TestClient_CreateIndexWithIndexDefinition1(t *testing.T) {
 }
 
 func TestClient_CreateIndex(t *testing.T) {
-	c := createClient("create-index-phonetic")
+	c := createClient("create-index-info")
+	flush(c)
 	version, err := c.getRediSearchVersion()
 	assert.Nil(t, err)
 	if version <= 10699 {
@@ -868,7 +869,7 @@ func TestClient_CreateIndex(t *testing.T) {
 
 	// IndexDefinition is available for RediSearch 2.0+
 	// In this example we will only index keys started by product:
-	indexDefinition := NewIndexDefinition().AddPrefix("create-index-phonetic:")
+	indexDefinition := NewIndexDefinition().AddPrefix("create-index-info:")
 
 	// Add the Index Definition
 	c.CreateIndexWithIndexDefinition(schema, indexDefinition)
@@ -876,8 +877,8 @@ func TestClient_CreateIndex(t *testing.T) {
 
 	// Create docs with a name that has the same phonetic matcher
 	vanillaConnection := c.pool.Get()
-	vanillaConnection.Do("HSET", "create-index-phonetic:doc1", "name", "Jon", "age", 25)
-	vanillaConnection.Do("HSET", "create-index-phonetic:doc2", "name", "John", "age", 20)
+	vanillaConnection.Do("HSET", "create-index-info:doc1", "name", "Jon", "age", 25)
+	vanillaConnection.Do("HSET", "create-index-info:doc2", "name", "John", "age", 20)
 
 	// Wait for all documents to be indexed
 	info, _ := c.Info()
@@ -885,7 +886,9 @@ func TestClient_CreateIndex(t *testing.T) {
 		time.Sleep(time.Second)
 		info, _ = c.Info()
 	}
-
+	assert.Equal(t, uint64(2), info.DocCount)
+	assert.Equal(t, false, info.IsIndexing)
+	assert.Equal(t, uint64(0), info.HashIndexingFailures)
 	docs, total, err := c.Search(NewQuery("Jon").
 		SetReturnFields("name"))
 	assert.Nil(t, err)
@@ -893,6 +896,56 @@ func TestClient_CreateIndex(t *testing.T) {
 	assert.Equal(t, 2, total)
 	assert.Equal(t, "Jon", docs[0].Properties["name"])
 	assert.Equal(t, "John", docs[1].Properties["name"])
+}
+
+func TestClient_CreateIndex_failure(t *testing.T) {
+	c := createClient("create-index-failure")
+	flush(c)
+	version, err := c.getRediSearchVersion()
+	assert.Nil(t, err)
+	if version <= 10699 {
+		// IndexDefinition is available for RediSearch 2.0+
+		return
+	}
+	c.DropIndex(true)
+
+	// Create a schema
+	schema := NewSchema(DefaultOptions).
+		AddField(NewTextFieldOptions("name", TextFieldOptions{Sortable: true, PhoneticMatcher: PhoneticDoubleMetaphoneEnglish})).
+		AddField(NewNumericFieldOptions("age", NumericFieldOptions{Sortable: true}))
+
+	// IndexDefinition is available for RediSearch 2.0+
+	// In this example we will only index keys started by product:
+	indexDefinition := NewIndexDefinition().AddPrefix("create-index-failure:")
+
+	// Add the Index Definition
+	c.CreateIndexWithIndexDefinition(schema, indexDefinition)
+	assert.Nil(t, err)
+
+	// Create docs with a name that has the same phonetic matcher
+	vanillaConnection := c.pool.Get()
+	vanillaConnection.Do("HSET", "create-index-failure:doc1", "name", "Jon", "age", "abc")
+	vanillaConnection.Do("HSET", "create-index-failure:doc2", "name", "John", "age", 20)
+
+	// Wait for all documents to be indexed
+	info, _ := c.Info()
+	for info.IsIndexing {
+		time.Sleep(time.Second)
+		info, _ = c.Info()
+	}
+	assert.Equal(t, uint64(1), info.DocCount)
+	assert.Equal(t, false, info.IsIndexing)
+	assert.Equal(t, uint64(1), info.HashIndexingFailures)
+	docs, total, err := c.Search(NewQuery("Jon").
+		SetReturnFields("name"))
+	assert.Nil(t, err)
+	// Verify that the we've received 1 document ( John )
+	assert.Equal(t, 1, total)
+	assert.Equal(t, "John", docs[0].Properties["name"])
+
+	// Drop index but keep docs
+	err = c.DropIndex(true)
+	assert.Nil(t, err)
 }
 
 func TestClient_DropIndex(t *testing.T) {

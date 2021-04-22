@@ -22,6 +22,7 @@ type IndexInfo struct {
 	OffsetBitsPerTermAvg float64 `redis:"offset_bits_per_record_avg"`
 	IsIndexing           bool    `redis:"indexing"`
 	PercentIndexed       float64 `redis:"percent_indexed"`
+	HashIndexingFailures uint64  `redis:"hash_indexing_failures"`
 }
 
 // IndexDefinition is used to define a index definition for automatic indexing on Hash update
