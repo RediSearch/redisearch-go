@@ -432,7 +432,7 @@ func TestFilter(t *testing.T) {
 
 	// Searching with GeoFilter
 	docs, total, err = c.Search(NewQuery("hello world").
-		AddFilter(Filter{Field: "location", Options: GeoFilterOptions{Lon: 37, Lat: 15, Radius: 200, Unit: KILOMETERS}}).
+		AddFilter(Filter{Field: "location", Options: GeoFilterOptions{Lon: 15, Lat: 37, Radius: 200, Unit: KILOMETERS}}).
 		SetSortBy("age", true).
 		SetReturnFields("age"))
 	assert.Nil(t, err)
@@ -440,7 +440,7 @@ func TestFilter(t *testing.T) {
 	assert.Equal(t, "18", docs[0].Properties["age"])
 
 	docs, total, err = c.Search(NewQuery("hello world").
-		AddFilter(Filter{Field: "location", Options: GeoFilterOptions{Lon: 13, Lat: 10, Radius: 1, Unit: KILOMETERS}}).
+		AddFilter(Filter{Field: "location", Options: GeoFilterOptions{Lon: 10, Lat: 13, Radius: 1, Unit: KILOMETERS}}).
 		SetSortBy("age", true).
 		SetReturnFields("body"))
 	assert.Nil(t, err)
