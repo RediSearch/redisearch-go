@@ -968,6 +968,7 @@ func TestClient_DropIndex(t *testing.T) {
 
 func TestClient_ListIndex(t *testing.T) {
 	c := createClient("index-list-test")
+	flush(c)
 	version, err := c.getRediSearchVersion()
 	assert.Nil(t, err)
 	if version <= 10699 {
