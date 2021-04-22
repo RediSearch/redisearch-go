@@ -853,7 +853,8 @@ func TestClient_CreateIndexWithIndexDefinition1(t *testing.T) {
 }
 
 func TestClient_CreateIndex(t *testing.T) {
-	c := createClient("create-index-phonetic")
+	c := createClient("create-index-info")
+	flush(c)
 	version, err := c.getRediSearchVersion()
 	assert.Nil(t, err)
 	if version <= 10699 {
@@ -868,7 +869,7 @@ func TestClient_CreateIndex(t *testing.T) {
 
 	// IndexDefinition is available for RediSearch 2.0+
 	// In this example we will only index keys started by product:
-	indexDefinition := NewIndexDefinition().AddPrefix("create-index-phonetic:")
+	indexDefinition := NewIndexDefinition().AddPrefix("create-index-info:")
 
 	// Add the Index Definition
 	c.CreateIndexWithIndexDefinition(schema, indexDefinition)
@@ -876,8 +877,8 @@ func TestClient_CreateIndex(t *testing.T) {
 
 	// Create docs with a name that has the same phonetic matcher
 	vanillaConnection := c.pool.Get()
-	vanillaConnection.Do("HSET", "create-index-phonetic:doc1", "name", "Jon", "age", 25)
-	vanillaConnection.Do("HSET", "create-index-phonetic:doc2", "name", "John", "age", 20)
+	vanillaConnection.Do("HSET", "create-index-info:doc1", "name", "Jon", "age", 25)
+	vanillaConnection.Do("HSET", "create-index-info:doc2", "name", "John", "age", 20)
 
 	// Wait for all documents to be indexed
 	info, _ := c.Info()
@@ -899,13 +900,14 @@ func TestClient_CreateIndex(t *testing.T) {
 
 func TestClient_CreateIndex_failure(t *testing.T) {
 	c := createClient("create-index-failure")
-	c.DropIndex(true)
+	flush(c)
 	version, err := c.getRediSearchVersion()
 	assert.Nil(t, err)
 	if version <= 10699 {
 		// IndexDefinition is available for RediSearch 2.0+
 		return
 	}
+	c.DropIndex(true)
 
 	// Create a schema
 	schema := NewSchema(DefaultOptions).
