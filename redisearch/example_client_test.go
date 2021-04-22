@@ -290,6 +290,86 @@ func ExampleNewClientFromPool_ssl() {
 	c.Drop()
 }
 
+// The following example illustrates geospatial search using RediSearch.
+// This examples maps to the Redis vanilla example showcased on https://redis.io/commands/georadius#examples.
+// We'll start by adding two docs ( one for each city ) and then do a georadius search based on a starting point
+// and 2 distinct radius:
+// 1)- First query with 100KM radius centered at long,lat 15,37 that should only output the city named "Catania";
+// 2)- Second query with 200KM radius centered at long,lat 15,37 that should output the cities named "Palermo" and "Catania";
+func ExampleClient_Search() {
+	// Create a client. By default a client is schemaless
+	// unless a schema is provided when creating the index
+	c := redisearch.NewClient("localhost:6379", "cityIndex")
+
+	// Create a schema
+	sc := redisearch.NewSchema(redisearch.DefaultOptions).
+		AddField(redisearch.NewTextField("city")).
+		AddField(redisearch.NewGeoField("location"))
+
+	// Drop an existing index. If the index does not exist an error is returned
+	c.Drop()
+
+	// Create the index with the given schema
+	if err := c.CreateIndex(sc); err != nil {
+		log.Fatal(err)
+	}
+
+	// Create the city docs
+	// Note While Specifying location you should specify in following order -> longitude,latitude
+	// Same look and feel as GEOADD https://redis.io/commands/geoadd
+	// This example maps to https://redis.io/commands/geoadd#examples
+	docPalermo := redisearch.NewDocument("doc:Palermo", 1.0)
+	docPalermo.Set("name", "Palermo").
+		Set("location", "13.361389,38.115556")
+
+	docCatania := redisearch.NewDocument("doc:Catania", 1.0)
+	docCatania.Set("name", "Catania").
+		Set("location", "15.087269,37.502669")
+
+	// Index the documents. The API accepts multiple documents at a time
+	if err := c.IndexOptions(redisearch.DefaultIndexingOptions, docPalermo, docCatania); err != nil {
+		log.Fatal(err)
+	}
+
+	// Searching for 100KM radius should only output Catania
+	docs, _, _ := c.Search(redisearch.NewQuery("*").AddFilter(
+		redisearch.Filter{
+			Field: "location",
+			Options: redisearch.GeoFilterOptions{
+				Lon:    15,
+				Lat:    37,
+				Radius: 100,
+				Unit:   redisearch.KILOMETERS,
+			},
+		},
+	).Limit(0, 2))
+
+	fmt.Println("100KM Radius search from longitude 15 latitude 37")
+	fmt.Println(docs[0])
+
+	// Searching for 200KM radius should output Catania and Palermo
+	docs, _, _ = c.Search(redisearch.NewQuery("*").AddFilter(
+		redisearch.Filter{
+			Field: "location",
+			Options: redisearch.GeoFilterOptions{
+				Lon:    15,
+				Lat:    37,
+				Radius: 200,
+				Unit:   redisearch.KILOMETERS,
+			},
+		},
+	).Limit(0, 2).SetSortBy("location", true))
+	fmt.Println("200KM Radius search from longitude 15 latitude 37")
+	fmt.Println(docs[0])
+	fmt.Println(docs[1])
+
+	// Output: 100KM Radius search from longitude 15 latitude 37
+	// {doc:Catania 1 [] map[location:15.087269,37.502669 name:Catania]}
+	// 200KM Radius search from longitude 15 latitude 37
+	// {doc:Palermo 1 [] map[location:13.361389,38.115556 name:Palermo]}
+	// {doc:Catania 1 [] map[location:15.087269,37.502669 name:Catania]}
+}
+
 func getConnectionDetails() (host string, password string) {
 	value, exists := os.LookupEnv("REDISEARCH_TEST_HOST")
 	host = "localhost:6379"

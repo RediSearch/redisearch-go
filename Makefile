@@ -8,6 +8,7 @@ GOTEST=$(GOCMD) test -count=1
 GOGET=$(GOCMD) get
 GOMOD=$(GOCMD) mod
 GOFMT=$(GOCMD) fmt
+GODOC=godoc
 
 .PHONY: all test coverage
 all: test coverage examples
@@ -34,6 +35,7 @@ examples: get
 	@echo "Building the examples..."
 	$(GOBUILD) ./examples/redisearch_quickstart/.
 	$(GOBUILD) ./examples/redisearch_auth/.
+	$(GOBUILD) ./examples/redisearch_geo/.
 	$(GOBUILD) ./examples/redisearch_tls_client/.
 	$(GOBUILD) ./examples/redisearch_temporary_index/.
 	./redisearch_tls_client --tls-cert-file $(TLS_CERT) \
@@ -52,4 +54,9 @@ test: get fmt
 
 coverage: get
 	$(GOTEST) -race -coverprofile=coverage.txt -covermode=atomic ./redisearch
+
+godoc:
+	$(GOGET) -u golang.org/x/tools/...
+	echo "Open browser tab on localhost:6060"
+	$(GODOC)
 
