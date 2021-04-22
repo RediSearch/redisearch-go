@@ -79,7 +79,7 @@ type Query struct {
 
 	Paging Paging
 	Flags  Flag
-	Slop   int
+	Slop   *int
 
 	Filters       []Filter
 	InKeys        []string
@@ -137,6 +137,10 @@ func (q Query) serialize() redis.Args {
 
 	if q.Flags&QueryNoContent != 0 {
 		args = args.Add("NOCONTENT")
+	}
+
+	if q.Slop != nil {
+		args = args.Add("SLOP", *q.Slop)
 	}
 
 	if q.Flags&QueryInOrder != 0 {
