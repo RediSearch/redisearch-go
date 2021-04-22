@@ -8,3 +8,7 @@
 !/tests/*.bz2
 !Makefile
 !**/*.yml
+
+# IDEs
+.idea
+.vscode
