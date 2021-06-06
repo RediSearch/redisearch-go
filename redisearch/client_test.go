@@ -1048,5 +1048,5 @@ func TestClient_ListIndex(t *testing.T) {
 }
 
 func TestClient_JsonIndexType(t *testing.T) {
-	
+
 }
