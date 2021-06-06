@@ -622,31 +622,40 @@ func TestClient_GetRediSearchVersion(t *testing.T) {
 	assert.Nil(t, err)
 }
 
-func TestClient_CreateIndexWithIndexDefinitioniJSON(t *testing.T) {
-	i := createClient("index-definition-test")
-	version, err := i.getRediSearchVersion()
+func TestClient_CreateIndexWithIndexDefinitionJSON(t *testing.T) {
+	c := createClient("index-definition-test")
+	version, err := c.getRediSearchVersion()
 	assert.Nil(t, err)
-	if version >= 20200 {
+	if version <= 20200 {
+		// JSON IndexDefinition is available for RediSearch 2.2+
+		return
+	}
+	// Create a schema
+	sc := NewSchema(DefaultOptions).
+		AddField(NewTextFieldOptions("name", TextFieldOptions{Sortable: true})).
+		AddField(NewTextFieldOptions("description", TextFieldOptions{Weight: 5.0, Sortable: true})).
+		AddField(NewNumericField("price"))
 
-		type args struct {
-			schema     *Schema
-			definition *IndexDefinition
-		}
-		tests := []struct {
-			name    string
-			args    args
-			wantErr bool
-		}{
-			{"default+index_on", args{sc, NewIndexDefinition().SetIndexOn(JSON)}, false},
-		}
-		for _, tt := range tests {
-			t.Run(tt.name, func(t *testing.T) {
-				if err := i.CreateIndexWithIndexDefinition(tt.args.schema, tt.args.definition); (err != nil) != tt.wantErr {
-					t.Errorf("CreateIndexWithIndexDefinition() error = %v, wantErr %v", err, tt.wantErr)
-				}
-				teardown(i)
-			})
-		}
+	type args struct {
+		schema     *Schema
+		definition *IndexDefinition
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		{"default+index_on", args{sc, NewIndexDefinition().SetIndexOn(JSON)}, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c.Drop()
+			if err := c.CreateIndexWithIndexDefinition(tt.args.schema, tt.args.definition); (err != nil) != tt.wantErr {
+				t.Errorf("CreateIndexWithIndexDefinition() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+		teardown(c)
+
 	}
 }
 
