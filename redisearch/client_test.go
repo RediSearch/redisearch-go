@@ -622,6 +622,34 @@ func TestClient_GetRediSearchVersion(t *testing.T) {
 	assert.Nil(t, err)
 }
 
+func TestClient_CreateIndexWithIndexDefinitioniJSON(t *testing.T) {
+	i := createClient("index-definition-test")
+	version, err := i.getRediSearchVersion()
+	assert.Nil(t, err)
+	if version >= 20200 {
+
+		type args struct {
+			schema     *Schema
+			definition *IndexDefinition
+		}
+		tests := []struct {
+			name    string
+			args    args
+			wantErr bool
+		}{
+			{"default+index_on", args{sc, NewIndexDefinition().SetIndexOn(JSON)}, false},
+		}
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				if err := i.CreateIndexWithIndexDefinition(tt.args.schema, tt.args.definition); (err != nil) != tt.wantErr {
+					t.Errorf("CreateIndexWithIndexDefinition() error = %v, wantErr %v", err, tt.wantErr)
+				}
+				teardown(i)
+			})
+		}
+	}
+}
+
 func TestClient_CreateIndexWithIndexDefinition(t *testing.T) {
 	i := createClient("index-definition-test")
 	version, err := i.getRediSearchVersion()
@@ -831,7 +859,6 @@ func TestClient_CreateIndexWithIndexDefinition1(t *testing.T) {
 		wantErr bool
 	}{
 		{"default", args{sc, NewIndexDefinition()}, false},
-		{"default+index_on", args{sc, NewIndexDefinition().SetIndexOn(JSON)}, false},
 		{"default+async", args{sc, NewIndexDefinition().SetAsync(true)}, false},
 		{"default+score", args{sc, NewIndexDefinition().SetScore(0.75)}, false},
 		{"default+score_field", args{sc, NewIndexDefinition().SetScoreField("myscore")}, false},
