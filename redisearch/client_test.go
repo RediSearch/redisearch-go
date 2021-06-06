@@ -831,6 +831,7 @@ func TestClient_CreateIndexWithIndexDefinition1(t *testing.T) {
 		wantErr bool
 	}{
 		{"default", args{sc, NewIndexDefinition()}, false},
+		{"default+index_on", args{sc, NewIndexDefinition().SetIndexOn(JSON)}, false},
 		{"default+async", args{sc, NewIndexDefinition().SetAsync(true)}, false},
 		{"default+score", args{sc, NewIndexDefinition().SetScore(0.75)}, false},
 		{"default+score_field", args{sc, NewIndexDefinition().SetScoreField("myscore")}, false},
@@ -1044,4 +1045,8 @@ func TestClient_ListIndex(t *testing.T) {
 	indexes, err := c.List()
 	assert.Nil(t, err)
 	assert.Equal(t, "index-list-test", indexes[0])
+}
+
+func TestClient_JsonIndexType(t *testing.T) {
+	
 }

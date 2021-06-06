@@ -4,6 +4,18 @@ import (
 	"github.com/gomodule/redigo/redis"
 )
 
+// IndexType - Enum of existing index types
+type IndexType int
+
+const (
+	HASH IndexType = iota
+	JSON
+)
+
+func (it IndexType) String() string {
+	return [...]string{"HASH", "JSON"}[it]
+}
+
 // IndexInfo - Structure showing information about an existing index
 type IndexInfo struct {
 	Schema               Schema
@@ -42,7 +54,14 @@ type IndexDefinition struct {
 // This is only valid for >= RediSearch 2.0
 func NewIndexDefinition() *IndexDefinition {
 	prefixArray := make([]string, 0)
-	return &IndexDefinition{"HASH", false, prefixArray, "", "", "", -1, "", ""}
+	return &IndexDefinition{HASH.String(), false, prefixArray, "", "", "", -1, "", ""}
+}
+
+// This is only valid for >= RediSearch 2.0
+func (defintion *IndexDefinition) SetIndexOn(value IndexType) (outDef *IndexDefinition) {
+	outDef = defintion
+	outDef.IndexOn = value.String()
+	return
 }
 
 // This is only valid for >= RediSearch 2.0
