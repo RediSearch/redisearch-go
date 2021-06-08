@@ -1082,7 +1082,3 @@ func TestClient_ListIndex(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, "index-list-test", indexes[0])
 }
-
-func TestClient_JsonIndexType(t *testing.T) {
-
-}
