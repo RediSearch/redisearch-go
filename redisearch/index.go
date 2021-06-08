@@ -57,7 +57,7 @@ func NewIndexDefinition() *IndexDefinition {
 	return &IndexDefinition{HASH.String(), false, prefixArray, "", "", "", -1, "", ""}
 }
 
-// This is only valid for >= RediSearch 2.0
+// This is only valid for >= RediSearch 2.2
 func (defintion *IndexDefinition) SetIndexOn(value IndexType) (outDef *IndexDefinition) {
 	outDef = defintion
 	outDef.IndexOn = value.String()
