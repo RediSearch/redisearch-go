@@ -20,6 +20,7 @@ func TestIndexDefinition_Serialize(t *testing.T) {
 		want   redis.Args
 	}{
 		{"default", fields{NewIndexDefinition()}, args{redis.Args{}}, redis.Args{"ON", "HASH"}},
+		{"default", fields{NewIndexDefinition().SetIndexOn(JSON)}, args{redis.Args{}}, redis.Args{"ON", "JSON"}},
 		{"default+async", fields{NewIndexDefinition().SetAsync(true)}, args{redis.Args{}}, redis.Args{"ON", "HASH", "ASYNC"}},
 		{"default+score", fields{NewIndexDefinition().SetScore(0.75)}, args{redis.Args{}}, redis.Args{"ON", "HASH", "SCORE", 0.75}},
 		{"default+score_field", fields{NewIndexDefinition().SetScoreField("myscore")}, args{redis.Args{}}, redis.Args{"ON", "HASH", "SCORE_FIELD", "myscore"}},
