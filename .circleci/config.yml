@@ -87,7 +87,7 @@ workflows:
   commit:
     jobs:
       - build-tls
-      - build-latest
+      - build
       - build-v16
   nightly:
     triggers:
