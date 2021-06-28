@@ -24,9 +24,9 @@ jobs:
       - run:
           name: Copy RediSearch
           command: |
-            docker run --rm --entrypoint cat redislabs/redismod:edge /usr/lib/redis/modules/redisearch.so > redisearch.so
+            docker run --rm --entrypoint cat redislabs/redisearch:edge /usr/lib/redis/modules/redisearch.so > redisearch.so
             chmod 755 redisearch.so
-            docker run --rm --entrypoint cat redislabs/redismod:edge /usr/lib/redis/modules/rejson.so > rejson.so
+            docker run --rm --entrypoint cat redislabs/redisearch:edge /usr/lib/redis/modules/rejson.so > rejson.so
             chmod 755 rejson.so
 
       - run:
