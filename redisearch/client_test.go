@@ -914,11 +914,14 @@ func TestClient_CreateIndex(t *testing.T) {
 
 	// Create docs with a name that has the same phonetic matcher
 	vanillaConnection := c.pool.Get()
-	vanillaConnection.Do("HSET", "create-index-info:doc1", "name", "Jon", "age", 25)
-	vanillaConnection.Do("HSET", "create-index-info:doc2", "name", "John", "age", 20)
+	_, err = vanillaConnection.Do("HSET", "create-index-info:doc1", "name", "Jon", "age", 25)
+	assert.Nil(t, err)
+	_, err = vanillaConnection.Do("HSET", "create-index-info:doc2", "name", "John", "age", 20)
+	assert.Nil(t, err)
 
 	// Wait for all documents to be indexed
-	info, _ := c.Info()
+	info, err := c.Info()
+	assert.Nil(t, err)
 	for info.IsIndexing {
 		time.Sleep(time.Second)
 		info, _ = c.Info()
@@ -927,6 +930,56 @@ func TestClient_CreateIndex(t *testing.T) {
 	assert.Equal(t, false, info.IsIndexing)
 	assert.Equal(t, uint64(0), info.HashIndexingFailures)
 	docs, total, err := c.Search(NewQuery("Jon").
+		SetReturnFields("name"))
+	assert.Nil(t, err)
+	// Verify that the we've received 2 documents ( Jon and John )
+	assert.Equal(t, 2, total)
+	assert.Equal(t, "Jon", docs[0].Properties["name"])
+	assert.Equal(t, "John", docs[1].Properties["name"])
+}
+
+func TestClient_CreateJsonIndex(t *testing.T) {
+	c := createClient("create-json-index")
+	flush(c)
+	version, err := c.getRediSearchVersion()
+	assert.Nil(t, err)
+	if version <= 10699 {
+		// IndexDefinition is available for RediSearch 2.0+
+		return
+	}
+	// Create a schema
+	schema := NewSchema(DefaultOptions).
+		AddField(NewTextFieldOptions("name", TextFieldOptions{Sortable: true})).
+		AddField(NewNumericField("age"))
+
+	// IndexDefinition is available for RediSearch 2.0+
+	// In this example we will only index keys started by product:
+	indexDefinition := NewIndexDefinition().SetIndexOn(JSON).AddPrefix("create-json-index:")
+
+	// Add the Index Definition
+	err = c.CreateIndexWithIndexDefinition(schema, indexDefinition)
+	assert.Nil(t, err)
+
+	// Create docs with a name that has the same phonetic matcher
+	vanillaConnection := c.pool.Get()
+	_, err = vanillaConnection.Do("JSON.SET", "create-json-index:doc1", "$", "{\"name\":\"Jon\", \"age\": 25}")
+	assert.Nil(t, err)
+	_, err = vanillaConnection.Do("JSON.SET", "create-json-index:doc2", "$", "{\"name\":\"John\", \"age\": 25}")
+	assert.Nil(t, err)
+
+	// Wait for all documents to be indexed
+	info, err := c.Info()
+	assert.Nil(t, err)
+	for info.IsIndexing {
+		time.Sleep(time.Second)
+		info, _ = c.Info()
+	}
+
+	
+	assert.Equal(t, uint64(2), info.DocCount)
+	assert.Equal(t, false, info.IsIndexing)
+	assert.Equal(t, uint64(0), info.HashIndexingFailures)
+	docs, total, err := c.Search(NewQuery("\"Jon\"").
 		SetReturnFields("name"))
 	assert.Nil(t, err)
 	// Verify that the we've received 2 documents ( Jon and John )
