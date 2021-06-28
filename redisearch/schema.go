@@ -139,6 +139,7 @@ type TextFieldOptions struct {
 	NoStem          bool
 	NoIndex         bool
 	PhoneticMatcher PhoneticMatcherType
+	As              string
 }
 
 // TagFieldOptions options for indexing tag fields
@@ -147,17 +148,20 @@ type TagFieldOptions struct {
 	Separator byte
 	NoIndex   bool
 	Sortable  bool
+	As        string
 }
 
 // NumericFieldOptions Options for numeric fields
 type NumericFieldOptions struct {
 	Sortable bool
 	NoIndex  bool
+	As       string
 }
 
 // GeoFieldOptions Options for geo fields
 type GeoFieldOptions struct {
 	NoIndex bool
+	As      string
 }
 
 // NewTextField creates a new text field with the given weight
@@ -313,6 +317,9 @@ func serializeField(f Field, args redis.Args) (argsOut redis.Args, err error) {
 				err = fmt.Errorf("Error on TextField serialization")
 				return
 			}
+			if opts.As != "" {
+				argsOut = append(argsOut[:len(argsOut)-1], "AS", opts.As, "TEXT")
+			}
 			if opts.Weight != 0 && opts.Weight != 1 {
 				argsOut = append(argsOut, "WEIGHT", opts.Weight)
 			}
@@ -337,6 +344,9 @@ func serializeField(f Field, args redis.Args) (argsOut redis.Args, err error) {
 				err = fmt.Errorf("Error on NumericField serialization")
 				return
 			}
+			if opts.As != "" {
+				argsOut = append(argsOut[:len(argsOut)-1], "AS", opts.As, "NUMERIC")
+			}
 			if opts.Sortable {
 				argsOut = append(argsOut, "SORTABLE")
 			}
@@ -351,6 +361,9 @@ func serializeField(f Field, args redis.Args) (argsOut redis.Args, err error) {
 			if !ok {
 				err = fmt.Errorf("Error on TagField serialization")
 				return
+			}
+			if opts.As != "" {
+				argsOut = append(argsOut[:len(argsOut)-1], "AS", opts.As, "TAG")
 			}
 			if opts.Separator != 0 {
 				argsOut = append(argsOut, "SEPARATOR", fmt.Sprintf("%c", opts.Separator))
@@ -369,6 +382,9 @@ func serializeField(f Field, args redis.Args) (argsOut redis.Args, err error) {
 			if !ok {
 				err = fmt.Errorf("Error on GeoField serialization")
 				return
+			}
+			if opts.As != "" {
+				argsOut = append(argsOut[:len(argsOut)-1], "AS", opts.As, "GEO")
 			}
 			if opts.NoIndex {
 				argsOut = append(argsOut, "NOINDEX")

@@ -949,8 +949,8 @@ func TestClient_CreateJsonIndex(t *testing.T) {
 	}
 	// Create a schema
 	schema := NewSchema(DefaultOptions).
-		AddField(NewTextFieldOptions("name", TextFieldOptions{Sortable: true})).
-		AddField(NewNumericField("age"))
+		AddField(NewTextFieldOptions("$.name", TextFieldOptions{Sortable: true, PhoneticMatcher: PhoneticDoubleMetaphoneEnglish, As: "name"})).
+		AddField(NewNumericFieldOptions("$.age", NumericFieldOptions{As: "age"}))
 
 	// IndexDefinition is available for RediSearch 2.0+
 	// In this example we will only index keys started by product:
@@ -975,17 +975,16 @@ func TestClient_CreateJsonIndex(t *testing.T) {
 		info, _ = c.Info()
 	}
 
-	
 	assert.Equal(t, uint64(2), info.DocCount)
 	assert.Equal(t, false, info.IsIndexing)
 	assert.Equal(t, uint64(0), info.HashIndexingFailures)
-	docs, total, err := c.Search(NewQuery("\"Jon\"").
+	docs, total, err := c.Search(NewQuery("Jon").
 		SetReturnFields("name"))
 	assert.Nil(t, err)
 	// Verify that the we've received 2 documents ( Jon and John )
 	assert.Equal(t, 2, total)
-	assert.Equal(t, "Jon", docs[0].Properties["name"])
-	assert.Equal(t, "John", docs[1].Properties["name"])
+	assert.Equal(t, "\"Jon\"", docs[0].Properties["name"])
+	assert.Equal(t, "\"John\"", docs[1].Properties["name"])
 }
 
 func TestClient_CreateIndex_failure(t *testing.T) {
