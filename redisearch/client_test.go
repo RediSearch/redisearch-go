@@ -984,8 +984,8 @@ func TestClient_CreateJsonIndex(t *testing.T) {
 	assert.Nil(t, err)
 	// Verify that the we've received 2 documents ( Jon and John )
 	assert.Equal(t, 2, total)
-	assert.Equal(t, "\"Jon\"", docs[0].Properties["name"])
-	assert.Equal(t, "\"John\"", docs[1].Properties["name"])
+	assert.Equal(t, "Jon", docs[0].Properties["name"])
+	assert.Equal(t, "John", docs[1].Properties["name"])
 }
 
 func TestClient_CreateIndex_failure(t *testing.T) {
