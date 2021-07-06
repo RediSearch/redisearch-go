@@ -943,7 +943,7 @@ func TestClient_CreateJsonIndex(t *testing.T) {
 	flush(c)
 	version, err := c.getRediSearchVersion()
 	assert.Nil(t, err)
-	if version < 20200  {
+	if version < 20200 {
 		// IndexDefinition is available for RediSearch 2.0+
 		return
 	}
