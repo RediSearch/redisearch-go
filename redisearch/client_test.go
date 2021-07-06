@@ -943,10 +943,11 @@ func TestClient_CreateJsonIndex(t *testing.T) {
 	flush(c)
 	version, err := c.getRediSearchVersion()
 	assert.Nil(t, err)
-	if version <= 10699 {
+	if version < 20200  {
 		// IndexDefinition is available for RediSearch 2.0+
 		return
 	}
+
 	// Create a schema
 	schema := NewSchema(DefaultOptions).
 		AddField(NewTextFieldOptions("$.name", TextFieldOptions{Sortable: true, PhoneticMatcher: PhoneticDoubleMetaphoneEnglish, As: "name"})).
