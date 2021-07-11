@@ -47,7 +47,8 @@ jobs:
                           TLS_KEY=redis/tests/tls/redis.key \
                           TLS_CACERT=redis/tests/tls/ca.crt
 
-  build: # test with rediseatch:latest
+
+  build: # test with redisearch:latest
     docker:
       - image: circleci/golang:1.12
       - image: redislabs/redisearch:latest
