@@ -957,7 +957,7 @@ func TestClient_CreateJsonIndex(t *testing.T) {
 	indexDefinition := NewIndexDefinition().SetIndexOn(JSON).AddPrefix("create-json-index:")
 
 	// Add the Index Definition
-	err = c.CreateIndexWithIndexDefinition(schema, indexDefinition)
+	err := c.CreateIndexWithIndexDefinition(schema, indexDefinition)
 	assert.Nil(t, err)
 
 	// Create docs with a name that has the same phonetic matcher
