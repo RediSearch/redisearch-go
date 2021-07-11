@@ -59,11 +59,12 @@ func TestSerializeSchema(t *testing.T) {
 		{"default-and-numeric-with-options-noindex", args{NewSchema(DefaultOptions).AddField(NewNumericFieldOptions("numeric-field", NumericFieldOptions{NoIndex: true, Sortable: false})), redis.Args{}}, redis.Args{"SCHEMA", "numeric-field", "NUMERIC", "NOINDEX"}, false},
 		{"default-and-text", args{NewSchema(DefaultOptions).AddField(NewTextField("text-field")), redis.Args{}}, redis.Args{"SCHEMA", "text-field", "TEXT"}, false},
 		{"default-and-sortable-text-field", args{NewSchema(DefaultOptions).AddField(NewSortableTextField("text-field", 10)), redis.Args{}}, redis.Args{"SCHEMA", "text-field", "TEXT", "WEIGHT", float32(10.0), "SORTABLE"}, false},
-		{"default-and-text-with-options", args{NewSchema(DefaultOptions).AddField(NewTextFieldOptions("text-field", TextFieldOptions{Weight: 5.0, Sortable: true, NoStem: false, NoIndex: false})), redis.Args{}}, redis.Args{"SCHEMA", "text-field", "TEXT", "WEIGHT", float32(5.0), "SORTABLE"}, false},
+		{"default-and-text-with-options", args{NewSchema(DefaultOptions).AddField(NewTextFieldOptions("text-field", TextFieldOptions{Weight: 5.0, Sortable: true, NoStem: false, NoIndex: false, As: "field"})), redis.Args{}}, redis.Args{"SCHEMA", "text-field", "AS", "field", "TEXT", "WEIGHT", float32(5.0), "SORTABLE"}, false},
 		{"default-and-text-with-phonetic-en", args{NewSchema(DefaultOptions).AddField(NewTextFieldOptions("text-field", TextFieldOptions{PhoneticMatcher: PhoneticDoubleMetaphoneEnglish})), redis.Args{}}, redis.Args{"SCHEMA", "text-field", "TEXT", "PHONETIC", "dm:en"}, false},
 		{"default-and-text-with-phonetic-pt", args{NewSchema(DefaultOptions).AddField(NewTextFieldOptions("text-field", TextFieldOptions{PhoneticMatcher: PhoneticDoubleMetaphonePortuguese})), redis.Args{}}, redis.Args{"SCHEMA", "text-field", "TEXT", "PHONETIC", "dm:pt"}, false},
 		{"default-and-tag", args{NewSchema(DefaultOptions).AddField(NewTagField("tag-field")), redis.Args{}}, redis.Args{"SCHEMA", "tag-field", "TAG", "SEPARATOR", ","}, false},
-		{"default-and-tag-with-options", args{NewSchema(DefaultOptions).AddField(NewTagFieldOptions("tag-field", TagFieldOptions{Sortable: true, NoIndex: false, Separator: byte(',')})), redis.Args{}}, redis.Args{"SCHEMA", "tag-field", "TAG", "SEPARATOR", ",", "SORTABLE"}, false},
+		{"default-and-tag-with-options", args{NewSchema(DefaultOptions).AddField(NewTagFieldOptions("tag-field", TagFieldOptions{Sortable: true, NoIndex: false, Separator: byte(','), As: "field"})), redis.Args{}}, redis.Args{"SCHEMA", "tag-field", "AS", "field", "TAG", "SEPARATOR", ",", "SORTABLE"}, false},
+		{"default-geo-with-options", args{NewSchema(DefaultOptions).AddField(NewGeoFieldOptions("location", GeoFieldOptions{As: "loc"})), redis.Args{}}, redis.Args{"SCHEMA", "location", "AS", "loc", "GEO"}, false},
 		{"error-unsupported", args{NewSchema(DefaultOptions).AddField(Field{Type: 10}), redis.Args{}}, nil, true},
 	}
 	for _, tt := range tests {
