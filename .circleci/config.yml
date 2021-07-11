@@ -24,9 +24,9 @@ jobs:
       - run:
           name: Copy RediSearch
           command: |
-            docker run --rm --entrypoint cat redislabs/redismod:edge /usr/lib/redis/modules/redisearch.so > redisearch.so
+            docker run --rm --entrypoint cat redislabs/redisearch:edge /usr/lib/redis/modules/redisearch.so > redisearch.so
             chmod 755 redisearch.so
-            docker run --rm --entrypoint cat redislabs/redismod:edge /usr/lib/redis/modules/rejson.so > rejson.so
+            docker run --rm --entrypoint cat redislabs/redisearch:edge /usr/lib/redis/modules/rejson.so > rejson.so
             chmod 755 rejson.so
 
       - run:
@@ -47,10 +47,10 @@ jobs:
                           TLS_KEY=redis/tests/tls/redis.key \
                           TLS_CACERT=redis/tests/tls/ca.crt
 
-  build: # test with redismod:latest
+  build: # test with redisearch:latest
     docker:
       - image: circleci/golang:1.12
-      - image: redislabs/redismod:latest
+      - image: redislabs/redisearch:latest
 
     working_directory: /go/src/github.com/RediSearch/redisearch-go
     steps:
@@ -75,7 +75,7 @@ jobs:
   build_nightly: # test nightly with redisearch:edge
     docker:
       - image: circleci/golang:1.12
-      - image: redislabs/redismod:edge
+      - image: redislabs/redisearch:edge
 
     working_directory: /go/src/github.com/RediSearch/redisearch-go
     steps:
