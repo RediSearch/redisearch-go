@@ -2,10 +2,11 @@ package redisearch
 
 import (
 	"fmt"
-	"github.com/gomodule/redigo/redis"
 	"math/rand"
 	"sync"
 	"time"
+
+	"github.com/gomodule/redigo/redis"
 )
 
 type ConnPool interface {
@@ -17,9 +18,9 @@ type SingleHostPool struct {
 	*redis.Pool
 }
 
-func NewSingleHostPool(host string) *SingleHostPool {
+func NewSingleHostPool(host string, opts ...redis.DialOption) *SingleHostPool {
 	pool := &redis.Pool{Dial: func() (redis.Conn, error) {
-		return redis.Dial("tcp", host)
+		return redis.Dial("tcp", host, opts...)
 	}, MaxIdle: maxConns}
 	pool.TestOnBorrow = func(c redis.Conn, t time.Time) (err error) {
 		if time.Since(t) > time.Second {
@@ -34,13 +35,15 @@ type MultiHostPool struct {
 	sync.Mutex
 	pools map[string]*redis.Pool
 	hosts []string
+	opts  []redis.DialOption
 }
 
-func NewMultiHostPool(hosts []string) *MultiHostPool {
+func NewMultiHostPool(hosts []string, opts ...redis.DialOption) *MultiHostPool {
 
 	return &MultiHostPool{
 		pools: make(map[string]*redis.Pool, len(hosts)),
 		hosts: hosts,
+		opts:  opts,
 	}
 }
 
@@ -52,7 +55,7 @@ func (p *MultiHostPool) Get() redis.Conn {
 	if !found {
 		pool = redis.NewPool(func() (redis.Conn, error) {
 			// TODO: Add timeouts. and 2 separate pools for indexing and querying, with different timeouts
-			return redis.Dial("tcp", host)
+			return redis.Dial("tcp", host, p.opts...)
 		}, maxConns)
 		pool.TestOnBorrow = func(c redis.Conn, t time.Time) (err error) {
 			if time.Since(t) > time.Second {
