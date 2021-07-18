@@ -10,7 +10,9 @@ GOMOD=$(GOCMD) mod
 GOFMT=$(GOCMD) fmt
 GODOC=godoc
 
-.PHONY: all test coverage
+.PHONY: all test coverage get checkfmt fmt godoc \
+	examples godoc_examples start-redis stop-redis monitor
+
 all: test coverage examples
 
 get:
@@ -19,7 +21,18 @@ get:
 TLS_CERT ?= redis.crt
 TLS_KEY ?= redis.key
 TLS_CACERT ?= ca.crt
-REDISEARCH_TEST_HOST ?= 127.0.0.1:6379
+
+REDIS_SERVER ?= localhost:6379
+export REDISEARCH_TEST_HOST=$(REDIS_SERVER)
+
+REDIS_HOST:=$(word 1,$(subst :, ,$(REDIS_SERVER)))
+REDIS_PORT:=$(word 2,$(subst :, ,$(REDIS_SERVER)))
+ifeq ($(word 1,$(REDIS_HOST)),)
+REDIS_HOST:=localhost
+endif
+ifeq ($(word 1,$(REDIS_PORT)),)
+REDIS_PORT:=6379
+endif
 
 checkfmt:
 	@echo 'Checking gofmt';\
@@ -41,7 +54,7 @@ examples: get
 	./redisearch_tls_client --tls-cert-file $(TLS_CERT) \
 						 --tls-key-file $(TLS_KEY) \
 						 --tls-ca-cert-file $(TLS_CACERT) \
-						 --host $(REDISEARCH_TEST_HOST)
+						 --host $(REDIS_SERVER)
 
 fmt:
 	$(GOFMT) ./...
@@ -49,8 +62,13 @@ fmt:
 godoc_examples: get fmt
 	$(GOTEST) -race -covermode=atomic ./redisearch
 
+TEST ?= Test
+ifeq ($(VERBOSE),1)
+TEST_FLAGS += -v
+endif
+
 test: get fmt
-	$(GOTEST) -run "Test" ./redisearch
+	$(GOTEST) $(TEST_FLAGS) -run $(TEST) ./redisearch
 
 coverage: get
 	$(GOTEST) -race -coverprofile=coverage.txt -covermode=atomic ./redisearch
@@ -60,3 +78,11 @@ godoc:
 	echo "Open browser tab on localhost:6060"
 	$(GODOC)
 
+start-redis:
+	@docker run --name redisearch-go-tests -d --rm -p 6379:6379 redislabs/redisearch:edge
+
+stop-redis:
+	@docker stop redisearch-go-tests
+
+monitor:
+	@redis-cli -h $(REDIS_HOST) -p $(REDIS_PORT) monitor
