@@ -447,3 +447,43 @@ func TestFilter(t *testing.T) {
 	assert.Equal(t, 0, total)
 	teardown(c)
 }
+
+func TestReturnFields(t *testing.T) {
+	c := createClient("TestReturnFields")
+	flush(c)
+	version, _ := c.getRediSearchVersion()
+	if version < 20200 {
+		// IndexDefinition is available for RediSearch 2.0+
+		return
+	}
+
+	// create index json
+	indexDefinition := NewIndexDefinition().SetIndexOn(JSON)
+	schema := NewSchema(DefaultOptions).
+		AddField(NewTextField("$.name")).
+		AddField(NewNumericField("$.age"))
+	err := c.CreateIndexWithIndexDefinition(schema, indexDefinition)
+	assert.Nil(t, err)
+
+	vanillaConnection := c.pool.Get()
+	_, err = vanillaConnection.Do("JSON.SET", "doc:1", "$", "{\"name\":\"Jon\", \"age\": 25}")
+	assert.Nil(t, err)
+
+	// Wait for the document to be indexed
+	info, err := c.Info()
+	assert.Nil(t, err)
+	for info.IsIndexing {
+		time.Sleep(time.Second)
+		info, _ = c.Info()
+	}
+
+	// Searching with return fields
+	docs, total, err := c.Search(NewQuery("*"))
+//		AddReturnFields("age").AddReturnField("user", "username"))
+	assert.Nil(t, err)
+	assert.Equal(t, 1, total)
+	fmt.Println(docs[0].Properties)
+
+	assert.Equal(t, "0", docs[0])
+
+}
