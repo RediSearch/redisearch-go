@@ -478,12 +478,10 @@ func TestReturnFields(t *testing.T) {
 	}
 
 	// Searching with return fields
-	docs, total, err := c.Search(NewQuery("*"))
-//		AddReturnFields("age").AddReturnField("user", "username"))
+	docs, total, err := c.Search(NewQuery("*").AddReturnField("$.name", "name").AddReturnFields("$.age", "as", "years"))
 	assert.Nil(t, err)
 	assert.Equal(t, 1, total)
-	fmt.Println(docs[0].Properties)
 
-	assert.Equal(t, "0", docs[0])
-
+	assert.Equal(t, "\"Jon\"", docs[0].Properties["name"])
+	assert.Equal(t, "25", docs[0].Properties["years"])
 }
