@@ -449,6 +449,12 @@ func TestFilter(t *testing.T) {
 }
 
 func TestReturnFields(t *testing.T) {
+	version, _ := c.getRediSearchVersion()
+	if version < 20200 {
+		// IndexDefinition is available for RediSearch 2.0+
+		return
+	}
+	
 	c := createClient("TestReturnFields")
 	// Create a schema
 	sc := NewSchema(DefaultOptions).
@@ -476,11 +482,6 @@ func TestReturnFields(t *testing.T) {
 
 	// Test return fields with as name with json index
 	flush(c)
-	version, _ := c.getRediSearchVersion()
-	if version < 20200 {
-		// IndexDefinition is available for RediSearch 2.0+
-		return
-	}
 
 	// Create index json
 	indexDefinition := NewIndexDefinition().SetIndexOn(JSON)
