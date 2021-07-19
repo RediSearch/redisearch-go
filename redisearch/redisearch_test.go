@@ -449,13 +449,13 @@ func TestFilter(t *testing.T) {
 }
 
 func TestReturnFields(t *testing.T) {
+	c := createClient("TestReturnFields")
 	version, _ := c.getRediSearchVersion()
 	if version < 20200 {
 		// IndexDefinition is available for RediSearch 2.0+
 		return
 	}
-	
-	c := createClient("TestReturnFields")
+
 	// Create a schema
 	sc := NewSchema(DefaultOptions).
 		AddField(NewTextField("body")).
