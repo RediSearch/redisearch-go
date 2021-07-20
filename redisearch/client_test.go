@@ -926,11 +926,12 @@ func TestClient_CreateIndex(t *testing.T) {
 		time.Sleep(time.Second)
 		info, _ = c.Info()
 	}
+
 	assert.Equal(t, uint64(2), info.DocCount)
 	assert.Equal(t, false, info.IsIndexing)
 	assert.Equal(t, uint64(0), info.HashIndexingFailures)
-	docs, total, err := c.Search(NewQuery("Jon").
-		SetReturnFields("name"))
+
+	docs, total, err := c.Search(NewQuery("Jon").SetReturnFields("name"))
 	assert.Nil(t, err)
 	// Verify that the we've received 2 documents ( Jon and John )
 	assert.Equal(t, 2, total)
