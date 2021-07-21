@@ -47,6 +47,7 @@ jobs:
                           TLS_KEY=redis/tests/tls/redis.key \
                           TLS_CACERT=redis/tests/tls/ca.crt
 
+
   build: # test with redisearch:latest
     docker:
       - image: circleci/golang:1.12
@@ -72,7 +73,7 @@ jobs:
       - checkout
       - run: make test
 
-  build_nightly: # test nightly with redisearch:edge
+  build-edge: # test nightly with redisearch:edge
     docker:
       - image: circleci/golang:1.12
       - image: redislabs/redisearch:edge
@@ -88,6 +89,7 @@ workflows:
     jobs:
       - build-tls
       - build
+      - build-edge
       - build-v16
   nightly:
     triggers:
@@ -98,5 +100,5 @@ workflows:
               only:
                 - master
     jobs:
-      - build_nightly
+      - build-edge
       - build-tls
