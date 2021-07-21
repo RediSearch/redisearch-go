@@ -473,7 +473,7 @@ func TestReturnFields(t *testing.T) {
 	// Searching with return fields
 	docs, total, err := c.Search(NewQuery("hello world").
 		AddReturnFields("body", "age").
-		AddReturnField("title", "doc_name"))
+		AddReturnField("title", "doc_name")) // using as name for title 
 	assert.Nil(t, err)
 	assert.Equal(t, 1, total)
 	assert.Equal(t, "foo bar", docs[0].Properties["body"])
