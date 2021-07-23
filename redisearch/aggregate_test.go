@@ -30,7 +30,7 @@ type Game struct {
 	Categories  []string `json:"categories"`
 }
 
-func init() {
+func _init() {
 	/* load test data */
 	value, exists := os.LookupEnv("REDISEARCH_RDB_LOADED")
 	requiresDatagen := true
