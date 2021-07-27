@@ -61,7 +61,7 @@ godoc:
 	$(GODOC)
 
 start-redis:
-	@docker run --name redisearch-go-tests -d --rm -p 6379:6379 redislabs/redisearch:edge
+	$(docker) run --name redisearch-go-tests -d --rm -p 6379:6379 redislabs/redisearch:edge
 
 stop-redis:
-	@docker stop redisearch-go-tests
+	$(docker) stop redisearch-go-tests
