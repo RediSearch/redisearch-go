@@ -447,3 +447,66 @@ func TestFilter(t *testing.T) {
 	assert.Equal(t, 0, total)
 	teardown(c)
 }
+
+func TestReturnFields(t *testing.T) {
+	c := createClient("TestReturnFields")
+	version, _ := c.getRediSearchVersion()
+	if version < 20200 {
+		// IndexDefinition is available for RediSearch 2.0+
+		return
+	}
+
+	// Create a schema
+	sc := NewSchema(DefaultOptions).
+		AddField(NewTextField("body")).
+		AddField(NewTextFieldOptions("title", TextFieldOptions{Weight: 5.0, Sortable: true})).
+		AddField(NewNumericFieldOptions("age", NumericFieldOptions{Sortable: true}))
+	c.Drop()
+	assert.Nil(t, c.CreateIndex(sc))
+
+	// Create a document
+	doc := NewDocument("TestFilter-doc1", 1.0)
+	doc.Set("title", "Hello world").
+		Set("body", "foo bar").
+		Set("age", 18)
+	assert.Nil(t, c.IndexOptions(DefaultIndexingOptions, doc))
+	// Searching with return fields
+	docs, total, err := c.Search(NewQuery("hello world").
+		AddReturnFields("body", "age").
+		AddReturnField("title", "doc_name"))
+	assert.Nil(t, err)
+	assert.Equal(t, 1, total)
+	assert.Equal(t, "foo bar", docs[0].Properties["body"])
+	assert.Equal(t, "18", docs[0].Properties["age"])
+	assert.Equal(t, "Hello world", docs[0].Properties["doc_name"])
+
+	// Test return fields with as name with json index
+	flush(c)
+
+	// Create index json
+	indexDefinition := NewIndexDefinition().SetIndexOn(JSON)
+	schema := NewSchema(DefaultOptions).
+		AddField(NewTextField("$.name")).
+		AddField(NewNumericField("$.age"))
+	err = c.CreateIndexWithIndexDefinition(schema, indexDefinition)
+	assert.Nil(t, err)
+
+	vanillaConnection := c.pool.Get()
+	_, err = vanillaConnection.Do("JSON.SET", "doc:1", "$", "{\"name\":\"Jon\", \"age\": 25}")
+	assert.Nil(t, err)
+
+	// Wait for the document to be indexed
+	info, err := c.Info()
+	assert.Nil(t, err)
+	for info.IsIndexing {
+		time.Sleep(time.Second)
+		info, _ = c.Info()
+	}
+
+	// Searching with return fields
+	docs, total, err = c.Search(NewQuery("*").AddReturnField("$.name", "name").AddReturnField("$.age", "years"))
+	assert.Nil(t, err)
+	assert.Equal(t, 1, total)
+	assert.Equal(t, "Jon", docs[0].Properties["name"])
+	assert.Equal(t, "25", docs[0].Properties["years"])
+}

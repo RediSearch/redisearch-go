@@ -297,6 +297,20 @@ func (q *Query) SetReturnFields(fields ...string) *Query {
 	return q
 }
 
+// AddReturnFields adds the fields that should be returned from each result
+// to the ReturnFields property
+func (q *Query) AddReturnFields(fields ...string) *Query {
+	q.ReturnFields = append(q.ReturnFields, fields...)
+	return q
+}
+
+// AddReturnField adds a single field with AS name that should be returned from
+// each result to the ReturnFields property
+func (q *Query) AddReturnField(field string, asName string) *Query {
+	q.ReturnFields = append(q.ReturnFields, field, "AS", asName)
+	return q
+}
+
 // SetPayload sets a binary payload to the query, that can be used by custom scoring functions
 func (q *Query) SetPayload(payload []byte) *Query {
 	q.Payload = payload
