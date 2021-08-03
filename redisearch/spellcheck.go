@@ -93,7 +93,10 @@ func NewMisspelledTerm(term string) MisspelledTerm {
 	}
 }
 
+// Len returns the length of the MisspelledSuggestionList
 func (l MisspelledTerm) Len() int { return len(l.MisspelledSuggestionList) }
+
+// Swap two suggestions in the list
 func (l MisspelledTerm) Swap(i, j int) {
 	maxLen := len(l.MisspelledSuggestionList)
 	if i < maxLen && j < maxLen {

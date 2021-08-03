@@ -126,12 +126,10 @@ func (i *Client) Search(q *Query) (docs []Document, total int, err error) {
 		payloadIdx = skip
 		skip++
 	}
-
 	if q.Flags&QueryNoContent == 0 {
 		fieldsIdx = skip
 		skip++
 	}
-
 	if len(res) > skip {
 		for i := 1; i < len(res); i += skip {
 
@@ -145,7 +143,8 @@ func (i *Client) Search(q *Query) (docs []Document, total int, err error) {
 	return
 }
 
-// Adds an alias to an index.
+// AliasAdd adds an alias to an index.
+// Indexes can have more than one alias, though an alias cannot refer to another alias.
 func (i *Client) AliasAdd(name string) (err error) {
 	conn := i.pool.Get()
 	defer conn.Close()
@@ -154,7 +153,7 @@ func (i *Client) AliasAdd(name string) (err error) {
 	return
 }
 
-// Deletes an alias to an index.
+// AliasDel deletes an alias from index.
 func (i *Client) AliasDel(name string) (err error) {
 	conn := i.pool.Get()
 	defer conn.Close()
@@ -163,7 +162,9 @@ func (i *Client) AliasDel(name string) (err error) {
 	return
 }
 
-// Deletes an alias to an index.
+// AliasUpdate differs from the AliasAdd in that it will remove the alias association with
+// a previous index, if any. AliasAdd will fail, on the other hand, if the alias is already
+// associated with another index.
 func (i *Client) AliasUpdate(name string) (err error) {
 	conn := i.pool.Get()
 	defer conn.Close()
@@ -172,7 +173,7 @@ func (i *Client) AliasUpdate(name string) (err error) {
 	return
 }
 
-// Adds terms to a dictionary.
+// DictAdd adds terms to a dictionary.
 func (i *Client) DictAdd(dictionaryName string, terms []string) (newTerms int, err error) {
 	conn := i.pool.Get()
 	defer conn.Close()
@@ -182,7 +183,7 @@ func (i *Client) DictAdd(dictionaryName string, terms []string) (newTerms int, e
 	return
 }
 
-// Deletes terms from a dictionary
+// DictDel deletes terms from a dictionary
 func (i *Client) DictDel(dictionaryName string, terms []string) (deletedTerms int, err error) {
 	conn := i.pool.Get()
 	defer conn.Close()
@@ -192,7 +193,7 @@ func (i *Client) DictDel(dictionaryName string, terms []string) (deletedTerms in
 	return
 }
 
-// Dumps all terms in the given dictionary.
+// DictDump dumps all terms in the given dictionary.
 func (i *Client) DictDump(dictionaryName string) (terms []string, err error) {
 	conn := i.pool.Get()
 	defer conn.Close()
@@ -336,14 +337,12 @@ func (i *Client) MultiGet(documentIds []string) (docs []*Document, err error) {
 			} else {
 				docs[i] = nil
 			}
-
 		}
-
 	}
 	return
 }
 
-// Explain Return a textual string explaining the query
+// Explain Return a textual string explaining the query (execution plan)
 func (i *Client) Explain(q *Query) (string, error) {
 	conn := i.pool.Get()
 	defer conn.Close()
@@ -354,22 +353,21 @@ func (i *Client) Explain(q *Query) (string, error) {
 	return redis.String(conn.Do("FT.EXPLAIN", args...))
 }
 
-//  Deletes the index and all the keys associated with it.
+// Drop deletes the index and all the keys associated with it.
 func (i *Client) Drop() error {
 	conn := i.pool.Get()
 	defer conn.Close()
 
 	_, err := conn.Do("FT.DROP", i.name)
 	return err
-
 }
 
 // Deletes the secondary index and optionally the associated hashes
 //
 // Available since RediSearch 2.0.
 //
-// By default, DropIndex() which is a wrapper for RediSearch FT.DROPINDEX does not delete the document hashes associated with the index.
-// Setting the argument deleteDocuments to true deletes the hashes as well.
+// By default, DropIndex() which is a wrapper for RediSearch FT.DROPINDEX does not delete the document
+// hashes associated with the index. Setting the argument deleteDocuments to true deletes the hashes as well.
 func (i *Client) DropIndex(deleteDocuments bool) error {
 	conn := i.pool.Get()
 	defer conn.Close()
@@ -389,7 +387,7 @@ func (i *Client) Delete(docId string, deleteDocument bool) (err error) {
 	return i.delDoc(docId, deleteDocument)
 }
 
-// Delete the document from the index and also delete the HASH key in which the document is stored
+// DeleteDocument delete the document from the index and also delete the HASH key in which the document is stored
 func (i *Client) DeleteDocument(docId string) (err error) {
 	return i.delDoc(docId, true)
 }
@@ -406,6 +404,7 @@ func (i *Client) delDoc(docId string, deleteDocument bool) (err error) {
 	return
 }
 
+// Internal method to be used by Info()
 func (info *IndexInfo) setTarget(key string, value interface{}) error {
 	v := reflect.ValueOf(info).Elem()
 	for i := 0; i < v.NumField(); i++ {
@@ -602,8 +601,8 @@ func (i *Client) GetTagVals(index string, filedName string) ([]string, error) {
 	return redis.Strings(conn.Do("FT.TAGVALS", args...))
 }
 
-// Adds a synonym group.
-// Deprecated: This function  is not longer supported on RediSearch 2.0 and above, use SynUpdate instead
+// SynAdd adds a synonym group.
+// Deprecated: This function is not longer supported on RediSearch 2.0 and above, use SynUpdate instead
 func (i *Client) SynAdd(indexName string, terms []string) (int64, error) {
 	conn := i.pool.Get()
 	defer conn.Close()
@@ -612,7 +611,7 @@ func (i *Client) SynAdd(indexName string, terms []string) (int64, error) {
 	return redis.Int64(conn.Do("FT.SYNADD", args...))
 }
 
-// Updates a synonym group, with additional terms.
+// SynUpdate updates a synonym group, with additional terms.
 func (i *Client) SynUpdate(indexName string, synonymGroupId int64, terms []string) (string, error) {
 	conn := i.pool.Get()
 	defer conn.Close()
@@ -621,7 +620,7 @@ func (i *Client) SynUpdate(indexName string, synonymGroupId int64, terms []strin
 	return redis.String(conn.Do("FT.SYNUPDATE", args...))
 }
 
-// Dumps the contents of a synonym group.
+// SynDump dumps the contents of a synonym group.
 func (i *Client) SynDump(indexName string) (map[string][]int64, error) {
 	conn := i.pool.Get()
 	defer conn.Close()
@@ -650,7 +649,7 @@ func (i *Client) SynDump(indexName string) (map[string][]int64, error) {
 }
 
 // Adds a document to the index from an existing HASH key in Redis.
-// Deprecated: This function  is not longer supported on RediSearch 2.0 and above, use HSET instead
+// Deprecated: This function is not longer supported on RediSearch 2.0 and above, use HSET instead
 // See the example ExampleClient_CreateIndexWithIndexDefinition for a deeper understanding on how to move towards using hashes on your application
 func (i *Client) AddHash(docId string, score float32, language string, replace bool) (string, error) {
 	conn := i.pool.Get()

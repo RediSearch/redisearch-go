@@ -73,7 +73,7 @@ type SummaryOptions struct {
 	Separator    string // default "..."
 }
 
-// Query is a single search query and all its parameters and predicates
+// Query is a single search query containing all its parameters and predicates
 type Query struct {
 	Raw string
 
@@ -243,7 +243,7 @@ func appendNumArgs(num float64, exclude bool, args redis.Args) redis.Args {
 	return append(args, num)
 }
 
-// AddFilter adds a filter to the query
+// AddFilter adds a filter to the query.
 func (q *Query) AddFilter(f Filter) *Query {
 	if q.Filters == nil {
 		q.Filters = []Filter{}
