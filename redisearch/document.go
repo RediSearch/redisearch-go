@@ -86,7 +86,8 @@ func EscapeTextFileString(value string) string {
 	return value
 }
 
-// convert the result from a redis query to a proper Document object
+// internal function 
+// loadDocument convert the result from a redis query to a proper Document object
 func loadDocument(arr []interface{}, idIdx, scoreIdx, payloadIdx, fieldsIdx int) (Document, error) {
 
 	var score float64 = 1
@@ -111,7 +112,8 @@ func loadDocument(arr []interface{}, idIdx, scoreIdx, payloadIdx, fieldsIdx int)
 	return doc, nil
 }
 
-// SetPayload Sets the document payload
+// internal function used by loadDocument()
+// loadFields loads the fields of the document
 func (d *Document) loadFields(lst []interface{}) *Document {
 	for i := 0; i < len(lst); i += 2 {
 		var prop string
@@ -137,7 +139,9 @@ func (d *Document) loadFields(lst []interface{}) *Document {
 // DocumentList is used to sort documents by descending score
 type DocumentList []Document
 
+// Len returns the length of the DocumentList
 func (l DocumentList) Len() int           { return len(l) }
+// Swap two documents in the list by their index
 func (l DocumentList) Swap(i, j int)      { l[i], l[j] = l[j], l[i] }
 func (l DocumentList) Less(i, j int) bool { return l[i].Score > l[j].Score } //reverse sorting
 

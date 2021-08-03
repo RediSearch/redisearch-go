@@ -12,6 +12,7 @@ const (
 	JSON
 )
 
+// Parse IndexType enum to string
 func (it IndexType) String() string {
 	return [...]string{"HASH", "JSON"}[it]
 }
