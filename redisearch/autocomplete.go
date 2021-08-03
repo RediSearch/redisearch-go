@@ -68,7 +68,7 @@ func (a *Autocompleter) AddTerms(terms ...Suggestion) error {
 	return nil
 }
 
-// AddTerms pushes new term suggestions to the index
+// DeleteTerms deletes term suggestions from the index
 func (a *Autocompleter) DeleteTerms(terms ...Suggestion) error {
 	conn := a.pool.Get()
 	defer conn.Close()
@@ -94,7 +94,7 @@ func (a *Autocompleter) DeleteTerms(terms ...Suggestion) error {
 	return nil
 }
 
-// AddTerms pushes new term suggestions to the index
+// Length gets the size of the suggestion
 func (a *Autocompleter) Length() (len int64, err error) {
 	conn := a.pool.Get()
 	defer conn.Close()
@@ -128,8 +128,8 @@ func (a *Autocompleter) Suggest(prefix string, num int, fuzzy bool) (ret []Sugge
 
 // SuggestOpts gets completion suggestions from the Autocompleter dictionary to the given prefix.
 // SuggestOptions are passed allowing you specify if the returned values contain a payload, and scores.
-// If SuggestOptions.Fuzzy is set, we also complete for prefixes that are in 1 Levenshtein distance from the
-// given prefix
+// If SuggestOptions.Fuzzy is set, we also complete for prefixes that are in 1 Levenshtein distance
+// from the given prefix
 func (a *Autocompleter) SuggestOpts(prefix string, opts SuggestOptions) (ret []Suggestion, err error) {
 	conn := a.pool.Get()
 	defer conn.Close()
