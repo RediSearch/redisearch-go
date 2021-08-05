@@ -22,6 +22,10 @@ func TestNewSchema(t *testing.T) {
 			Options: Options{Stopwords: []string{"custom"}}}},
 		{"no-frequencies", args{Options{NoFrequencies: true}}, &Schema{Fields: []Field{},
 			Options: Options{NoFrequencies: true}}},
+		{"no-highlights", args{Options{NoHighlights: true}}, &Schema{Fields: []Field{},
+			Options: Options{NoHighlights: true}}},
+		{"skip-initial-scan", args{Options{SkipInitialScan: true}}, &Schema{Fields: []Field{},
+			Options: Options{SkipInitialScan: true}}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -50,6 +54,10 @@ func TestSerializeSchema(t *testing.T) {
 		{"default-args-with-different-constructor", args{NewSchema(*NewOptions()), redis.Args{}}, redis.Args{"SCHEMA"}, false},
 		{"temporary", args{NewSchema(*NewOptions().SetTemporaryPeriod(60)), redis.Args{}}, redis.Args{"TEMPORARY", 60, "SCHEMA"}, false},
 		{"no-frequencies", args{NewSchema(Options{NoFrequencies: true}), redis.Args{}}, redis.Args{"NOFREQS", "SCHEMA"}, false},
+		{"no-hithlights", args{NewSchema(Options{NoHighlights: true}), redis.Args{}}, redis.Args{"NOHL", "SCHEMA"}, false},
+		{"no-hithlights-with-different-consturctor", args{NewSchema(*NewOptions().SetNoHighlight(true)), redis.Args{}}, redis.Args{"NOHL", "SCHEMA"}, false},
+		{"skip-inital-scan", args{NewSchema(Options{SkipInitialScan: true}), redis.Args{}}, redis.Args{"SKIPINITIALSCAN", "SCHEMA"}, false},
+		{"skipinitalscan-with-different-consturctor", args{NewSchema(*NewOptions().SetSkipInitialScan(true)), redis.Args{}}, redis.Args{"SKIPINITIALSCAN", "SCHEMA"}, false},
 		{"no-fields", args{NewSchema(Options{NoFieldFlags: true}), redis.Args{}}, redis.Args{"NOFIELDS", "SCHEMA"}, false},
 		{"custom-stopwords", args{NewSchema(Options{Stopwords: []string{"custom"}}), redis.Args{}}, redis.Args{"STOPWORDS", 1, "custom", "SCHEMA"}, false},
 		{"custom-stopwords-with-different-constructor", args{NewSchema(*NewOptions().SetStopWords([]string{"custom"})), redis.Args{}}, redis.Args{"STOPWORDS", 1, "custom", "SCHEMA"}, false},

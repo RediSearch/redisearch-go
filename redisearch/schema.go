@@ -28,7 +28,7 @@ type Options struct {
 	// This is an option that is applied and index level.
 	NoFrequencies bool
 
-	// If set, , we avoid saving the term offsets for documents.
+	// If set, we avoid saving the term offsets for documents.
 	// This saves memory but does not allow exact searches or highlighting. Implies NOHL
 	// This is an option that is applied and index level.
 	NoOffsetVectors bool
@@ -49,6 +49,13 @@ type Options struct {
 	// If set to true This option forces RediSearch to encode indexes as if there were more than 32 text fields,
 	// which allows you to add additional fields (beyond 32).
 	MaxTextFieldsFlag bool
+
+	// If set to true, conserves storage space and memory by disabling highlighting support.
+	// Also implied by NoOffsetVectors
+	NoHighlights bool
+
+	// If set to true, we do not scan and index.
+	SkipInitialScan bool
 }
 
 func NewOptions() *Options {
@@ -89,6 +96,18 @@ func (options *Options) SetMaxTextFieldsFlag(flag bool) *Options {
 	return options
 }
 
+// SetNoHighlight conserves storage space and memory by disabling highlighting support.
+func (options *Options) SetNoHighlight(flag bool) *Options {
+	options.NoHighlights = flag
+	return options
+}
+
+// SetSkipInitialScan determines if scan the index on creation
+func (options *Options) SetSkipInitialScan(flag bool) *Options {
+	options.SkipInitialScan = flag
+	return options
+}
+
 // DefaultOptions represents the default options
 var DefaultOptions = Options{
 	NoSave:            false,
@@ -99,6 +118,8 @@ var DefaultOptions = Options{
 	Temporary:         false,
 	TemporaryPeriod:   0,
 	MaxTextFieldsFlag: false,
+	NoHighlights:      false,
+	SkipInitialScan:   false,
 }
 
 // Field Types
@@ -282,11 +303,17 @@ func SerializeSchema(s *Schema, args redis.Args) (argsOut redis.Args, err error)
 	if s.Options.Temporary {
 		argsOut = append(argsOut, "TEMPORARY", s.Options.TemporaryPeriod)
 	}
+	if s.Options.NoHighlights {
+		argsOut = append(argsOut, "NOHL")
+	}
 	if s.Options.NoFieldFlags {
 		argsOut = append(argsOut, "NOFIELDS")
 	}
 	if s.Options.NoFrequencies {
 		argsOut = append(argsOut, "NOFREQS")
+	}
+	if s.Options.SkipInitialScan {
+		argsOut = append(argsOut, "SKIPINITIALSCAN")
 	}
 
 	if s.Options.Stopwords != nil {
