@@ -7,11 +7,11 @@ import (
 	"reflect"
 )
 
-// Projection - Apply a 1-to-1 transformation on one or more properties, 
+// Projection - Apply a 1-to-1 transformation on one or more properties,
 // and either store the result as a new property down the pipeline, or
 // replace any property using this transformation. Expression is an expression
-// that can be used to perform arithmetic operations on numeric properties, 
-// or functions that can be applied on properties depending on their types, 
+// that can be used to perform arithmetic operations on numeric properties,
+// or functions that can be applied on properties depending on their types,
 // or any combination thereof.
 type Projection struct {
 	Expression string
@@ -71,7 +71,7 @@ func (c Cursor) Serialize() redis.Args {
 	return args
 }
 
-//GroupBy groups the results in the pipeline based on one or more properties. 
+//GroupBy groups the results in the pipeline based on one or more properties.
 //Each group should have at least one reducer, a function that handles the group
 //entries, either counting them, or performing multiple aggregate operations.
 type GroupBy struct {
@@ -108,7 +108,7 @@ func (g *GroupBy) Reduce(reducer Reducer) *GroupBy {
 	return g
 }
 
-// Limit adds Paging to the GroupBy object 
+// Limit adds Paging to the GroupBy object
 func (g *GroupBy) Limit(offset int, num int) *GroupBy {
 	g.Paging = NewPaging(offset, num)
 	return g
@@ -162,7 +162,7 @@ func (a *AggregateQuery) SetWithSchema(value bool) *AggregateQuery {
 	return a
 }
 
-// SetVerbatim - If set, we do not try to use stemming for query expansion but search 
+// SetVerbatim - If set, we do not try to use stemming for query expansion but search
 // the query terms verbatim.
 func (a *AggregateQuery) SetVerbatim(value bool) *AggregateQuery {
 	a.Verbatim = value

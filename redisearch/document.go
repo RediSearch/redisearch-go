@@ -86,7 +86,7 @@ func EscapeTextFileString(value string) string {
 	return value
 }
 
-// internal function 
+// internal function
 // loadDocument convert the result from a redis query to a proper Document object
 func loadDocument(arr []interface{}, idIdx, scoreIdx, payloadIdx, fieldsIdx int) (Document, error) {
 
@@ -140,7 +140,8 @@ func (d *Document) loadFields(lst []interface{}) *Document {
 type DocumentList []Document
 
 // Len returns the length of the DocumentList
-func (l DocumentList) Len() int           { return len(l) }
+func (l DocumentList) Len() int { return len(l) }
+
 // Swap two documents in the list by their index
 func (l DocumentList) Swap(i, j int)      { l[i], l[j] = l[j], l[i] }
 func (l DocumentList) Less(i, j int) bool { return l[i].Score > l[j].Score } //reverse sorting

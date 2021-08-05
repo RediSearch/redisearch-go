@@ -243,7 +243,7 @@ func appendNumArgs(num float64, exclude bool, args redis.Args) redis.Args {
 	return append(args, num)
 }
 
-// AddFilter adds a filter to the query. 
+// AddFilter adds a filter to the query.
 func (q *Query) AddFilter(f Filter) *Query {
 	if q.Filters == nil {
 		q.Filters = []Filter{}
