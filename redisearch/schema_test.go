@@ -120,3 +120,31 @@ func TestSchema_AddField(t *testing.T) {
 		})
 	}
 }
+
+func TestSchema_SkipInitialScan(t *testing.T) {
+	c := createClient("skip-initial-scan-test")
+	flush(c)
+	
+	vanillaConnection := c.pool.Get()
+	_, err := vanillaConnection.Do("HSET", "create-index-info:doc1", "name", "Jon", "age", 25)
+	assert.Nil(t, err)
+
+	q := NewQuery("@name:Jon")
+	schema1 := NewSchema(DefaultOptions).AddField(NewTextField("name"))
+	schema2 := NewSchema(Options{SkipInitialScan: true}).AddField(NewTextField("name"))
+	indexDefinition := NewIndexDefinition()
+
+	c = createClient("skip-initial-scan-test-scan")
+	c.CreateIndexWithIndexDefinition(schema1, indexDefinition)
+	assert.Nil(t, err)
+	_, total, err := c.Search(q)
+	assert.Nil(t, err)
+	assert.Equal(t, 1, total)
+
+	c = createClient("skip-initial-scan-test-skip-scan")
+	c.CreateIndexWithIndexDefinition(schema2, indexDefinition)
+	assert.Nil(t, err)
+	_, total, err = c.Search(q)
+	assert.Nil(t, err)
+	assert.Equal(t, 0, total)
+}
