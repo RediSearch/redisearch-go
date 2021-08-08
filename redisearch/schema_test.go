@@ -124,7 +124,7 @@ func TestSchema_AddField(t *testing.T) {
 func TestSchema_SkipInitialScan(t *testing.T) {
 	c := createClient("skip-initial-scan-test")
 	flush(c)
-	
+
 	vanillaConnection := c.pool.Get()
 	_, err := vanillaConnection.Do("HSET", "create-index-info:doc1", "name", "Jon", "age", 25)
 	assert.Nil(t, err)
@@ -147,4 +147,24 @@ func TestSchema_SkipInitialScan(t *testing.T) {
 	_, total, err = c.Search(q)
 	assert.Nil(t, err)
 	assert.Equal(t, 0, total)
+}
+
+func TestSchema_SummarizationDisabled(t *testing.T) {
+	doc := NewDocument("TestSchema-doc1", 1.0).Set("body", "foo bar")
+
+	c := createClient("summarize-disable-no-term-offsets-test")
+	flush(c)
+	schema := NewSchema(Options{NoOffsetVectors: true}).AddField(NewTextField("body"))
+	c.CreateIndexWithIndexDefinition(schema, NewIndexDefinition())
+	assert.Nil(t, c.IndexOptions(DefaultIndexingOptions, doc))
+	_, _, err := c.Search(NewQuery("body").Summarize())
+	assert.NotNil(t, err)
+
+	c = createClient("summarize-disable-no-highlights-test")
+	flush(c)
+	schema = NewSchema(Options{NoHighlights: true}).AddField(NewTextField("body"))
+	c.CreateIndexWithIndexDefinition(schema, NewIndexDefinition())
+	assert.Nil(t, c.IndexOptions(DefaultIndexingOptions, doc))
+	_, _, err = c.Search(NewQuery("body").Summarize())
+	assert.NotNil(t, err)
 }
