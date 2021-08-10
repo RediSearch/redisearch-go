@@ -125,8 +125,16 @@ func TestSchema_SkipInitialScan(t *testing.T) {
 	c := createClient("skip-initial-scan-test")
 	flush(c)
 
+	// check RediSearch version
+	version, err := c.getRediSearchVersion()
+	assert.Nil(t, err)
+	// This feature is only available since RediSearch >= v2.0
+	if version <= 10699 {
+		return
+	}
+
 	vanillaConnection := c.pool.Get()
-	_, err := vanillaConnection.Do("HSET", "create-index-info:doc1", "name", "Jon", "age", 25)
+	_, err = vanillaConnection.Do("HSET", "create-index-info:doc1", "name", "Jon", "age", 25)
 	assert.Nil(t, err)
 
 	q := NewQuery("@name:Jon")
