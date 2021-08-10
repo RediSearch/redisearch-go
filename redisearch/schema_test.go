@@ -163,7 +163,8 @@ func TestSchema_SummarizationDisabled(t *testing.T) {
 	c := createClient("summarize-disable-no-term-offsets-test")
 	flush(c)
 	schema := NewSchema(Options{NoOffsetVectors: true}).AddField(NewTextField("body"))
-	c.CreateIndexWithIndexDefinition(schema, NewIndexDefinition())
+
+	c.CreateIndex(schema)
 	assert.Nil(t, c.IndexOptions(DefaultIndexingOptions, doc))
 	_, _, err := c.Search(NewQuery("body").Summarize())
 	assert.NotNil(t, err)
@@ -171,7 +172,7 @@ func TestSchema_SummarizationDisabled(t *testing.T) {
 	c = createClient("summarize-disable-no-highlights-test")
 	flush(c)
 	schema = NewSchema(Options{NoHighlights: true}).AddField(NewTextField("body"))
-	c.CreateIndexWithIndexDefinition(schema, NewIndexDefinition())
+	c.CreateIndex(schema)
 	assert.Nil(t, c.IndexOptions(DefaultIndexingOptions, doc))
 	_, _, err = c.Search(NewQuery("body").Summarize())
 	assert.NotNil(t, err)
