@@ -50,7 +50,7 @@ jobs:
 
   build: # test with redisearch:latest
     docker:
-      - image: circleci/golang:1.12
+      - image: circleci/golang:1.16
       - image: redislabs/redisearch:latest
 
     working_directory: /go/src/github.com/RediSearch/redisearch-go
