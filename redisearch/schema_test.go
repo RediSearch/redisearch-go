@@ -5,6 +5,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"reflect"
 	"testing"
+	"time"
 )
 
 func TestNewSchema(t *testing.T) {
@@ -22,6 +23,10 @@ func TestNewSchema(t *testing.T) {
 			Options: Options{Stopwords: []string{"custom"}}}},
 		{"no-frequencies", args{Options{NoFrequencies: true}}, &Schema{Fields: []Field{},
 			Options: Options{NoFrequencies: true}}},
+		{"no-highlights", args{Options{NoHighlights: true}}, &Schema{Fields: []Field{},
+			Options: Options{NoHighlights: true}}},
+		{"skip-initial-scan", args{Options{SkipInitialScan: true}}, &Schema{Fields: []Field{},
+			Options: Options{SkipInitialScan: true}}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -50,6 +55,10 @@ func TestSerializeSchema(t *testing.T) {
 		{"default-args-with-different-constructor", args{NewSchema(*NewOptions()), redis.Args{}}, redis.Args{"SCHEMA"}, false},
 		{"temporary", args{NewSchema(*NewOptions().SetTemporaryPeriod(60)), redis.Args{}}, redis.Args{"TEMPORARY", 60, "SCHEMA"}, false},
 		{"no-frequencies", args{NewSchema(Options{NoFrequencies: true}), redis.Args{}}, redis.Args{"NOFREQS", "SCHEMA"}, false},
+		{"no-hithlights", args{NewSchema(Options{NoHighlights: true}), redis.Args{}}, redis.Args{"NOHL", "SCHEMA"}, false},
+		{"no-hithlights-with-different-consturctor", args{NewSchema(*NewOptions().SetNoHighlight(true)), redis.Args{}}, redis.Args{"NOHL", "SCHEMA"}, false},
+		{"skip-inital-scan", args{NewSchema(Options{SkipInitialScan: true}), redis.Args{}}, redis.Args{"SKIPINITIALSCAN", "SCHEMA"}, false},
+		{"skipinitalscan-with-different-consturctor", args{NewSchema(*NewOptions().SetSkipInitialScan(true)), redis.Args{}}, redis.Args{"SKIPINITIALSCAN", "SCHEMA"}, false},
 		{"no-fields", args{NewSchema(Options{NoFieldFlags: true}), redis.Args{}}, redis.Args{"NOFIELDS", "SCHEMA"}, false},
 		{"custom-stopwords", args{NewSchema(Options{Stopwords: []string{"custom"}}), redis.Args{}}, redis.Args{"STOPWORDS", 1, "custom", "SCHEMA"}, false},
 		{"custom-stopwords-with-different-constructor", args{NewSchema(*NewOptions().SetStopWords([]string{"custom"})), redis.Args{}}, redis.Args{"STOPWORDS", 1, "custom", "SCHEMA"}, false},
@@ -111,4 +120,70 @@ func TestSchema_AddField(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestSchema_SkipInitialScan(t *testing.T) {
+	c := createClient("skip-initial-scan-test")
+	flush(c)
+
+	// check RediSearch version
+	version, err := c.getRediSearchVersion()
+	assert.Nil(t, err)
+	// This feature is only available since RediSearch >= v2.0
+	if version <= 10699 {
+		return
+	}
+
+	vanillaConnection := c.pool.Get()
+	_, err = vanillaConnection.Do("HSET", "create-index-info:doc1", "name", "Jon", "age", 25)
+	assert.Nil(t, err)
+
+	q := NewQuery("@name:Jon")
+	schema1 := NewSchema(DefaultOptions).AddField(NewTextField("name"))
+	schema2 := NewSchema(Options{SkipInitialScan: true}).AddField(NewTextField("name"))
+	indexDefinition := NewIndexDefinition()
+
+	c = createClient("skip-initial-scan-test-scan")
+	c.CreateIndexWithIndexDefinition(schema1, indexDefinition)
+	assert.Nil(t, err)
+
+	// Wait for all documents to be indexed
+	info, err := c.Info()
+	assert.Nil(t, err)
+	for info.IsIndexing {
+		time.Sleep(time.Second)
+		info, _ = c.Info()
+	}
+
+	_, total, err := c.Search(q)
+	assert.Nil(t, err)
+	assert.Equal(t, 1, total)
+
+	c = createClient("skip-initial-scan-test-skip-scan")
+	c.CreateIndexWithIndexDefinition(schema2, indexDefinition)
+	assert.Nil(t, err)
+	_, total, err = c.Search(q)
+	assert.Nil(t, err)
+	assert.Equal(t, 0, total)
+}
+
+func TestSchema_SummarizationDisabled(t *testing.T) {
+	doc := NewDocument("TestSchema-doc1", 1.0).Set("body", "foo bar")
+
+	c := createClient("summarize-disable-no-term-offsets-test")
+	flush(c)
+	schema := NewSchema(Options{NoOffsetVectors: true}).AddField(NewTextField("body"))
+
+	c.CreateIndex(schema)
+	assert.Nil(t, c.IndexOptions(DefaultIndexingOptions, doc))
+	_, _, err := c.Search(NewQuery("body").Summarize())
+	assert.NotNil(t, err)
+
+	c = createClient("summarize-disable-no-highlights-test")
+	flush(c)
+	schema = NewSchema(Options{NoHighlights: true}).AddField(NewTextField("body"))
+	c.CreateIndex(schema)
+	assert.Nil(t, c.IndexOptions(DefaultIndexingOptions, doc))
+	_, _, err = c.Search(NewQuery("body").Summarize())
+	assert.NotNil(t, err)
 }
