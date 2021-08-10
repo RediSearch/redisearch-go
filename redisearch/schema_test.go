@@ -5,6 +5,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"reflect"
 	"testing"
+	"time"
 )
 
 func TestNewSchema(t *testing.T) {
@@ -145,6 +146,15 @@ func TestSchema_SkipInitialScan(t *testing.T) {
 	c = createClient("skip-initial-scan-test-scan")
 	c.CreateIndexWithIndexDefinition(schema1, indexDefinition)
 	assert.Nil(t, err)
+
+	// Wait for all documents to be indexed
+	info, err := c.Info()
+	assert.Nil(t, err)
+	for info.IsIndexing {
+		time.Sleep(time.Second)
+		info, _ = c.Info()
+	}
+
 	_, total, err := c.Search(q)
 	assert.Nil(t, err)
 	assert.Equal(t, 1, total)
