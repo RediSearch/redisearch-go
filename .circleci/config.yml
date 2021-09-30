@@ -35,7 +35,8 @@ jobs:
             docker run -d -v $(pwd)/redisearch.so:/data/redisearch.so \
                        -v $(pwd)/rejson.so:/data/rejson.so \
                        -v $(pwd)/redis/tests/tls/:/data \
-                       -p 6379:6379 redis redis-server --tls-port 6379 --port 0  \
+                       -p 6379:6379 redisfab/redis:6.2-latest-x64-bullseye redis-server \
+                       --tls-port 6379 --port 0  \
                        --tls-cert-file /data/redis.crt  \
                        --tls-key-file /data/redis.key  \
                        --tls-ca-cert-file /data/ca.crt \
