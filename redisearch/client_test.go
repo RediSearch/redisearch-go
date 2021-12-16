@@ -901,12 +901,22 @@ func TestClient_CreateIndex(t *testing.T) {
 
 	// Create a schema
 	schema := NewSchema(DefaultOptions).
-		AddField(NewTagField("tags")).
-		AddField(NewGeoField("geo")).
-		AddField(NewTextFieldOptions(
-			"name",
-			TextFieldOptions{Sortable: true, PhoneticMatcher: PhoneticDoubleMetaphoneEnglish})).
-		AddField(NewNumericField("age"))
+		AddField(NewGeoField("geo")). // There are no useful opttions for geo field at this time
+		AddField(
+			NewTagFieldOptions(
+				"tags",
+				TagFieldOptions{Separator: '|'},
+			)).
+		AddField(
+			NewTextFieldOptions(
+				"name",
+				TextFieldOptions{Sortable: true, PhoneticMatcher: PhoneticDoubleMetaphoneEnglish},
+			)).
+		AddField(
+			NewNumericFieldOptions(
+				"age",
+				NumericFieldOptions{Sortable: true},
+			))
 
 	// IndexDefinition is available for RediSearch 2.0+
 	// In this example we will only index keys started by product:
@@ -918,9 +928,9 @@ func TestClient_CreateIndex(t *testing.T) {
 
 	// Create docs with a name that has the same phonetic matcher
 	vanillaConnection := c.pool.Get()
-	_, err = vanillaConnection.Do("HSET", "create-index-info:doc1", "name", "Jon", "age", 25, "tags", "tag1,tag2", "geo", "40.7222756,-73.9977894")
+	_, err = vanillaConnection.Do("HSET", "create-index-info:doc1", "name", "Jon", "age", 25, "tags", "tag1|tag2", "geo", "40.7222756,-73.9977894")
 	assert.Nil(t, err)
-	_, err = vanillaConnection.Do("HSET", "create-index-info:doc2", "name", "John", "age", 20, "tags", "tag1,tag2", "geo", "40.7222756,-73.9977894")
+	_, err = vanillaConnection.Do("HSET", "create-index-info:doc2", "name", "John", "age", 20, "tags", "tag1|tag2", "geo", "40.7222756,-73.9977894")
 	assert.Nil(t, err)
 
 	// Wait for all documents to be indexed
@@ -947,10 +957,14 @@ func TestClient_CreateIndex(t *testing.T) {
 		switch {
 		case f.Name == "age":
 			assert.Equal(t, 1, int(f.Type))
+			assert.Equal(t, true, f.Options.(NumericFieldOptions).Sortable)
 		case f.Name == "name":
 			assert.Equal(t, 0, int(f.Type))
+			assert.Equal(t, true, f.Options.(TextFieldOptions).Sortable)
 		case f.Name == "tags":
 			assert.Equal(t, 3, int(f.Type))
+			// Verify that the tags separators is | or 0x7c
+			assert.Equal(t, uint8(0x7c), f.Options.(TagFieldOptions).Separator)
 		case f.Name == "geo":
 			assert.Equal(t, 2, int(f.Type))
 		}
