@@ -901,7 +901,11 @@ func TestClient_CreateIndex(t *testing.T) {
 
 	// Create a schema
 	schema := NewSchema(DefaultOptions).
-		AddField(NewTextFieldOptions("name", TextFieldOptions{Sortable: true, PhoneticMatcher: PhoneticDoubleMetaphoneEnglish})).
+		AddField(NewTagField("tags")).
+		AddField(NewGeoField("geo")).
+		AddField(NewTextFieldOptions(
+			"name",
+			TextFieldOptions{Sortable: true, PhoneticMatcher: PhoneticDoubleMetaphoneEnglish})).
 		AddField(NewNumericField("age"))
 
 	// IndexDefinition is available for RediSearch 2.0+
@@ -914,9 +918,9 @@ func TestClient_CreateIndex(t *testing.T) {
 
 	// Create docs with a name that has the same phonetic matcher
 	vanillaConnection := c.pool.Get()
-	_, err = vanillaConnection.Do("HSET", "create-index-info:doc1", "name", "Jon", "age", 25)
+	_, err = vanillaConnection.Do("HSET", "create-index-info:doc1", "name", "Jon", "age", 25, "tags", "tag1,tag2", "geo", "40.7222756,-73.9977894")
 	assert.Nil(t, err)
-	_, err = vanillaConnection.Do("HSET", "create-index-info:doc2", "name", "John", "age", 20)
+	_, err = vanillaConnection.Do("HSET", "create-index-info:doc2", "name", "John", "age", 20, "tags", "tag1,tag2", "geo", "40.7222756,-73.9977894")
 	assert.Nil(t, err)
 
 	// Wait for all documents to be indexed
@@ -937,6 +941,20 @@ func TestClient_CreateIndex(t *testing.T) {
 	assert.Equal(t, 2, total)
 	assert.Equal(t, "Jon", docs[0].Properties["name"])
 	assert.Equal(t, "John", docs[1].Properties["name"])
+
+	// Verify that each of the field types is correct
+	for _, f := range info.Schema.Fields {
+		switch {
+		case f.Name == "age":
+			assert.Equal(t, 1, int(f.Type))
+		case f.Name == "name":
+			assert.Equal(t, 0, int(f.Type))
+		case f.Name == "tags":
+			assert.Equal(t, 3, int(f.Type))
+		case f.Name == "geo":
+			assert.Equal(t, 2, int(f.Type))
+		}
+	}
 }
 
 func TestClient_CreateJsonIndex(t *testing.T) {

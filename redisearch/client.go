@@ -499,6 +499,10 @@ func (info *IndexInfo) loadSchema(values []interface{}, options []string) {
 
 		f := Field{Name: spec[0]}
 		switch strings.ToUpper(spec[2]) {
+		case "TAG":
+			f.Type = TagField
+		case "GEO":
+			f.Type = GeoField
 		case "NUMERIC":
 			f.Type = NumericField
 			nfOptions := NumericFieldOptions{}
