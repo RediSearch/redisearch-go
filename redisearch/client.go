@@ -511,7 +511,6 @@ func (info *IndexInfo) loadSchema(values []interface{}, options []string) {
 		case "NUMERIC":
 			f.Type = NumericField
 			nfOptions := NumericFieldOptions{}
-			f.Options = nfOptions
 			if sliceIndex(options, "SORTABLE") != -1 {
 				nfOptions.Sortable = true
 			}
