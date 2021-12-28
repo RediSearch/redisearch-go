@@ -499,17 +499,25 @@ func (info *IndexInfo) loadSchema(values []interface{}, options []string) {
 
 		f := Field{Name: spec[0]}
 		switch strings.ToUpper(spec[2]) {
+		case "TAG":
+			f.Type = TagField
+			tfOptions := TagFieldOptions{}
+			if wIdx := sliceIndex(options, "SEPARATOR"); wIdx != -1 {
+				tfOptions.Separator = options[wIdx+1][0]
+			}
+			f.Options = tfOptions
+		case "GEO":
+			f.Type = GeoField
 		case "NUMERIC":
 			f.Type = NumericField
 			nfOptions := NumericFieldOptions{}
-			f.Options = nfOptions
 			if sliceIndex(options, "SORTABLE") != -1 {
 				nfOptions.Sortable = true
 			}
+			f.Options = nfOptions
 		case "TEXT":
 			f.Type = TextField
 			tfOptions := TextFieldOptions{}
-			f.Options = tfOptions
 			if sliceIndex(options, "SORTABLE") != -1 {
 				tfOptions.Sortable = true
 			}
@@ -518,6 +526,7 @@ func (info *IndexInfo) loadSchema(values []interface{}, options []string) {
 				weight64, _ := strconv.ParseFloat(weightString, 32)
 				tfOptions.Weight = float32(weight64)
 			}
+			f.Options = tfOptions
 		}
 		sc = sc.AddField(f)
 	}
