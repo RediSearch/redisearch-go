@@ -17,7 +17,7 @@ jobs:
       - run:
           name: Generate a root CA and a server certificate using redis helpers
           command: |
-            git clone git://github.com/redis/redis.git
+            git clone https://github.com/redis/redis.git
             cd redis
             ./utils/gen-test-certs.sh
             cd ..
