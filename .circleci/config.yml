@@ -44,6 +44,7 @@ jobs:
       - run:
           name: Run Examples
           command: |
+            sudo chmod a+r redis/tests/tls/*
             make examples TLS_CERT=redis/tests/tls/redis.crt \
                           TLS_KEY=redis/tests/tls/redis.key \
                           TLS_CACERT=redis/tests/tls/ca.crt
