@@ -146,7 +146,7 @@ func Test_appendNumArgs(t *testing.T) {
 		want redis.Args
 	}{
 		{"1 arg", args{1.0, false, redis.Args{}}, redis.Args{1.0}},
-		{"2.54 excluded arg", args{1.3, true, redis.Args{}}, redis.Args{"(2.54"}},
+		{"2.54 excluded arg", args{2.54, true, redis.Args{}}, redis.Args{"(2.54"}},
 		{"+inf", args{math.Inf(1), false, redis.Args{}}, redis.Args{"+inf"}},
 		{"+inf", args{math.Inf(-1), false, redis.Args{}}, redis.Args{"-inf"}},
 	}
