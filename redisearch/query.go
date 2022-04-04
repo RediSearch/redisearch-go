@@ -2,7 +2,7 @@ package redisearch
 
 import (
 	"math"
-
+	"fmt"
 	"github.com/gomodule/redigo/redis"
 )
 
@@ -238,7 +238,7 @@ func appendNumArgs(num float64, exclude bool, args redis.Args) redis.Args {
 	}
 
 	if exclude {
-		return append(args, "(", num)
+		return append(args, fmt.Sprint("(", num))
 	}
 	return append(args, num)
 }
