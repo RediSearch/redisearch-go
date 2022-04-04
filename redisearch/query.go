@@ -1,8 +1,9 @@
 package redisearch
 
 import (
-	"math"
 	"fmt"
+	"math"
+	
 	"github.com/gomodule/redigo/redis"
 )
 
