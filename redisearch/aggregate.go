@@ -202,7 +202,7 @@ func (a *AggregateQuery) Limit(offset int, num int) *AggregateQuery {
 }
 
 //Load document fields from the document HASH objects (if they are not in the sortables).
-//Empty array will load all properties
+//Empty array will load all properties.
 func (a *AggregateQuery) Load(Properties []string) *AggregateQuery {
 	nproperties := len(Properties)
 	if nproperties == 0 {
