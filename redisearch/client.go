@@ -112,7 +112,7 @@ func (i *Client) Search(q *Query) (docs []Document, total int, err error) {
 		return
 	}
 
-	docs = make([]Document, 0, len(res)-1)
+	docs = make([]Document, 0, len(res)/2)
 
 	skip := 1
 	scoreIdx := -1
