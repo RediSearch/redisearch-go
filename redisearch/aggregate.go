@@ -204,6 +204,9 @@ func (a *AggregateQuery) Limit(offset int, num int) *AggregateQuery {
 //Load document fields from the document HASH objects (if they are not in the sortables)
 func (a *AggregateQuery) Load(Properties []string) *AggregateQuery {
 	nproperties := len(Properties)
+	if nproperties == 0 {
+		a.AggregatePlan = a.AggregatePlan.Add("LOAD", "*")
+	}
 	if nproperties > 0 {
 		a.AggregatePlan = a.AggregatePlan.Add("LOAD", nproperties)
 		for _, property := range Properties {
