@@ -532,7 +532,8 @@ func TestParams(t *testing.T) {
 	assert.Nil(t, err)
 	// Searching with parameters
 	_, total, err := c.Search(NewQuery("@numval:[$min $max]").
-		SetParams(map[string]interface{}{"min": "1", "max": "2"}))
+		SetParams(map[string]interface{}{"min": "1", "max": "2"}).
+		SetDialect(2))
 	assert.Nil(t, err)
 	assert.Equal(t, 2, total)
 }
@@ -556,14 +557,18 @@ func TestVectorField(t *testing.T) {
 	c.Drop()
 	assert.Nil(t, c.CreateIndex(sc))
 	// Create data
-    c.pool.Get().Do("HSET", "a", "v", "aaaaaaaa")
-    c.pool.Get().Do("HSET", "b", "v", "aaaabaaa")
-    c.pool.Get().Do("HSET", "c", "v", "aaaaabaa")
+    _, err := c.pool.Get().Do("HSET", "a", "v", "aaaaaaaa")
+	assert.Nil(t, err)
+    _, err = c.pool.Get().Do("HSET", "b", "v", "aaaabaaa")
+	assert.Nil(t, err)
+    _, err = c.pool.Get().Do("HSET", "c", "v", "aaaaabaa")
+	assert.Nil(t, err)
 	// Searching with parameters
 	docs, total, err := c.Search(NewQuery("*=>[KNN 2 @v $vec]").
 		AddParam("vec", "aaaaaaaa").
 		SetSortBy("__v_score", true).
-		AddReturnFields("__v_score"))
+		AddReturnFields("__v_score").
+		SetDialect(2))
 	assert.Nil(t, err)
 	assert.Equal(t, 2, total)
 	assert.Equal(t, "a", docs[0].Id)
