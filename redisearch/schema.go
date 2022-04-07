@@ -135,6 +135,9 @@ const (
 
 	// TagField is a field used for compact indexing of comma separated values
 	TagField
+
+	//VectorField allows vector similarity queries against the value in this attribute.
+	VectorField
 )
 
 // Phonetic Matchers
@@ -183,6 +186,19 @@ type NumericFieldOptions struct {
 type GeoFieldOptions struct {
 	NoIndex bool
 	As      string
+}
+
+type algorithm string
+
+const (
+	Flat algorithm = "FLAT"
+	HNSW algorithm = "HNSW"
+)
+
+// VectorFieldOptions Options for vector fields
+type VectorFieldOptions struct {
+	Algorithm  algorithm
+	Attributes map[string]interface{}
 }
 
 // NewTextField creates a new text field with the given weight
@@ -266,6 +282,15 @@ func NewGeoFieldOptions(name string, options GeoFieldOptions) Field {
 	f := NewGeoField(name)
 	f.Options = options
 	return f
+}
+
+// NewGeoFieldOptions creates a new geo field with the given name and additional options
+func NewVectorFieldOptions(name string, options VectorFieldOptions) Field {
+	return Field{
+		Name:    name,
+		Type:    VectorField,
+		Options: options,
+	}
 }
 
 // Schema represents an index schema Schema, or how the index would
@@ -415,6 +440,26 @@ func serializeField(f Field, args redis.Args) (argsOut redis.Args, err error) {
 			}
 			if opts.NoIndex {
 				argsOut = append(argsOut, "NOINDEX")
+			}
+		}
+	case VectorField:
+		argsOut = append(argsOut, f.Name, "VECTOR")
+		if f.Options != nil {
+			opts, ok := f.Options.(VectorFieldOptions)
+			if !ok {
+				err = fmt.Errorf("Error on VectorField serialization")
+				return
+			}
+			if opts.Algorithm != "" {
+				argsOut = append(argsOut, opts.Algorithm)
+			}
+			if opts.Attributes != nil {
+				var flat []interface{}
+				for attrName, attrValue := range opts.Attributes {
+					flat = append(flat, attrName, attrValue)
+				}
+				argsOut = append(argsOut, len(flat))
+				argsOut = append(argsOut, flat...)
 			}
 		}
 	default:
