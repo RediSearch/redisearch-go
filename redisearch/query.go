@@ -400,6 +400,7 @@ func (q *Query) AddParam(name string, value interface{}) *Query {
 	return q
 }
 
+// SetDialect can have one of 2 options - 1 or 2
 func (q *Query) SetDialect(dialect int) *Query {
 	q.Dialect = dialect
 	return q

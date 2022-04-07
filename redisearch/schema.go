@@ -190,6 +190,7 @@ type GeoFieldOptions struct {
 
 type algorithm string
 
+// Supported algorithms for Vector field
 const (
 	Flat algorithm = "FLAT"
 	HNSW algorithm = "HNSW"
@@ -284,7 +285,7 @@ func NewGeoFieldOptions(name string, options GeoFieldOptions) Field {
 	return f
 }
 
-// NewGeoFieldOptions creates a new geo field with the given name and additional options
+// NewVectorFieldOptions creates a new geo field with the given name and additional options
 func NewVectorFieldOptions(name string, options VectorFieldOptions) Field {
 	return Field{
 		Name:    name,
