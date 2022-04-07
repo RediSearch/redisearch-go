@@ -510,3 +510,59 @@ func TestReturnFields(t *testing.T) {
 	assert.Equal(t, "Jon", docs[0].Properties["name"])
 	assert.Equal(t, "25", docs[0].Properties["years"])
 }
+
+func TestParams(t *testing.T) {
+	c := createClient("TestParams")
+	version, _ := c.getRediSearchVersion()
+	if version < 20200 {
+		// VectorSimilarity is available for RediSearch 2.2+
+		return
+	}
+
+	// Create a schema
+	sc := NewSchema(DefaultOptions).AddField(NewNumericField("numval"))
+	c.Drop()
+	assert.Nil(t, c.CreateIndex(sc))
+	// Create data
+    c.pool.Get().Do("HSET", "1", "numval", "1")
+    c.pool.Get().Do("HSET", "2", "numval", "2")
+    c.pool.Get().Do("HSET", "3", "numval", "3")
+	// Searching with parameters
+	_, total, err := c.Search(NewQuery("@numval:[$min $max]").
+		SetParams(map[string]interface{}{"min": "1", "max": "2"}))
+	assert.Nil(t, err)
+	assert.Equal(t, 2, total)
+}
+
+func TestVectorField(t *testing.T) {
+	c := createClient("TestVectorField")
+	version, _ := c.getRediSearchVersion()
+	if version < 20200 {
+		// VectorSimilarity is available for RediSearch 2.2+
+		return
+	}
+
+	// Create a schema
+	sc := NewSchema(DefaultOptions).AddField(
+		NewVectorFieldOptions("v", VectorFieldOptions{Algorithm: Flat, Attributes: map[string]interface{}{
+			"TYPE": "FLOAT32",
+			"DIM": 2,
+			"DISTANCE_METRIC": "L2",
+		}}),
+	)
+	c.Drop()
+	assert.Nil(t, c.CreateIndex(sc))
+	// Create data
+    c.pool.Get().Do("HSET", "a", "v", "aaaaaaaa")
+    c.pool.Get().Do("HSET", "b", "v", "aaaabaaa")
+    c.pool.Get().Do("HSET", "c", "v", "aaaaabaa")
+	// Searching with parameters
+	docs, total, err := c.Search(NewQuery("*=>[KNN 2 @v $vec]").
+		AddParam("vec", "aaaaaaaa").
+		SetSortBy("__v_score", true).
+		AddReturnFields("__v_score"))
+	assert.Nil(t, err)
+	assert.Equal(t, 2, total)
+	assert.Equal(t, "a", docs[0].Id)
+	assert.Equal(t, "0", docs[0].Properties["__v_score"])
+}
