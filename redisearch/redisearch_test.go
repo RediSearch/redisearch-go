@@ -524,9 +524,12 @@ func TestParams(t *testing.T) {
 	c.Drop()
 	assert.Nil(t, c.CreateIndex(sc))
 	// Create data
-    c.pool.Get().Do("HSET", "1", "numval", "1")
-    c.pool.Get().Do("HSET", "2", "numval", "2")
-    c.pool.Get().Do("HSET", "3", "numval", "3")
+    _, err := c.pool.Get().Do("HSET", "1", "numval", "1")
+	assert.Nil(t, err)
+    _, err = c.pool.Get().Do("HSET", "2", "numval", "2")
+	assert.Nil(t, err)
+    _, err = c.pool.Get().Do("HSET", "3", "numval", "3")
+	assert.Nil(t, err)
 	// Searching with parameters
 	_, total, err := c.Search(NewQuery("@numval:[$min $max]").
 		SetParams(map[string]interface{}{"min": "1", "max": "2"}))
