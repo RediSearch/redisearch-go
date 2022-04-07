@@ -231,7 +231,7 @@ func (q Query) serialize() redis.Args {
 	}
 
 	if q.Params != nil {
-		args = args.Add("PARAMS", len(q.Params) * 2)
+		args = args.Add("PARAMS", len(q.Params)*2)
 		for name, value := range q.Params {
 			args = args.Add(name, value)
 		}
@@ -397,7 +397,7 @@ func (q *Query) AddParam(name string, value interface{}) *Query {
 	if q.Params == nil {
 		q.Params = make(map[string]interface{})
 	}
-	q.Params[name] = value;
+	q.Params[name] = value
 	return q
 }
 

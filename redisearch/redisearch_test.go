@@ -524,11 +524,11 @@ func TestParams(t *testing.T) {
 	c.Drop()
 	assert.Nil(t, c.CreateIndex(sc))
 	// Create data
-    _, err := c.pool.Get().Do("HSET", "1", "numval", "1")
+	_, err := c.pool.Get().Do("HSET", "1", "numval", "1")
 	assert.Nil(t, err)
-    _, err = c.pool.Get().Do("HSET", "2", "numval", "2")
+	_, err = c.pool.Get().Do("HSET", "2", "numval", "2")
 	assert.Nil(t, err)
-    _, err = c.pool.Get().Do("HSET", "3", "numval", "3")
+	_, err = c.pool.Get().Do("HSET", "3", "numval", "3")
 	assert.Nil(t, err)
 	// Searching with parameters
 	_, total, err := c.Search(NewQuery("@numval:[$min $max]").
@@ -549,19 +549,19 @@ func TestVectorField(t *testing.T) {
 	// Create a schema
 	sc := NewSchema(DefaultOptions).AddField(
 		NewVectorFieldOptions("v", VectorFieldOptions{Algorithm: Flat, Attributes: map[string]interface{}{
-			"TYPE": "FLOAT32",
-			"DIM": 2,
+			"TYPE":            "FLOAT32",
+			"DIM":             2,
 			"DISTANCE_METRIC": "L2",
 		}}),
 	)
 	c.Drop()
 	assert.Nil(t, c.CreateIndex(sc))
 	// Create data
-    _, err := c.pool.Get().Do("HSET", "a", "v", "aaaaaaaa")
+	_, err := c.pool.Get().Do("HSET", "a", "v", "aaaaaaaa")
 	assert.Nil(t, err)
-    _, err = c.pool.Get().Do("HSET", "b", "v", "aaaabaaa")
+	_, err = c.pool.Get().Do("HSET", "b", "v", "aaaabaaa")
 	assert.Nil(t, err)
-    _, err = c.pool.Get().Do("HSET", "c", "v", "aaaaabaa")
+	_, err = c.pool.Get().Do("HSET", "c", "v", "aaaaabaa")
 	assert.Nil(t, err)
 	// Searching with parameters
 	docs, total, err := c.Search(NewQuery("*=>[KNN 2 @v $vec]").
