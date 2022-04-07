@@ -560,6 +560,9 @@ func (i *Client) Info() (*IndexInfo, error) {
 			indexOptions, _ = redis.Strings(res[ii+1], nil)
 		case "fields":
 			schemaFields, _ = redis.Values(res[ii+1], nil)
+		// In newer versions of Redis, the fields have been renamed to attributes
+		case "attributes":
+			schemaFields, _ = redis.Values(res[ii+1], nil)
 		}
 	}
 
