@@ -545,7 +545,7 @@ func (i *Client) Info() (*IndexInfo, error) {
 	}
 
 	ret := IndexInfo{}
-	var schemaFields []interface{}
+	var schemaAttributes []interface{}
 	var indexOptions []string
 
 	// Iterate over the values
@@ -558,13 +558,13 @@ func (i *Client) Info() (*IndexInfo, error) {
 		switch key {
 		case "index_options":
 			indexOptions, _ = redis.Strings(res[ii+1], nil)
-		case "fields":
-			schemaFields, _ = redis.Values(res[ii+1], nil)
+		case "attributes":
+			schemaAttributes, _ = redis.Values(res[ii+1], nil)
 		}
 	}
 
-	if schemaFields != nil {
-		ret.loadSchema(schemaFields, indexOptions)
+	if schemaAttributes != nil {
+		ret.loadSchema(schemaAttributes, indexOptions)
 	}
 
 	return &ret, nil
