@@ -1167,3 +1167,25 @@ func TestClient_ListIndex(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, "index-list-test", indexes[0])
 }
+
+func TestClient_FieldsTEst(t *testing.T) {
+	c := createClient("ft-info-fields-test")
+	flush(c)
+	schema := NewSchema(DefaultOptions).
+		AddField(NewTextFieldOptions("text", TextFieldOptions{Sortable: true, PhoneticMatcher: PhoneticDoubleMetaphoneEnglish})).
+		AddField(NewNumericField("numeric"))
+	// In this example we will only index keys started by product:
+	indexDefinition := NewIndexDefinition().AddPrefix("ft-info-fields-test:")
+	// Add the Index Definition
+	err := c.CreateIndexWithIndexDefinition(schema, indexDefinition)
+	assert.Nil(t, err)
+
+	info, err := c.Info()
+	assert.Nil(t, err)
+	assert.Equal(t,
+		[]Field(
+			[]Field{
+				Field{Name: "text", Type: 0, Sortable: false, Options: TextFieldOptions{Weight: 1, Sortable: true, NoStem: false, NoIndex: false, PhoneticMatcher: "", As: ""}},
+				Field{Name: "numeric", Type: 1, Sortable: false, Options: NumericFieldOptions{Sortable: false, NoIndex: false, As: ""}}}),
+		info.Schema.Fields)
+}
