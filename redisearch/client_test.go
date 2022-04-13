@@ -1173,6 +1173,7 @@ func TestClient_FieldsTEst(t *testing.T) {
 	flush(c)
 	schema := NewSchema(DefaultOptions).
 		AddField(NewTextFieldOptions("text", TextFieldOptions{Sortable: true, PhoneticMatcher: PhoneticDoubleMetaphoneEnglish})).
+		AddField(NewGeoField("geo")).
 		AddField(NewNumericField("numeric"))
 	// In this example we will only index keys started by product:
 	indexDefinition := NewIndexDefinition().AddPrefix("ft-info-fields-test:")
@@ -1186,6 +1187,7 @@ func TestClient_FieldsTEst(t *testing.T) {
 		[]Field(
 			[]Field{
 				Field{Name: "text", Type: 0, Sortable: false, Options: TextFieldOptions{Weight: 1, Sortable: true, NoStem: false, NoIndex: false, PhoneticMatcher: "", As: ""}},
+				Field{Name: "geo", Type: 2, Sortable: false, Options: interface{}(nil)},
 				Field{Name: "numeric", Type: 1, Sortable: false, Options: NumericFieldOptions{Sortable: false, NoIndex: false, As: ""}}}),
 		info.Schema.Fields)
 }

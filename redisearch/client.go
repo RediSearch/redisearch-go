@@ -561,7 +561,11 @@ func (i *Client) Info() (*IndexInfo, error) {
 		case "fields":
 			schemaFields, _ = redis.Values(res[ii+1], nil)
 		case "attributes":
-			schemaFields, _ = redis.Values(res[ii+1], nil)
+			for _, attr := range res[ii+1].([]interface{}) {
+				l := len(attr.([]interface{}))
+				schemaFields = append(schemaFields, attr.([]interface{})[3:l])
+
+			}
 		}
 	}
 
