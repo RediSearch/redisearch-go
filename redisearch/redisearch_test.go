@@ -525,7 +525,7 @@ func TestNoStopWords(t *testing.T) {
 	_, err = vanillaConnection.Do("HSET", "doc1", "title", "hello world")
 	assert.Nil(t, err)
 
-	// Searching with return fields
+	// Searching
 	_, total, err := c.Search(NewQuery("hello a world").SetFlags((QueryNoContent)))
 	assert.Nil(t, err)
 	assert.Equal(t, 1, total)
