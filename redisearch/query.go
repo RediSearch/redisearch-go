@@ -96,6 +96,8 @@ type Query struct {
 	SortBy        *SortingKey
 	HighlightOpts *HighlightOptions
 	SummarizeOpts *SummaryOptions
+	Params        map[string]interface{}
+	Dialect       int
 }
 
 // Paging represents the offset paging of a search result
@@ -233,6 +235,18 @@ func (q Query) serialize() redis.Args {
 			}
 		}
 	}
+
+	if q.Params != nil {
+		args = args.Add("PARAMS", len(q.Params)*2)
+		for name, value := range q.Params {
+			args = args.Add(name, value)
+		}
+	}
+
+	if q.Dialect != 0 {
+		args = args.Add("DIALECT", q.Dialect)
+	}
+
 	return args
 }
 
@@ -373,6 +387,29 @@ func (q *Query) Summarize(fields ...string) *Query {
 // This function accepts advanced settings for snippet length, separators and number of snippets
 func (q *Query) SummarizeOptions(opts SummaryOptions) *Query {
 	q.SummarizeOpts = &opts
+	return q
+}
+
+// SetParams sets parameters that can be referenced in the query string by a $ , followed by the parameter name,
+// e.g., $user , and each such reference in the search query to a parameter name is substituted
+// by the corresponding parameter value.
+func (q *Query) SetParams(params map[string]interface{}) *Query {
+	q.Params = params
+	return q
+}
+
+// AddParam adds a new param to the parameters list
+func (q *Query) AddParam(name string, value interface{}) *Query {
+	if q.Params == nil {
+		q.Params = make(map[string]interface{})
+	}
+	q.Params[name] = value
+	return q
+}
+
+// SetDialect can have one of 2 options: 1 or 2
+func (q *Query) SetDialect(dialect int) *Query {
+	q.Dialect = dialect
 	return q
 }
 
