@@ -514,7 +514,7 @@ func TestReturnFields(t *testing.T) {
 func TestParams(t *testing.T) {
 	c := createClient("TestParams")
 	version, _ := c.getRediSearchVersion()
-	if version < 20200 {
+	if version < 20430 {
 		// VectorSimilarity is available for RediSearch 2.2+
 		return
 	}
@@ -541,7 +541,7 @@ func TestParams(t *testing.T) {
 func TestVectorField(t *testing.T) {
 	c := createClient("TestVectorField")
 	version, _ := c.getRediSearchVersion()
-	if version < 20200 {
+	if version < 20430 {
 		// VectorSimilarity is available for RediSearch 2.2+
 		return
 	}

@@ -201,9 +201,13 @@ func (a *AggregateQuery) Limit(offset int, num int) *AggregateQuery {
 	return a
 }
 
-//Load document fields from the document HASH objects (if they are not in the sortables)
+//Load document fields from the document HASH objects (if they are not in the sortables).
+//Empty array will load all properties.
 func (a *AggregateQuery) Load(Properties []string) *AggregateQuery {
 	nproperties := len(Properties)
+	if nproperties == 0 {
+		a.AggregatePlan = a.AggregatePlan.Add("LOAD", "*")
+	}
 	if nproperties > 0 {
 		a.AggregatePlan = a.AggregatePlan.Add("LOAD", nproperties)
 		for _, property := range Properties {
