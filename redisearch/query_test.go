@@ -113,7 +113,7 @@ func TestQuery_serialize(t *testing.T) {
 			NumFragments: 3,
 			Separator:    "...",
 		}}, redis.Args{raw, "LIMIT", 0, 0, "SUMMARIZE", "FIELDS", 1, "test_field", "LEN", 20, "FRAGS", 3, "SEPARATOR", "..."}},
-		{"Params", fields{Raw: raw, Params: map[string]interface{}{"min": 1}}, redis.Args{raw, "LIMIT", 0, 0, "PARAMS", 4, "min", 1}},
+		{"Params", fields{Raw: raw, Params: map[string]interface{}{"min": 1}}, redis.Args{raw, "LIMIT", 0, 0, "PARAMS", 2, "min", 1}},
 		{"Dialect", fields{Raw: raw, Dialect: 2}, redis.Args{raw, "LIMIT", 0, 0, "DIALECT", 2}},
 	}
 	for _, tt := range tests {
