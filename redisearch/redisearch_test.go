@@ -200,14 +200,14 @@ func TestNoIndex(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, 0, total)
 
-	_, total, err = c.Search(NewQuery("@f2:Mark*"))
+	_, total, _ = c.Search(NewQuery("@f2:Mark*"))
 	assert.Equal(t, 2, total)
 
-	docs, total, err := c.Search(NewQuery("@f2:Mark*").SetSortBy("f1", false))
+	docs, total, _ := c.Search(NewQuery("@f2:Mark*").SetSortBy("f1", false))
 	assert.Equal(t, 2, total)
 	assert.Equal(t, "TestNoIndex-doc1", docs[0].Id)
 
-	docs, total, err = c.Search(NewQuery("@f2:Mark*").SetSortBy("f1", true))
+	docs, total, _ = c.Search(NewQuery("@f2:Mark*").SetSortBy("f1", true))
 	assert.Equal(t, 2, total)
 	assert.Equal(t, "TestNoIndex-doc2", docs[0].Id)
 	teardown(c)
@@ -439,7 +439,7 @@ func TestFilter(t *testing.T) {
 	assert.Equal(t, 1, total)
 	assert.Equal(t, "18", docs[0].Properties["age"])
 
-	docs, total, err = c.Search(NewQuery("hello world").
+	_, total, err = c.Search(NewQuery("hello world").
 		AddFilter(Filter{Field: "location", Options: GeoFilterOptions{Lon: 10, Lat: 13, Radius: 1, Unit: KILOMETERS}}).
 		SetSortBy("age", true).
 		SetReturnFields("body"))
@@ -509,6 +509,29 @@ func TestReturnFields(t *testing.T) {
 	assert.Equal(t, 1, total)
 	assert.Equal(t, "Jon", docs[0].Properties["name"])
 	assert.Equal(t, "25", docs[0].Properties["years"])
+}
+
+func TestNoStopWords(t *testing.T) {
+	c := createClient("testung")
+
+	sc := NewSchema(DefaultOptions).
+		AddField(NewTextField("title"))
+	c.Drop()
+
+	err := c.CreateIndex(sc)
+	assert.Nil(t, err)
+
+	vanillaConnection := c.pool.Get()
+	_, err = vanillaConnection.Do("HSET", "doc1", "title", "hello world")
+	assert.Nil(t, err)
+
+	// Searching
+	_, total, err := c.Search(NewQuery("hello a world").SetFlags((QueryNoContent)))
+	assert.Nil(t, err)
+	assert.Equal(t, 1, total)
+	_, total, err = c.Search(NewQuery("hello a world").SetFlags((QueryNoContent | QueryWithStopWords)))
+	assert.Nil(t, err)
+	assert.Equal(t, 0, total)
 }
 
 func TestParams(t *testing.T) {

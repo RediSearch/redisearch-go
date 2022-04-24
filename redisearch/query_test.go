@@ -94,6 +94,7 @@ func TestQuery_serialize(t *testing.T) {
 		{"QueryInOrder", fields{Raw: raw, Flags: QueryInOrder}, redis.Args{raw, "LIMIT", 0, 0, "INORDER"}},
 		{"QueryWithPayloads", fields{Raw: raw, Flags: QueryWithPayloads}, redis.Args{raw, "LIMIT", 0, 0, "WITHPAYLOADS"}},
 		{"QueryWithScores", fields{Raw: raw, Flags: QueryWithScores}, redis.Args{raw, "LIMIT", 0, 0, "WITHSCORES"}},
+		{"QueryWithStopWords", fields{Raw: raw, Flags: QueryWithStopWords}, redis.Args{raw, "LIMIT", 0, 0, "NOSTOPWORDS"}},
 		{"InKeys", fields{Raw: raw, InKeys: []string{"test_key"}}, redis.Args{raw, "LIMIT", 0, 0, "INKEYS", 1, "test_key"}},
 		{"InFields", fields{Raw: raw, InFields: []string{"test_key"}}, redis.Args{raw, "LIMIT", 0, 0, "INFIELDS", 1, "test_key"}},
 		{"ReturnFields", fields{Raw: raw, ReturnFields: []string{"test_field"}}, redis.Args{raw, "LIMIT", 0, 0, "RETURN", 1, "test_field"}},
