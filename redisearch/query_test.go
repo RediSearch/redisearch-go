@@ -79,6 +79,8 @@ func TestQuery_serialize(t *testing.T) {
 		SortBy        *SortingKey
 		HighlightOpts *HighlightOptions
 		SummarizeOpts *SummaryOptions
+		Params        map[string]interface{}
+		Dialect       int
 	}
 	tests := []struct {
 		name   string
@@ -111,6 +113,8 @@ func TestQuery_serialize(t *testing.T) {
 			NumFragments: 3,
 			Separator:    "...",
 		}}, redis.Args{raw, "LIMIT", 0, 0, "SUMMARIZE", "FIELDS", 1, "test_field", "LEN", 20, "FRAGS", 3, "SEPARATOR", "..."}},
+		{"Params", fields{Raw: raw, Params: map[string]interface{}{"min": 1}}, redis.Args{raw, "LIMIT", 0, 0, "PARAMS", 2, "min", 1}},
+		{"Dialect", fields{Raw: raw, Dialect: 2}, redis.Args{raw, "LIMIT", 0, 0, "DIALECT", 2}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -126,6 +130,8 @@ func TestQuery_serialize(t *testing.T) {
 				SortBy:        tt.fields.SortBy,
 				HighlightOpts: tt.fields.HighlightOpts,
 				SummarizeOpts: tt.fields.SummarizeOpts,
+				Params:        tt.fields.Params,
+				Dialect:       tt.fields.Dialect,
 			}
 			if g := q.serialize(); !reflect.DeepEqual(g, tt.want) {
 				t.Errorf("serialize() = %v, want %v", g, tt.want)
