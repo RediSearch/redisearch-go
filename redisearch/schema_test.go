@@ -74,7 +74,7 @@ func TestSerializeSchema(t *testing.T) {
 		{"default-and-tag", args{NewSchema(DefaultOptions).AddField(NewTagField("tag-field")), redis.Args{}}, redis.Args{"SCHEMA", "tag-field", "TAG", "SEPARATOR", ","}, false},
 		{"default-and-tag-with-options", args{NewSchema(DefaultOptions).AddField(NewTagFieldOptions("tag-field", TagFieldOptions{Sortable: true, NoIndex: false, Separator: byte(','), As: "field"})), redis.Args{}}, redis.Args{"SCHEMA", "tag-field", "AS", "field", "TAG", "SEPARATOR", ",", "SORTABLE"}, false},
 		{"default-geo-with-options", args{NewSchema(DefaultOptions).AddField(NewGeoFieldOptions("location", GeoFieldOptions{As: "loc"})), redis.Args{}}, redis.Args{"SCHEMA", "location", "AS", "loc", "GEO"}, false},
-		{"default-vector", args{NewSchema(DefaultOptions).AddField(NewVectorFieldOptions("vec", VectorFieldOptions{Algorithm: Flat, Attributes: map[string]interface{}{"DIM": 128}})), redis.Args{}}, redis.Args{"SCHEMA", "vec", "VECTOR", Flat, 6, "DIM", 128}, false},
+		{"default-vector", args{NewSchema(DefaultOptions).AddField(NewVectorFieldOptions("vec", VectorFieldOptions{Algorithm: Flat, Attributes: map[string]interface{}{"DIM": 128}})), redis.Args{}}, redis.Args{"SCHEMA", "vec", "VECTOR", Flat, 2, "DIM", 128}, false},
 		{"error-unsupported", args{NewSchema(DefaultOptions).AddField(Field{Type: 10}), redis.Args{}}, nil, true},
 	}
 	for _, tt := range tests {
