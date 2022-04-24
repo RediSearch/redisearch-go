@@ -53,7 +53,7 @@ jobs:
   build: # test with redisearch:latest
     docker:
       - image: circleci/golang:1.16
-      - image: redislabs/redisearch:latest
+      - image: redislabs/redisearch:edge
 
     working_directory: /go/src/github.com/RediSearch/redisearch-go
     steps:
@@ -64,26 +64,6 @@ jobs:
       - run: make godoc_examples
       - run: make coverage
       - run: bash <(curl -s https://raw.githubusercontent.com/codecov/codecov-bash/master/codecov) -t ${CODECOV_TOKEN}
-
-  build-v16:
-    docker:
-      - image: circleci/golang:1.16
-      - image: redislabs/redisearch:edge
-
-    working_directory: /go/src/github.com/RediSearch/redisearch-go
-    steps:
-      - checkout
-      - run: make test
-
-  build-edge: # test nightly with redisearch:edge
-    docker:
-      - image: circleci/golang:1.16
-      - image: redislabs/redisearch:edge
-
-    working_directory: /go/src/github.com/RediSearch/redisearch-go
-    steps:
-      - checkout
-      - run: make test
 
 workflows:
   version: 2
