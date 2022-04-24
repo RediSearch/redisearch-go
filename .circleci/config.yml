@@ -68,7 +68,7 @@ jobs:
   build-v16:
     docker:
       - image: circleci/golang:1.16
-      - image: redislabs/redisearch:1.6.15
+      - image: redislabs/redisearch:edge
 
     working_directory: /go/src/github.com/RediSearch/redisearch-go
     steps:
