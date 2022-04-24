@@ -71,8 +71,6 @@ workflows:
     jobs:
       - build-tls
       - build
-      - build-edge
-      - build-v16
   nightly:
     triggers:
       - schedule:
@@ -82,5 +80,5 @@ workflows:
               only:
                 - master
     jobs:
-      - build-edge
+      - build
       - build-tls
