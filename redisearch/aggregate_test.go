@@ -616,10 +616,10 @@ func TestAggregateQuery_Load(t *testing.T) {
 			args{[]string{"field1", "field2", "field3", "field4"}},
 			redis.Args{"*", "LOAD", 4, "@field1", "@field2", "@field3", "@field4"},
 		},
-		{"TestAggregateQuery_Load_Empty",
+		{"TestAggregateQuery_Load_All",
 			fields{nil, redis.Args{}, nil, 0, false, false, false, nil},
 			args{[]string{}},
-			redis.Args{"*"},
+			redis.Args{"*", "LOAD", "*"},
 		},
 	}
 	for _, tt := range tests {

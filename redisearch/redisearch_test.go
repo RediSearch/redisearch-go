@@ -200,14 +200,14 @@ func TestNoIndex(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, 0, total)
 
-	_, total, err = c.Search(NewQuery("@f2:Mark*"))
+	_, total, _ = c.Search(NewQuery("@f2:Mark*"))
 	assert.Equal(t, 2, total)
 
-	docs, total, err := c.Search(NewQuery("@f2:Mark*").SetSortBy("f1", false))
+	docs, total, _ := c.Search(NewQuery("@f2:Mark*").SetSortBy("f1", false))
 	assert.Equal(t, 2, total)
 	assert.Equal(t, "TestNoIndex-doc1", docs[0].Id)
 
-	docs, total, err = c.Search(NewQuery("@f2:Mark*").SetSortBy("f1", true))
+	docs, total, _ = c.Search(NewQuery("@f2:Mark*").SetSortBy("f1", true))
 	assert.Equal(t, 2, total)
 	assert.Equal(t, "TestNoIndex-doc2", docs[0].Id)
 	teardown(c)
@@ -439,7 +439,7 @@ func TestFilter(t *testing.T) {
 	assert.Equal(t, 1, total)
 	assert.Equal(t, "18", docs[0].Properties["age"])
 
-	docs, total, err = c.Search(NewQuery("hello world").
+	_, total, err = c.Search(NewQuery("hello world").
 		AddFilter(Filter{Field: "location", Options: GeoFilterOptions{Lon: 10, Lat: 13, Radius: 1, Unit: KILOMETERS}}).
 		SetSortBy("age", true).
 		SetReturnFields("body"))
@@ -509,4 +509,91 @@ func TestReturnFields(t *testing.T) {
 	assert.Equal(t, 1, total)
 	assert.Equal(t, "Jon", docs[0].Properties["name"])
 	assert.Equal(t, "25", docs[0].Properties["years"])
+}
+
+func TestNoStopWords(t *testing.T) {
+	c := createClient("testung")
+
+	sc := NewSchema(DefaultOptions).
+		AddField(NewTextField("title"))
+	c.Drop()
+
+	err := c.CreateIndex(sc)
+	assert.Nil(t, err)
+
+	vanillaConnection := c.pool.Get()
+	_, err = vanillaConnection.Do("HSET", "doc1", "title", "hello world")
+	assert.Nil(t, err)
+
+	// Searching
+	_, total, err := c.Search(NewQuery("hello a world").SetFlags((QueryNoContent)))
+	assert.Nil(t, err)
+	assert.Equal(t, 1, total)
+	_, total, err = c.Search(NewQuery("hello a world").SetFlags((QueryNoContent | QueryWithStopWords)))
+	assert.Nil(t, err)
+	assert.Equal(t, 0, total)
+}
+
+func TestParams(t *testing.T) {
+	c := createClient("TestParams")
+	version, _ := c.getRediSearchVersion()
+	if version < 20430 {
+		// VectorSimilarity is available for RediSearch 2.2+
+		return
+	}
+
+	// Create a schema
+	sc := NewSchema(DefaultOptions).AddField(NewNumericField("numval"))
+	c.Drop()
+	assert.Nil(t, c.CreateIndex(sc))
+	// Create data
+	_, err := c.pool.Get().Do("HSET", "1", "numval", "1")
+	assert.Nil(t, err)
+	_, err = c.pool.Get().Do("HSET", "2", "numval", "2")
+	assert.Nil(t, err)
+	_, err = c.pool.Get().Do("HSET", "3", "numval", "3")
+	assert.Nil(t, err)
+	// Searching with parameters
+	_, total, err := c.Search(NewQuery("@numval:[$min $max]").
+		SetParams(map[string]interface{}{"min": "1", "max": "2"}).
+		SetDialect(2))
+	assert.Nil(t, err)
+	assert.Equal(t, 2, total)
+}
+
+func TestVectorField(t *testing.T) {
+	c := createClient("TestVectorField")
+	version, _ := c.getRediSearchVersion()
+	if version < 20430 {
+		// VectorSimilarity is available for RediSearch 2.2+
+		return
+	}
+
+	// Create a schema
+	sc := NewSchema(DefaultOptions).AddField(
+		NewVectorFieldOptions("v", VectorFieldOptions{Algorithm: Flat, Attributes: map[string]interface{}{
+			"TYPE":            "FLOAT32",
+			"DIM":             2,
+			"DISTANCE_METRIC": "L2",
+		}}),
+	)
+	c.Drop()
+	assert.Nil(t, c.CreateIndex(sc))
+	// Create data
+	_, err := c.pool.Get().Do("HSET", "a", "v", "aaaaaaaa")
+	assert.Nil(t, err)
+	_, err = c.pool.Get().Do("HSET", "b", "v", "aaaabaaa")
+	assert.Nil(t, err)
+	_, err = c.pool.Get().Do("HSET", "c", "v", "aaaaabaa")
+	assert.Nil(t, err)
+	// Searching with parameters
+	docs, total, err := c.Search(NewQuery("*=>[KNN 2 @v $vec]").
+		AddParam("vec", "aaaaaaaa").
+		SetSortBy("__v_score", true).
+		AddReturnFields("__v_score").
+		SetDialect(2))
+	assert.Nil(t, err)
+	assert.Equal(t, 2, total)
+	assert.Equal(t, "a", docs[0].Id)
+	assert.Equal(t, "0", docs[0].Properties["__v_score"])
 }
