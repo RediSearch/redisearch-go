@@ -245,26 +245,12 @@ func (i *Client) SpellCheck(q *Query, s *SpellCheckOptions) (suggs []MisspelledT
 	return
 }
 
-// Aggregate
+// Deprecated: Use AggregateQuery() instead.
 func (i *Client) Aggregate(q *AggregateQuery) (aggregateReply [][]string, total int, err error) {
-	conn := i.pool.Get()
-	defer conn.Close()
-	hasCursor := q.WithCursor
-	validCursor := q.CursorHasResults()
-	var res []interface{} = nil
-	if !validCursor {
-		args := redis.Args{i.name}
-		args = append(args, q.Serialize()...)
-		res, err = redis.Values(conn.Do("FT.AGGREGATE", args...))
-	} else {
-		args := redis.Args{"READ", i.name, q.Cursor.Id}
-		res, err = redis.Values(conn.Do("FT.CURSOR", args...))
-	}
-	if err != nil {
-		return
-	}
+	res, err := i.aggregate(q)
+
 	// has no cursor
-	if !hasCursor {
+	if !q.WithCursor {
 		total, aggregateReply, err = processAggReply(res)
 		// has cursor
 	} else {
@@ -278,7 +264,47 @@ func (i *Client) Aggregate(q *AggregateQuery) (aggregateReply [][]string, total 
 		}
 		total, aggregateReply, err = processAggReply(partialResults)
 	}
+	return
+}
 
+// AggregateQuery - New version to Aggregate() function. The values in each map can be string or []string.
+func (i *Client) AggregateQuery(q *AggregateQuery) (total int, aggregateReply []map[string]interface{}, err error) {
+	res, err := i.aggregate(q)
+
+	// has no cursor
+	if !q.WithCursor {
+		total, aggregateReply, err = processAggQueryReply(res)
+		// has cursor
+	} else {
+		var partialResults, err = redis.Values(res[0], nil)
+		if err != nil {
+			return total, aggregateReply, err
+		}
+		q.Cursor.Id, err = redis.Int(res[1], nil)
+		if err != nil {
+			return total, aggregateReply, err
+		}
+		total, aggregateReply, err = processAggQueryReply(partialResults)
+	}
+	return
+}
+
+func (i *Client) aggregate(q *AggregateQuery) (res []interface{}, err error) {
+	conn := i.pool.Get()
+	defer conn.Close()
+	validCursor := q.CursorHasResults()
+	// var res []interface{} = nil
+	if !validCursor {
+		args := redis.Args{i.name}
+		args = append(args, q.Serialize()...)
+		res, err = redis.Values(conn.Do("FT.AGGREGATE", args...))
+	} else {
+		args := redis.Args{"READ", i.name, q.Cursor.Id}
+		res, err = redis.Values(conn.Do("FT.CURSOR", args...))
+	}
+	if err != nil {
+		return
+	}
 	return
 }
 

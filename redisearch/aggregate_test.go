@@ -148,6 +148,7 @@ func Init() {
 
 	AddValues(c)
 }
+
 func TestAggregateGroupBy(t *testing.T) {
 	Init()
 	c := createClient("docs-games-idx1")
@@ -158,9 +159,16 @@ func TestAggregateGroupBy(t *testing.T) {
 		SortBy([]SortingKey{*NewSortingKeyDir("@count", false)}).
 		Limit(0, 5)
 
-	_, count, err := c.Aggregate(q1)
+	res, count, err := c.Aggregate(q1)
 	assert.Nil(t, err)
 	assert.Equal(t, 5, count)
+	assert.Equal(t, []string{"brand", "", "count", "1518"}, res[0])
+
+	count, rep, err := c.AggregateQuery(q1)
+	assert.Nil(t, err)
+	assert.Equal(t, 5, count)
+	assert.Equal(t, map[string]interface{}{"brand": "", "count": "1518"}, rep[0])
+
 }
 
 func TestAggregateMinMax(t *testing.T) {
@@ -181,6 +189,13 @@ func TestAggregateMinMax(t *testing.T) {
 	assert.GreaterOrEqual(t, f, 88.0)
 	assert.Less(t, f, 89.0)
 
+	_, rep, err := c.AggregateQuery(q1)
+	assert.Nil(t, err)
+	fmt.Println(rep[0])
+	f, _ = strconv.ParseFloat(rep[0]["minPrice"].(string), 64)
+	assert.GreaterOrEqual(t, f, 88.0)
+	assert.Less(t, f, 89.0)
+
 	q2 := NewAggregateQuery().SetQuery(NewQuery("sony")).
 		GroupBy(*NewGroupBy().AddFields("@brand").
 			Reduce(*NewReducer(GroupByReducerCount, []string{})).
@@ -191,6 +206,12 @@ func TestAggregateMinMax(t *testing.T) {
 	assert.Nil(t, err)
 	row = res[0]
 	f, _ = strconv.ParseFloat(row[5], 64)
+	assert.GreaterOrEqual(t, f, 695.0)
+	assert.Less(t, f, 696.0)
+
+	_, rep, err = c.AggregateQuery(q2)
+	assert.Nil(t, err)
+	f, _ = strconv.ParseFloat(rep[0]["maxPrice"].(string), 64)
 	assert.GreaterOrEqual(t, f, 695.0)
 	assert.Less(t, f, 696.0)
 }
@@ -208,6 +229,27 @@ func TestAggregateCountDistinct(t *testing.T) {
 	assert.Nil(t, err)
 	row := res[0]
 	assert.Equal(t, "1484", row[3])
+
+	_, rep, err := c.AggregateQuery(q1)
+	assert.Nil(t, err)
+	assert.Equal(t, "1484", rep[0]["count_distinct(title)"])
+}
+
+func TestAggregateToList(t *testing.T) {
+	Init()
+	c := createClient("docs-games-idx1")
+
+	q1 := NewAggregateQuery().
+		GroupBy(*NewGroupBy().AddFields("@brand").
+			Reduce(*NewReducer(GroupByReducerToList, []string{"@brand"})))
+
+	total, reply, err := c.AggregateQuery(q1) // Can't be used with Aggregate when using ToList!
+	assert.Nil(t, err)
+	assert.Equal(t, 292, total)
+	_, ok := reply[0]["brand"].(string)
+	assert.True(t, ok)
+	_, ok = reply[0]["__generated_aliastolistbrand"].([]string)
+	assert.True(t, ok)
 }
 
 func TestAggregateFilter(t *testing.T) {
@@ -226,6 +268,12 @@ func TestAggregateFilter(t *testing.T) {
 		assert.Greater(t, f, 5.0)
 	}
 
+	_, rep, err := c.AggregateQuery(q1)
+	assert.Nil(t, err)
+	for _, row := range rep {
+		f, _ := strconv.ParseFloat(row["count"].(string), 64)
+		assert.Greater(t, f, 5.0)
+	}
 }
 
 func makeAggResponseInterface(seed int64, nElements int, responseSizes []int) (res []interface{}) {
