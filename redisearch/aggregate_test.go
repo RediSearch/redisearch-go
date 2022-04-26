@@ -159,16 +159,13 @@ func TestAggregateGroupBy(t *testing.T) {
 		SortBy([]SortingKey{*NewSortingKeyDir("@count", false)}).
 		Limit(0, 5)
 
-	res, count, err := c.Aggregate(q1)
+	_, count, err := c.Aggregate(q1)
 	assert.Nil(t, err)
 	assert.Equal(t, 5, count)
-	assert.Equal(t, []string{"brand", "", "count", "1518"}, res[0])
 
-	count, rep, err := c.AggregateQuery(q1)
+	count, _, err = c.AggregateQuery(q1)
 	assert.Nil(t, err)
 	assert.Equal(t, 5, count)
-	assert.Equal(t, map[string]interface{}{"brand": "", "count": "1518"}, rep[0])
-
 }
 
 func TestAggregateMinMax(t *testing.T) {
