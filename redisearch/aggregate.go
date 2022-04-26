@@ -1,7 +1,6 @@
 package redisearch
 
 import (
-	"errors"
 	"fmt"
 	"github.com/gomodule/redigo/redis"
 	"log"
@@ -362,13 +361,13 @@ func mapToStrings(result interface{}, err error) (map[string]interface{}, error)
 		return nil, err
 	}
 	if len(values)%2 != 0 {
-		return nil, errors.New("redigo: mapToStrings expects even number of values result")
+		return nil, fmt.Errorf("redigo: mapToStrings expects even number of values result")
 	}
 	m := make(map[string]interface{}, len(values)/2)
 	for i := 0; i < len(values); i += 2 {
 		key, okKey := redis.String(values[i], err)
 		if okKey != nil {
-			return nil, errors.New("mapToStrings key not a bulk string value")
+			return nil, fmt.Errorf("mapToStrings key not a bulk string value")
 		}
 
 		var value interface{}
@@ -376,8 +375,8 @@ func mapToStrings(result interface{}, err error) (map[string]interface{}, error)
 		if okValue != nil {
 			value, okValue = redis.Strings(values[i+1], err)
 		}
-		if okValue != nil {
-			return nil, errors.New("mapToStrings value got unexpected element type")
+		if okValue != nil && okValue != redis.ErrNil {
+			return nil, fmt.Errorf("mapToStrings value got unexpected element type: %T", values[i+1])
 		}
 
 		m[string(key)] = value
