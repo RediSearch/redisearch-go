@@ -293,7 +293,6 @@ func (i *Client) aggregate(q *AggregateQuery) (res []interface{}, err error) {
 	conn := i.pool.Get()
 	defer conn.Close()
 	validCursor := q.CursorHasResults()
-	// var res []interface{} = nil
 	if !validCursor {
 		args := redis.Args{i.name}
 		args = append(args, q.Serialize()...)
