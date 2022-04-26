@@ -298,11 +298,11 @@ func ProcessAggResponse(res []interface{}) [][]string {
 func processAggReply(res []interface{}) (total int, aggregateReply [][]string, err error) {
 	aggregateReply = [][]string{}
 	total = 0
-	aggregate_results := len(res) - 1
-	if aggregate_results > 0 {
-		total = aggregate_results
-		aggregateReply = make([][]string, aggregate_results)
-		for i := 0; i < aggregate_results; i++ {
+	aggregateResults := len(res) - 1
+	if aggregateResults > 0 {
+		total = aggregateResults
+		aggregateReply = make([][]string, aggregateResults)
+		for i := 0; i < aggregateResults; i++ {
 			if d, e := redis.Strings(res[i+1], nil); e == nil {
 				aggregateReply[i] = d
 			} else {
@@ -318,11 +318,11 @@ func processAggReply(res []interface{}) (total int, aggregateReply [][]string, e
 func processAggQueryReply(res []interface{}) (total int, aggregateReply []map[string]interface{}, err error) {
 	aggregateReply = []map[string]interface{}{}
 	total = 0
-	aggregate_results := len(res) - 1
-	if aggregate_results > 0 {
-		total = aggregate_results
-		aggregateReply = make([]map[string]interface{}, aggregate_results)
-		for i := 0; i < aggregate_results; i++ {
+	aggregateResults := len(res) - 1
+	if aggregateResults > 0 {
+		total = aggregateResults
+		aggregateReply = make([]map[string]interface{}, aggregateResults)
+		for i := 0; i < aggregateResults; i++ {
 			if d, e := mapToStrings(res[i+1], nil); e == nil {
 				aggregateReply[i] = d
 			} else {
