@@ -259,7 +259,7 @@ func appendNumArgs(num float64, exclude bool, args redis.Args) redis.Args {
 	}
 
 	if exclude {
-		return append(args, fmt.Sprintf("(%f", num))
+		return append(args, fmt.Sprintf("(%g", num))
 	}
 	return append(args, num)
 }
