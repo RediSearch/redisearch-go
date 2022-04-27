@@ -523,7 +523,7 @@ func (info *IndexInfo) loadSchema(values []interface{}, options []string) {
 		}
 
 		f := Field{Name: spec[0]}
-		switch strings.ToUpper(spec[2]) {
+		switch strings.ToUpper(spec[sliceIndex(spec, "type")+1]) {
 		case "TAG":
 			f.Type = TagField
 			tfOptions := TagFieldOptions{}

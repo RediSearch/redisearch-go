@@ -835,6 +835,7 @@ func Test_processAggQueryReply(t *testing.T) {
 		{"multi-element-reply", args{[]interface{}{2, []interface{}{"userFullName", "j"}, []interface{}{"userFullName", "a"}}}, 2, []map[string]interface{}{{"userFullName": "j"}, {"userFullName": "a"}}, false},
 		{"odd-number-of-args", args{[]interface{}{1, []interface{}{"userFullName"}}}, 1, nil, true},
 		{"invalid-key", args{[]interface{}{1, []interface{}{nil, "j"}}}, 1, nil, true},
+		{"invalid-value", args{[]interface{}{1, []interface{}{"userFullName", fmt.Errorf("invalid value type")}}}, 1, nil, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
