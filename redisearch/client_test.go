@@ -591,10 +591,10 @@ func TestClient_AddHash(t *testing.T) {
 	// Add a hash key
 	c.pool.Get().Do("HMSET", "myhash", "field1", "Hello")
 
-	ret, err := c.AddHash("myhash", 1, "english", false)
+	ret, err := c.AddHash("myhash", 1, "english", true)
 	// Given that FT.ADDHASH is no longer valid for search2+ we assert it's error
 	if err != nil {
-		assert.Equal(t, "ERR unknown command `FT.ADDHASH`, with args beginning with: `testAddHash`, `myhash`, `1`, `LANGUAGE`, `english`, ", err.Error())
+		assert.Equal(t, "ERR unknown command `FT.ADDHASH`, with args beginning with: `testAddHash`, `myhash`, `1`, `LANGUAGE`, `english`, `REPLACE`, ", err.Error())
 	} else {
 		assert.Equal(t, "OK", ret)
 	}
@@ -1190,4 +1190,16 @@ func TestClient_Info(t *testing.T) {
 	assert.True(t, info.Schema.Options.NoFieldFlags)
 	assert.True(t, info.Schema.Options.NoFrequencies)
 	assert.True(t, info.Schema.Options.NoOffsetVectors)
+	assert.Equal(t, 1, len(info.Schema.Fields))
+	expectedField := Field{
+		Name: "age",
+		Type: NumericField,
+		Sortable: false,
+		Options: NumericFieldOptions{
+			Sortable: false,
+			NoIndex: false,
+			As: "",
+		},
+	}
+	assert.True(t, reflect.DeepEqual(expectedField, info.Schema.Fields[0]))
 }
