@@ -32,7 +32,7 @@ jobs:
           docker run --rm --entrypoint cat redislabs/redisearch:edge /usr/lib/redis/modules/redisearch.so > redisearch.so
           docker run --rm --entrypoint cat redislabs/redisearch:edge /usr/lib/redis/modules/rejson.so > rejson.so
           chmod 755 *.so
-      - name: Start redisearch docekr with tls
+      - name: Start redisearch docker with tls
         run: |
           docker run -d -v $(pwd)/redisearch.so:/data/redisearch.so \
             -v $(pwd)/rejson.so:/data/rejson.so \
