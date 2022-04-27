@@ -1192,13 +1192,13 @@ func TestClient_Info(t *testing.T) {
 	assert.True(t, info.Schema.Options.NoOffsetVectors)
 	assert.Equal(t, 1, len(info.Schema.Fields))
 	expectedField := Field{
-		Name: "age",
-		Type: NumericField,
+		Name:     "age",
+		Type:     NumericField,
 		Sortable: false,
 		Options: NumericFieldOptions{
 			Sortable: false,
-			NoIndex: false,
-			As: "",
+			NoIndex:  false,
+			As:       "",
 		},
 	}
 	assert.True(t, reflect.DeepEqual(expectedField, info.Schema.Fields[0]))

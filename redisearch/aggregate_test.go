@@ -179,7 +179,9 @@ func TestAggregateGroupBy(t *testing.T) {
 
 	q1 := NewAggregateQuery().
 		GroupBy(*NewGroupBy().AddFields("@brand").
-			Reduce(*NewReducerAlias(GroupByReducerCount, []string{}, "count"))).
+			Reduce(*NewReducerAlias("", nil, "count").
+				SetName(GroupByReducerCount).
+				SetArgs([]string{}))).
 		SortBy([]SortingKey{*NewSortingKeyDir("@count", false)}).
 		Limit(0, 5)
 
