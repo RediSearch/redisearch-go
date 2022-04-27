@@ -245,26 +245,12 @@ func (i *Client) SpellCheck(q *Query, s *SpellCheckOptions) (suggs []MisspelledT
 	return
 }
 
-// Aggregate
+// Deprecated: Use AggregateQuery() instead.
 func (i *Client) Aggregate(q *AggregateQuery) (aggregateReply [][]string, total int, err error) {
-	conn := i.pool.Get()
-	defer conn.Close()
-	hasCursor := q.WithCursor
-	validCursor := q.CursorHasResults()
-	var res []interface{} = nil
-	if !validCursor {
-		args := redis.Args{i.name}
-		args = append(args, q.Serialize()...)
-		res, err = redis.Values(conn.Do("FT.AGGREGATE", args...))
-	} else {
-		args := redis.Args{"READ", i.name, q.Cursor.Id}
-		res, err = redis.Values(conn.Do("FT.CURSOR", args...))
-	}
-	if err != nil {
-		return
-	}
+	res, err := i.aggregate(q)
+
 	// has no cursor
-	if !hasCursor {
+	if !q.WithCursor {
 		total, aggregateReply, err = processAggReply(res)
 		// has cursor
 	} else {
@@ -278,7 +264,46 @@ func (i *Client) Aggregate(q *AggregateQuery) (aggregateReply [][]string, total 
 		}
 		total, aggregateReply, err = processAggReply(partialResults)
 	}
+	return
+}
 
+// AggregateQuery - New version to Aggregate() function. The values in each map can be string or []string.
+func (i *Client) AggregateQuery(q *AggregateQuery) (total int, aggregateReply []map[string]interface{}, err error) {
+	res, err := i.aggregate(q)
+
+	// has no cursor
+	if !q.WithCursor {
+		total, aggregateReply, err = processAggQueryReply(res)
+		// has cursor
+	} else {
+		var partialResults, err = redis.Values(res[0], nil)
+		if err != nil {
+			return total, aggregateReply, err
+		}
+		q.Cursor.Id, err = redis.Int(res[1], nil)
+		if err != nil {
+			return total, aggregateReply, err
+		}
+		total, aggregateReply, err = processAggQueryReply(partialResults)
+	}
+	return
+}
+
+func (i *Client) aggregate(q *AggregateQuery) (res []interface{}, err error) {
+	conn := i.pool.Get()
+	defer conn.Close()
+	validCursor := q.CursorHasResults()
+	if !validCursor {
+		args := redis.Args{i.name}
+		args = append(args, q.Serialize()...)
+		res, err = redis.Values(conn.Do("FT.AGGREGATE", args...))
+	} else {
+		args := redis.Args{"READ", i.name, q.Cursor.Id}
+		res, err = redis.Values(conn.Do("FT.CURSOR", args...))
+	}
+	if err != nil {
+		return
+	}
 	return
 }
 
@@ -499,17 +524,25 @@ func (info *IndexInfo) loadSchema(values []interface{}, options []string) {
 
 		f := Field{Name: spec[0]}
 		switch strings.ToUpper(spec[2]) {
+		case "TAG":
+			f.Type = TagField
+			tfOptions := TagFieldOptions{}
+			if wIdx := sliceIndex(options, "SEPARATOR"); wIdx != -1 {
+				tfOptions.Separator = options[wIdx+1][0]
+			}
+			f.Options = tfOptions
+		case "GEO":
+			f.Type = GeoField
 		case "NUMERIC":
 			f.Type = NumericField
 			nfOptions := NumericFieldOptions{}
-			f.Options = nfOptions
 			if sliceIndex(options, "SORTABLE") != -1 {
 				nfOptions.Sortable = true
 			}
+			f.Options = nfOptions
 		case "TEXT":
 			f.Type = TextField
 			tfOptions := TextFieldOptions{}
-			f.Options = tfOptions
 			if sliceIndex(options, "SORTABLE") != -1 {
 				tfOptions.Sortable = true
 			}
@@ -518,6 +551,7 @@ func (info *IndexInfo) loadSchema(values []interface{}, options []string) {
 				weight64, _ := strconv.ParseFloat(weightString, 32)
 				tfOptions.Weight = float32(weight64)
 			}
+			f.Options = tfOptions
 		}
 		sc = sc.AddField(f)
 	}
@@ -536,7 +570,7 @@ func (i *Client) Info() (*IndexInfo, error) {
 	}
 
 	ret := IndexInfo{}
-	var schemaFields []interface{}
+	var schemaAttributes []interface{}
 	var indexOptions []string
 
 	// Iterate over the values
@@ -549,13 +583,13 @@ func (i *Client) Info() (*IndexInfo, error) {
 		switch key {
 		case "index_options":
 			indexOptions, _ = redis.Strings(res[ii+1], nil)
-		case "fields":
-			schemaFields, _ = redis.Values(res[ii+1], nil)
+		case "fields", "attributes":
+			schemaAttributes, _ = redis.Values(res[ii+1], nil)
 		}
 	}
 
-	if schemaFields != nil {
-		ret.loadSchema(schemaFields, indexOptions)
+	if schemaAttributes != nil {
+		ret.loadSchema(schemaAttributes, indexOptions)
 	}
 
 	return &ret, nil
