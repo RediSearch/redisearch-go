@@ -1,4 +1,5 @@
 ---
+name: Integration Tests
 
 on:
   push:
@@ -18,9 +19,10 @@ jobs:
       - uses: addnab/docker-run-action@v3
         with:
           image: redislabs/redisearch:edge
-      - run: make get
-      - run: make checkfmt
-      - run: make test
-      - run: make godoc_examples
-      - run: make coverage
-      - run: bash <(curl -s https://raw.githubusercontent.com/codecov/codecov-bash/master/codecov)
+          with:
+            make get
+            make checkfmt
+            make test
+            make godoc_examples
+            make coverage
+            bash <(curl -s https://raw.githubusercontent.com/codecov/codecov-bash/master/codecov)
