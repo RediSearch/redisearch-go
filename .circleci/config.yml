@@ -50,7 +50,7 @@ jobs:
                           TLS_CACERT=redis/tests/tls/ca.crt
 
 
-  build: # test with redisearch:latest
+  build:
     docker:
       - image: circleci/golang:1.16
       - image: redislabs/redisearch:edge

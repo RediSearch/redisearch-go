@@ -281,7 +281,7 @@ func (q AggregateQuery) Serialize() redis.Args {
 
 // Deprecated: Please use processAggReply() instead
 func ProcessAggResponse(res []interface{}) [][]string {
-	aggregateReply := make([][]string, len(res), len(res))
+	aggregateReply := make([][]string, len(res))
 	for i := 0; i < len(res); i++ {
 		if d, e := redis.Strings(res[i], nil); e == nil {
 			aggregateReply[i] = d
@@ -293,15 +293,36 @@ func ProcessAggResponse(res []interface{}) [][]string {
 	return aggregateReply
 }
 
+// Deprecated: Please use processAggQueryReply() instead
 func processAggReply(res []interface{}) (total int, aggregateReply [][]string, err error) {
 	aggregateReply = [][]string{}
 	total = 0
-	aggregate_results := len(res) - 1
-	if aggregate_results > 0 {
-		total = aggregate_results
-		aggregateReply = make([][]string, aggregate_results, aggregate_results)
-		for i := 0; i < aggregate_results; i++ {
+	aggregateResults := len(res) - 1
+	if aggregateResults > 0 {
+		total = aggregateResults
+		aggregateReply = make([][]string, aggregateResults)
+		for i := 0; i < aggregateResults; i++ {
 			if d, e := redis.Strings(res[i+1], nil); e == nil {
+				aggregateReply[i] = d
+			} else {
+				err = fmt.Errorf("Error parsing Aggregate Reply: %v on reply position %d", e, i)
+				aggregateReply[i] = nil
+			}
+		}
+	}
+	return
+}
+
+// New Aggregate reply processor
+func processAggQueryReply(res []interface{}) (total int, aggregateReply []map[string]interface{}, err error) {
+	aggregateReply = []map[string]interface{}{}
+	total = 0
+	aggregateResults := len(res) - 1
+	if aggregateResults > 0 {
+		total = aggregateResults
+		aggregateReply = make([]map[string]interface{}, aggregateResults)
+		for i := 0; i < aggregateResults; i++ {
+			if d, e := mapToStrings(res[i+1], nil); e == nil {
 				aggregateReply[i] = d
 			} else {
 				err = fmt.Errorf("Error parsing Aggregate Reply: %v on reply position %d", e, i)
@@ -314,11 +335,11 @@ func processAggReply(res []interface{}) (total int, aggregateReply [][]string, e
 
 func ProcessAggResponseSS(res []interface{}) [][]string {
 	var lout = len(res)
-	aggregateReply := make([][]string, lout, lout)
+	aggregateReply := make([][]string, lout)
 	for i := 0; i < lout; i++ {
 		reply := res[i].([]interface{})
 		linner := len(reply)
-		aggregateReply[i] = make([]string, linner, linner)
+		aggregateReply[i] = make([]string, linner)
 		for j := 0; j < linner; j++ {
 			if reply[j] == nil {
 				log.Print(fmt.Sprintf("Error parsing Aggregate Reply on position (%d,%d)", i, j))
@@ -329,4 +350,36 @@ func ProcessAggResponseSS(res []interface{}) [][]string {
 		}
 	}
 	return aggregateReply
+}
+
+// mapToStrings is a helper that converts an array (alternating key, value) into a map[string]interface{}.
+// The value can be string or []string. Numbers will be treated as strings. Requires an even number of
+// values in result.
+func mapToStrings(result interface{}, err error) (map[string]interface{}, error) {
+	values, err := redis.Values(result, err)
+	if err != nil {
+		return nil, err
+	}
+	if len(values)%2 != 0 {
+		return nil, fmt.Errorf("redigo: mapToStrings expects even number of values result")
+	}
+	m := make(map[string]interface{}, len(values)/2)
+	for i := 0; i < len(values); i += 2 {
+		key, okKey := redis.String(values[i], err)
+		if okKey != nil {
+			return nil, fmt.Errorf("mapToStrings key not a bulk string value")
+		}
+
+		var value interface{}
+		value, okValue := redis.String(values[i+1], err)
+		if okValue != nil {
+			value, okValue = redis.Strings(values[i+1], err)
+		}
+		if okValue != nil && okValue != redis.ErrNil {
+			return nil, fmt.Errorf("mapToStrings value got unexpected element type: %T", values[i+1])
+		}
+
+		m[string(key)] = value
+	}
+	return m, nil
 }
