@@ -19,7 +19,7 @@ jobs:
       - uses: addnab/docker-run-action@v3
         with:
           image: redislabs/redisearch:edge
-          with:
+          run: |
             make get
             make checkfmt
             make test
