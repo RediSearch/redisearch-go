@@ -86,7 +86,7 @@ func (r *Reducer) SetAlias(a string) *Reducer {
 
 func (r Reducer) Serialize() redis.Args {
 	ret := len(r.Args)
-	args := redis.Args{"REDUCE", r.Name, ret}.AddFlat(r.Args)
+	args := redis.Args{"REDUCE", string(r.Name), ret}.AddFlat(r.Args)
 	if r.Alias != "" {
 		args = append(args, "AS", r.Alias)
 	}

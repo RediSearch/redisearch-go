@@ -407,20 +407,41 @@ func TestCursor_Serialize(t *testing.T) {
 	}
 }
 
-func TestAggregateQuery_Serialize(t *testing.T) {
+func TestQuery_Serialize(t *testing.T) {
 	tests := []struct {
 		name  string
 		query AggregateQuery
 		want  redis.Args
 	}{
-		{"TestAggregateQuery_Serialize_basic", *NewAggregateQuery(), redis.Args{"*"}},
-		{"TestAggregateQuery_Serialize_WITHSCHEMA", *NewAggregateQuery().SetWithSchema(true), redis.Args{"*", "WITHSCHEMA"}},
-		{"TestAggregateQuery_Serialize_VERBATIM", *NewAggregateQuery().SetVerbatim(true), redis.Args{"*", "VERBATIM"}},
-		{"TestAggregateQuery_Serialize_WITHCURSOR", *NewAggregateQuery().SetCursor(NewCursor()), redis.Args{"*", "WITHCURSOR"}},
+		{"TestQuery_Serialize_basic", *NewAggregateQuery(), redis.Args{"*"}},
+		{"TestQuery_Serialize_WITHSCHEMA", *NewAggregateQuery().SetWithSchema(true), redis.Args{"*", "WITHSCHEMA"}},
+		{"TestQuery_Serialize_VERBATIM", *NewAggregateQuery().SetVerbatim(true), redis.Args{"*", "VERBATIM"}},
+		{"TestQuery_Serialize_WITHCURSOR", *NewAggregateQuery().SetCursor(NewCursor()), redis.Args{"*", "WITHCURSOR"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := tt.query.Serialize(); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("serialize() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestGroupBy_Serialize(t *testing.T) {
+	testsSerialize := []struct {
+		name  string
+		group GroupBy
+		want  redis.Args
+	}{
+		{"TestGroupBy_Serialize_basic", *NewGroupBy(), redis.Args{"GROUPBY", 0}},
+		{"TestGroupBy_Serialize_FIELDS", *NewGroupBy().AddFields("a"), redis.Args{"GROUPBY", 1, "a"}},
+		{"TestGroupBy_Serialize_FIELDS_2", *NewGroupBy().AddFields([]string{"a", "b"}), redis.Args{"GROUPBY", 2, "a", "b"}},
+		{"TestGroupBy_Serialize_REDUCE", *NewGroupBy().Reduce(*NewReducerAlias(GroupByReducerCount, []string{}, "count")), redis.Args{"GROUPBY", 0, "REDUCE", "COUNT", 0, "AS", "count"}},
+		{"TestGroupBy_Serialize_LIMIT", *NewGroupBy().Limit(10, 20), redis.Args{"GROUPBY", 0, "LIMIT", 10, 20}},
+	}
+	for _, tt := range testsSerialize {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.group.Serialize(); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("serialize() = %v, want %v", got, tt.want)
 			}
 		})
@@ -442,15 +463,20 @@ func TestGroupBy_AddFields(t *testing.T) {
 		args   args
 		want   *GroupBy
 	}{
-		{"TestGroupBy_AddFields_1",
+		{"TestGroupBy_AddFields_single_field",
 			fields{[]string{}, nil, nil},
 			args{"a"},
 			&GroupBy{[]string{"a"}, nil, nil},
 		},
-		{"TestGroupBy_AddFields_2",
+		{"TestGroupBy_AddFields_multi_fields",
 			fields{[]string{}, nil, nil},
 			args{[]string{"a", "b", "c"}},
 			&GroupBy{[]string{"a", "b", "c"}, nil, nil},
+		},
+		{"TestGroupBy_AddFields_nil",
+			fields{[]string{}, nil, nil},
+			args{nil},
+			&GroupBy{[]string{}, nil, nil},
 		},
 	}
 	for _, tt := range tests {
