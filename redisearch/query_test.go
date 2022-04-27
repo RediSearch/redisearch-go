@@ -79,6 +79,8 @@ func TestQuery_serialize(t *testing.T) {
 		SortBy        *SortingKey
 		HighlightOpts *HighlightOptions
 		SummarizeOpts *SummaryOptions
+		Params        map[string]interface{}
+		Dialect       int
 	}
 	tests := []struct {
 		name   string
@@ -92,6 +94,7 @@ func TestQuery_serialize(t *testing.T) {
 		{"QueryInOrder", fields{Raw: raw, Flags: QueryInOrder}, redis.Args{raw, "LIMIT", 0, 0, "INORDER"}},
 		{"QueryWithPayloads", fields{Raw: raw, Flags: QueryWithPayloads}, redis.Args{raw, "LIMIT", 0, 0, "WITHPAYLOADS"}},
 		{"QueryWithScores", fields{Raw: raw, Flags: QueryWithScores}, redis.Args{raw, "LIMIT", 0, 0, "WITHSCORES"}},
+		{"QueryWithStopWords", fields{Raw: raw, Flags: QueryWithStopWords}, redis.Args{raw, "LIMIT", 0, 0, "NOSTOPWORDS"}},
 		{"InKeys", fields{Raw: raw, InKeys: []string{"test_key"}}, redis.Args{raw, "LIMIT", 0, 0, "INKEYS", 1, "test_key"}},
 		{"InFields", fields{Raw: raw, InFields: []string{"test_key"}}, redis.Args{raw, "LIMIT", 0, 0, "INFIELDS", 1, "test_key"}},
 		{"ReturnFields", fields{Raw: raw, ReturnFields: []string{"test_field"}}, redis.Args{raw, "LIMIT", 0, 0, "RETURN", 1, "test_field"}},
@@ -111,6 +114,8 @@ func TestQuery_serialize(t *testing.T) {
 			NumFragments: 3,
 			Separator:    "...",
 		}}, redis.Args{raw, "LIMIT", 0, 0, "SUMMARIZE", "FIELDS", 1, "test_field", "LEN", 20, "FRAGS", 3, "SEPARATOR", "..."}},
+		{"Params", fields{Raw: raw, Params: map[string]interface{}{"min": 1}}, redis.Args{raw, "LIMIT", 0, 0, "PARAMS", 2, "min", 1}},
+		{"Dialect", fields{Raw: raw, Dialect: 2}, redis.Args{raw, "LIMIT", 0, 0, "DIALECT", 2}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -126,6 +131,8 @@ func TestQuery_serialize(t *testing.T) {
 				SortBy:        tt.fields.SortBy,
 				HighlightOpts: tt.fields.HighlightOpts,
 				SummarizeOpts: tt.fields.SummarizeOpts,
+				Params:        tt.fields.Params,
+				Dialect:       tt.fields.Dialect,
 			}
 			if g := q.serialize(); !reflect.DeepEqual(g, tt.want) {
 				t.Errorf("serialize() = %v, want %v", g, tt.want)
@@ -146,7 +153,7 @@ func Test_appendNumArgs(t *testing.T) {
 		want redis.Args
 	}{
 		{"1 arg", args{1.0, false, redis.Args{}}, redis.Args{1.0}},
-		{"1 excluded arg", args{1.0, true, redis.Args{}}, redis.Args{"(", 1.0}},
+		{"2.54 excluded arg", args{2.54, true, redis.Args{}}, redis.Args{"(2.54"}},
 		{"+inf", args{math.Inf(1), false, redis.Args{}}, redis.Args{"+inf"}},
 		{"+inf", args{math.Inf(-1), false, redis.Args{}}, redis.Args{"-inf"}},
 	}
