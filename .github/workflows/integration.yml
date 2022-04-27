@@ -16,13 +16,12 @@ jobs:
         with:
           go-version: ${{ matrix.go-version}}
       - uses: actions/checkout@v3
-      - uses: addnab/docker-run-action@v3
-        with:
-          image: redislabs/redisearch:edge
-          run: |
-            make get
-            make checkfmt
-            make test
-            make godoc_examples
-            make coverage
-            bash <(curl -s https://raw.githubusercontent.com/codecov/codecov-bash/master/codecov)
+      - name: Start redisearch docker
+        run: |
+          docker run -d -p 6379:6379 redislabs/redisearch:edge
+      - run: make get
+      - run: make checkfmt
+      - run: make test
+      - run: make godoc_examples
+      - run: make coverage
+      - run: bash <(curl -s https://raw.githubusercontent.com/codecov/codecov-bash/master/codecov)
