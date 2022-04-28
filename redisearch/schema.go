@@ -169,10 +169,11 @@ type TextFieldOptions struct {
 // TagFieldOptions options for indexing tag fields
 type TagFieldOptions struct {
 	// Separator is the custom separator between tags. defaults to comma (,)
-	Separator byte
-	NoIndex   bool
-	Sortable  bool
-	As        string
+	Separator     byte
+	NoIndex       bool
+	Sortable      bool
+	CaseSensitive bool
+	As            string
 }
 
 // NumericFieldOptions Options for numeric fields
@@ -232,7 +233,7 @@ func NewTagField(name string) Field {
 	return Field{
 		Name:    name,
 		Type:    TagField,
-		Options: TagFieldOptions{Separator: ',', NoIndex: false},
+		Options: TagFieldOptions{Separator: ',', NoIndex: false, CaseSensitive: false},
 	}
 }
 
@@ -426,6 +427,9 @@ func serializeField(f Field, args redis.Args) (argsOut redis.Args, err error) {
 			}
 			if opts.NoIndex {
 				argsOut = append(argsOut, "NOINDEX")
+			}
+			if opts.CaseSensitive {
+				argsOut = append(argsOut, "CASESENSITIVE")
 			}
 		}
 	case GeoField:
