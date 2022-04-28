@@ -552,6 +552,10 @@ func (info *IndexInfo) loadSchema(values []interface{}, options []string) {
 				tfOptions.Weight = float32(weight64)
 			}
 			f.Options = tfOptions
+		case "VECTOR":
+			f.Type = VectorField
+			f.Options = VectorFieldOptions{}  // For now redisearch is not returning these fields.
+			// Need to update later after they fix it...
 		}
 		sc = sc.AddField(f)
 	}

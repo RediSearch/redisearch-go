@@ -1167,7 +1167,7 @@ func TestClient_ListIndex(t *testing.T) {
 	assert.Equal(t, "index-list-test", indexes[0])
 }
 
-func TestClient_Info(t *testing.T) {
+func TestClient_InfoSchemaFields(t *testing.T) {
 	c := createClient("index-info")
 	flush(c)
 	_, err := c.getRediSearchVersion()
@@ -1179,7 +1179,12 @@ func TestClient_Info(t *testing.T) {
 	opt.NoFrequencies = true
 	opt.NoOffsetVectors = true
 	schema := NewSchema(opt).
-		AddField(NewNumericField("age"))
+		AddField(NewNumericField("age")).
+		AddField(NewVectorFieldOptions("vec", VectorFieldOptions{Algorithm: Flat, Attributes: map[string]interface{}{
+			"TYPE":            "FLOAT32",
+			"DIM":             2,
+			"DISTANCE_METRIC": "L2",
+		}}))
 
 	// Add the Index Definition
 	err = c.CreateIndexWithIndexDefinition(schema, NewIndexDefinition())
@@ -1190,8 +1195,8 @@ func TestClient_Info(t *testing.T) {
 	assert.True(t, info.Schema.Options.NoFieldFlags)
 	assert.True(t, info.Schema.Options.NoFrequencies)
 	assert.True(t, info.Schema.Options.NoOffsetVectors)
-	assert.Equal(t, 1, len(info.Schema.Fields))
-	expectedField := Field{
+	assert.Equal(t, 2, len(info.Schema.Fields))
+	expNumericField := Field{
 		Name:     "age",
 		Type:     NumericField,
 		Sortable: false,
@@ -1201,5 +1206,17 @@ func TestClient_Info(t *testing.T) {
 			As:       "",
 		},
 	}
-	assert.True(t, reflect.DeepEqual(expectedField, info.Schema.Fields[0]))
+	assert.True(t, reflect.DeepEqual(expNumericField, info.Schema.Fields[0]))
+	expVectorField := Field{
+		Name:     "vec",
+		Type:     VectorField,
+		Sortable: false,
+		Options: VectorFieldOptions {
+			Algorithm:  "",
+			Attributes: nil,
+		},
+	}
+	a := expVectorField
+	b := info.Schema.Fields[1]
+	assert.True(t, reflect.DeepEqual(a,b))
 }
