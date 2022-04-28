@@ -1211,12 +1211,10 @@ func TestClient_InfoSchemaFields(t *testing.T) {
 		Name:     "vec",
 		Type:     VectorField,
 		Sortable: false,
-		Options: VectorFieldOptions {
+		Options: VectorFieldOptions{
 			Algorithm:  "",
 			Attributes: nil,
 		},
 	}
-	a := expVectorField
-	b := info.Schema.Fields[1]
-	assert.True(t, reflect.DeepEqual(a,b))
+	assert.True(t, reflect.DeepEqual(expVectorField, info.Schema.Fields[1]))
 }
