@@ -1168,7 +1168,7 @@ func TestClient_ListIndex(t *testing.T) {
 	assert.Equal(t, "index-list-test", indexes[0])
 }
 
-func TestClient_FieldsTEst(t *testing.T) {
+func TestClient_FieldsTest(t *testing.T) {
 	c := createClient("ft-info-fields-test")
 	flush(c)
 	schema := NewSchema(DefaultOptions).
@@ -1183,6 +1183,7 @@ func TestClient_FieldsTEst(t *testing.T) {
 
 	info, err := c.Info()
 	assert.Nil(t, err)
+	// Check to make sure the fields that we get back match the fields that we created
 	assert.Equal(t,
 		[]Field(
 			[]Field{
