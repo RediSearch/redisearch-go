@@ -12,7 +12,7 @@
 
 Go client for [RediSearch](http://redisearch.io), based on redigo.
 
-# Installing 
+# Installing
 
 ```sh
 go get github.com/RediSearch/redisearch-go/redisearch
@@ -21,7 +21,7 @@ go get github.com/RediSearch/redisearch-go/redisearch
 # Usage Example
 
 ```go
-package main 
+package main
 import (
 	"fmt"
 	"log"
@@ -84,7 +84,7 @@ func ExampleClient() {
 | [FT.ALIASDEL](https://oss.redislabs.com/redisearch/Commands.html#ftaliasdel) |     [AliasDel](https://godoc.org/github.com/RediSearch/redisearch-go/redisearch#Client.AliasDel)        |
 | [FT.INFO](https://oss.redislabs.com/redisearch/Commands.html#ftinfo) |   [Info](https://godoc.org/github.com/RediSearch/redisearch-go/redisearch#Client.Info)          |
 | [FT.SEARCH](https://oss.redislabs.com/redisearch/Commands.html#ftsearch) |  [Search](https://godoc.org/github.com/RediSearch/redisearch-go/redisearch#Client.Search)          |
-| [FT.AGGREGATE](https://oss.redislabs.com/redisearch/Commands.html#ftaggregate) |   [Aggregate](https://godoc.org/github.com/RediSearch/redisearch-go/redisearch#Client.Aggregate)          |
+| [FT.AGGREGATE](https://oss.redislabs.com/redisearch/Commands.html#ftaggregate) |   [AggregateQuery](https://godoc.org/github.com/RediSearch/redisearch-go/redisearch#Client.AggregateQuery)          |
 | [FT.CURSOR](https://oss.redislabs.com/redisearch/Aggregations.html#cursor_api) |   [Aggregate](https://godoc.org/github.com/RediSearch/redisearch-go/redisearch#Client.Aggregate) + (*WithCursor option set to True)         |
 | [FT.EXPLAIN](https://oss.redislabs.com/redisearch/Commands.html#ftexplain) |   [Explain](https://godoc.org/github.com/RediSearch/redisearch-go/redisearch#Client.Explain)        |
 | [FT.DEL](https://oss.redislabs.com/redisearch/Commands.html#ftdel) |   [DeleteDocument](https://godoc.org/github.com/RediSearch/redisearch-go/redisearch#Client.DeleteDocument)        |
