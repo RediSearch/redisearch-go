@@ -552,6 +552,9 @@ func (info *IndexInfo) loadSchema(values []interface{}, options []string) {
 				tfOptions.Weight = float32(weight64)
 			}
 			f.Options = tfOptions
+		case "VECTOR":
+			f.Type = VectorField
+			f.Options = VectorFieldOptions{}
 		}
 		sc = sc.AddField(f)
 	}
