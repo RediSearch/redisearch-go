@@ -558,9 +558,9 @@ func TestClient_SynDump(t *testing.T) {
 	assert.Nil(t, err)
 	// For RediSearch < v2.0 we need to use SYNADD. For Redisearch >= v2.0 we need to use SYNUPDATE
 	if version <= 10699 {
-		gId1, err = c.SynAdd("testsyndump", []string{"girl", "baby"})
+		_, err = c.SynAdd("testsyndump", []string{"girl", "baby"})
 		assert.Nil(t, err)
-		gId2, err = c.SynAdd("testsyndump", []string{"child"})
+		_, err = c.SynAdd("testsyndump", []string{"child"})
 		assert.Nil(t, err)
 	} else {
 		ret, err := c.SynUpdate("testsyndump", gId1, []string{"girl", "baby"})
@@ -571,7 +571,7 @@ func TestClient_SynDump(t *testing.T) {
 		assert.Equal(t, "OK", ret)
 	}
 
-	m, err := c.SynDump("testsyndump")
+	m, _ := c.SynDump("testsyndump")
 	assert.Contains(t, m, "baby")
 	assert.Contains(t, m, "girl")
 	assert.Contains(t, m, "child")
@@ -591,10 +591,10 @@ func TestClient_AddHash(t *testing.T) {
 	// Add a hash key
 	c.pool.Get().Do("HMSET", "myhash", "field1", "Hello")
 
-	ret, err := c.AddHash("myhash", 1, "english", false)
+	ret, err := c.AddHash("myhash", 1, "english", true)
 	// Given that FT.ADDHASH is no longer valid for search2+ we assert it's error
 	if err != nil {
-		assert.Equal(t, "ERR unknown command `FT.ADDHASH`, with args beginning with: `testAddHash`, `myhash`, `1`, `LANGUAGE`, `english`, ", err.Error())
+		assert.Equal(t, "ERR unknown command `FT.ADDHASH`, with args beginning with: `testAddHash`, `myhash`, `1`, `LANGUAGE`, `english`, `REPLACE`, ", err.Error())
 	} else {
 		assert.Equal(t, "OK", ret)
 	}
@@ -1111,9 +1111,9 @@ func TestClient_DropIndex(t *testing.T) {
 	_, err = c.Info()
 	assert.EqualError(t, err, "Unknown Index name")
 	// Assert hashes still exist
-	result, err := vanillaConnection.Do("EXISTS", "drop-index:doc1")
+	result, _ := vanillaConnection.Do("EXISTS", "drop-index:doc1")
 	assert.Equal(t, int64(1), result)
-	result, err = vanillaConnection.Do("EXISTS", "drop-index:doc2")
+	result, _ = vanillaConnection.Do("EXISTS", "drop-index:doc2")
 	assert.Equal(t, int64(1), result)
 
 	// Create index again
@@ -1134,11 +1134,10 @@ func TestClient_DropIndex(t *testing.T) {
 	_, err = c.Info()
 	assert.EqualError(t, err, "Unknown Index name")
 	// Assert hashes still exist
-	result, err = vanillaConnection.Do("EXISTS", "drop-index:doc1")
+	result, _ = vanillaConnection.Do("EXISTS", "drop-index:doc1")
 	assert.Equal(t, int64(0), result)
-	result, err = vanillaConnection.Do("EXISTS", "drop-index:doc2")
+	result, _ = vanillaConnection.Do("EXISTS", "drop-index:doc2")
 	assert.Equal(t, int64(0), result)
-
 }
 
 func TestClient_ListIndex(t *testing.T) {
@@ -1160,10 +1159,47 @@ func TestClient_ListIndex(t *testing.T) {
 	indexDefinition := NewIndexDefinition().AddPrefix("index-list-test:")
 
 	// Add the Index Definition
-	c.CreateIndexWithIndexDefinition(schema, indexDefinition)
+	err = c.CreateIndexWithIndexDefinition(schema, indexDefinition)
 	assert.Nil(t, err)
 
 	indexes, err := c.List()
 	assert.Nil(t, err)
 	assert.Equal(t, "index-list-test", indexes[0])
+}
+
+func TestClient_Info(t *testing.T) {
+	c := createClient("index-info")
+	flush(c)
+	_, err := c.getRediSearchVersion()
+	assert.Nil(t, err)
+
+	// Create a schema
+	opt := DefaultOptions
+	opt.NoFieldFlags = true
+	opt.NoFrequencies = true
+	opt.NoOffsetVectors = true
+	schema := NewSchema(opt).
+		AddField(NewNumericField("age"))
+
+	// Add the Index Definition
+	err = c.CreateIndexWithIndexDefinition(schema, NewIndexDefinition())
+	assert.Nil(t, err)
+
+	info, err := c.Info()
+	assert.Nil(t, err)
+	assert.True(t, info.Schema.Options.NoFieldFlags)
+	assert.True(t, info.Schema.Options.NoFrequencies)
+	assert.True(t, info.Schema.Options.NoOffsetVectors)
+	assert.Equal(t, 1, len(info.Schema.Fields))
+	expectedField := Field{
+		Name:     "age",
+		Type:     NumericField,
+		Sortable: false,
+		Options: NumericFieldOptions{
+			Sortable: false,
+			NoIndex:  false,
+			As:       "",
+		},
+	}
+	assert.True(t, reflect.DeepEqual(expectedField, info.Schema.Fields[0]))
 }
