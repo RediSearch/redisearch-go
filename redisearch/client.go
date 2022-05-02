@@ -267,7 +267,7 @@ func (i *Client) Aggregate(q *AggregateQuery) (aggregateReply [][]string, total 
 	return
 }
 
-// AggregateQuery replaces Aggregate() function. The reply is slice of maps in which the values can be string or []string.
+// AggregateQuery replaces the Aggregate() function. The reply is slice of maps, with values of either string or []string.
 func (i *Client) AggregateQuery(q *AggregateQuery) (total int, aggregateReply []map[string]interface{}, err error) {
 	res, err := i.aggregate(q)
 
