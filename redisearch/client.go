@@ -586,8 +586,14 @@ func (i *Client) Info() (*IndexInfo, error) {
 		switch key {
 		case "index_options":
 			indexOptions, _ = redis.Strings(res[ii+1], nil)
-		case "fields", "attributes":
+		case "fields":
 			schemaAttributes, _ = redis.Values(res[ii+1], nil)
+		case "attributes":
+			for _, attr := range res[ii+1].([]interface{}) {
+				l := len(attr.([]interface{}))
+				schemaAttributes = append(schemaAttributes, attr.([]interface{})[3:l])
+
+			}
 		}
 	}
 

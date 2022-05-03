@@ -1218,3 +1218,28 @@ func TestClient_InfoSchemaFields(t *testing.T) {
 	}
 	assert.True(t, reflect.DeepEqual(expVectorField, info.Schema.Fields[1]))
 }
+
+func TestClient_InfoFieldsTest(t *testing.T) {
+	c := createClient("ft-info-fields-test")
+	flush(c)
+	schema := NewSchema(DefaultOptions).
+		AddField(NewTextFieldOptions("text", TextFieldOptions{Sortable: true, PhoneticMatcher: PhoneticDoubleMetaphoneEnglish})).
+		AddField(NewGeoField("geo")).
+		AddField(NewNumericField("numeric"))
+	// In this example we will only index keys started by product:
+	indexDefinition := NewIndexDefinition().AddPrefix("ft-info-fields-test:")
+	// Add the Index Definition
+	err := c.CreateIndexWithIndexDefinition(schema, indexDefinition)
+	assert.Nil(t, err)
+
+	info, err := c.Info()
+	assert.Nil(t, err)
+	// Check to make sure the fields that we get back match the fields that we created
+	assert.Equal(t,
+		[]Field(
+			[]Field{
+				Field{Name: "text", Type: 0, Sortable: false, Options: TextFieldOptions{Weight: 1, Sortable: true, NoStem: false, NoIndex: false, PhoneticMatcher: "", As: ""}},
+				Field{Name: "geo", Type: 2, Sortable: false, Options: interface{}(nil)},
+				Field{Name: "numeric", Type: 1, Sortable: false, Options: NumericFieldOptions{Sortable: false, NoIndex: false, As: ""}}}),
+		info.Schema.Fields)
+}
