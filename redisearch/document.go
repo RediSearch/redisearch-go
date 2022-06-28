@@ -17,6 +17,7 @@ type Document struct {
 	Id         string
 	Score      float32
 	Payload    []byte
+	TTL        int
 	Properties map[string]interface{}
 }
 
@@ -67,6 +68,12 @@ func (d *Document) SetPayload(payload []byte) {
 // Set sets a property and its value in the document
 func (d Document) Set(name string, value interface{}) Document {
 	d.Properties[name] = value
+	return d
+}
+
+// SetTTL sets the ttl in the document
+func (d Document) SetTTL(ttl int) Document {
+	d.TTL = ttl
 	return d
 }
 
