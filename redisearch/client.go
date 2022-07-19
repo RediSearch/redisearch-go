@@ -516,8 +516,8 @@ func (info *IndexInfo) loadSchema(values []interface{}, options []string) {
 		}
 
 		var options []string
-		if len(spec) > 3 {
-			options = spec[3:]
+		if len(spec) > 2 {
+			options = spec[2:]
 		} else {
 			options = []string{}
 		}
