@@ -471,16 +471,6 @@ func sliceIndex(haystack []string, needle string) int {
 	return -1
 }
 
-func sliceIndexLast(haystack []string, needle string) int {
-	index := -1
-	for pos, elem := range haystack {
-		if elem == needle {
-			index = pos
-		}
-	}
-	return index
-}
-
 func (info *IndexInfo) loadSchema(values []interface{}, options []string) {
 	// Values are a list of fields
 	scOptions := Options{}
@@ -533,7 +523,7 @@ func (info *IndexInfo) loadSchema(values []interface{}, options []string) {
 		}
 
 		f := Field{Name: spec[sliceIndex(spec, "identifier")+1]}
-		switch strings.ToUpper(spec[sliceIndexLast(spec, "type")+1]) {
+		switch strings.ToUpper(options[3]) {
 		case "TAG":
 			f.Type = TagField
 			tfOptions := TagFieldOptions{
