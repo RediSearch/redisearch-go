@@ -620,9 +620,7 @@ func (i *Client) Info() (*IndexInfo, error) {
 		switch key {
 		case "index_options":
 			indexOptions, _ = redis.Strings(res[ii+1], nil)
-		case "fields":
-			schemaAttributes, _ = redis.Values(res[ii+1], nil)
-		case "attributes":
+		case "fields", "attributes":
 			schemaAttributes, _ = redis.Values(res[ii+1], nil)
 		}
 	}
