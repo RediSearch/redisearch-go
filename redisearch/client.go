@@ -471,6 +471,16 @@ func sliceIndex(haystack []string, needle string) int {
 	return -1
 }
 
+func sliceIndexLast(haystack []string, needle string) int {
+	index := -1
+	for pos, elem := range haystack {
+		if elem == needle {
+			index = pos
+		}
+	}
+	return index
+}
+
 func (info *IndexInfo) loadSchema(values []interface{}, options []string) {
 	// Values are a list of fields
 	scOptions := Options{}
@@ -523,26 +533,59 @@ func (info *IndexInfo) loadSchema(values []interface{}, options []string) {
 		}
 
 		f := Field{Name: spec[sliceIndex(spec, "identifier")+1]}
-		switch strings.ToUpper(spec[sliceIndex(spec, "type")+1]) {
+		switch strings.ToUpper(spec[sliceIndexLast(spec, "type")+1]) {
 		case "TAG":
 			f.Type = TagField
-			tfOptions := TagFieldOptions{}
+			tfOptions := TagFieldOptions{
+				As: options[0],
+			}
+			if sliceIndex(options, "NOINDEX") != -1 {
+				tfOptions.NoIndex = true
+			}
+			if sliceIndex(options, "SORTABLE") != -1 {
+				tfOptions.Sortable = true
+			}
+			if sliceIndex(options, "CASESENSITIVE") != -1 {
+				tfOptions.CaseSensitive = true
+			}
 			if wIdx := sliceIndex(options, "SEPARATOR"); wIdx != -1 {
 				tfOptions.Separator = options[wIdx+1][0]
 			}
 			f.Options = tfOptions
+			f.Sortable = tfOptions.Sortable
 		case "GEO":
 			f.Type = GeoField
+			gfOptions := GeoFieldOptions{
+				As: options[0],
+			}
+			if sliceIndex(options, "NOINDEX") != -1 {
+				gfOptions.NoIndex = true
+			}
+			f.Options = gfOptions
 		case "NUMERIC":
 			f.Type = NumericField
-			nfOptions := NumericFieldOptions{}
+			nfOptions := NumericFieldOptions{
+				As: options[0],
+			}
+			if sliceIndex(options, "NOINDEX") != -1 {
+				nfOptions.NoIndex = true
+			}
 			if sliceIndex(options, "SORTABLE") != -1 {
 				nfOptions.Sortable = true
 			}
 			f.Options = nfOptions
+			f.Sortable = nfOptions.Sortable
 		case "TEXT":
 			f.Type = TextField
-			tfOptions := TextFieldOptions{}
+			tfOptions := TextFieldOptions{
+				As: options[0],
+			}
+			if sliceIndex(options, "NOSTEM") != -1 {
+				tfOptions.NoStem = true
+			}
+			if sliceIndex(options, "NOINDEX") != -1 {
+				tfOptions.NoIndex = true
+			}
 			if sliceIndex(options, "SORTABLE") != -1 {
 				tfOptions.Sortable = true
 			}
@@ -552,6 +595,7 @@ func (info *IndexInfo) loadSchema(values []interface{}, options []string) {
 				tfOptions.Weight = float32(weight64)
 			}
 			f.Options = tfOptions
+			f.Sortable = tfOptions.Sortable
 		case "VECTOR":
 			f.Type = VectorField
 			f.Options = VectorFieldOptions{}
@@ -589,11 +633,7 @@ func (i *Client) Info() (*IndexInfo, error) {
 		case "fields":
 			schemaAttributes, _ = redis.Values(res[ii+1], nil)
 		case "attributes":
-			for _, attr := range res[ii+1].([]interface{}) {
-				l := len(attr.([]interface{}))
-				schemaAttributes = append(schemaAttributes, attr.([]interface{})[3:l])
-
-			}
+			schemaAttributes, _ = redis.Values(res[ii+1], nil)
 		}
 	}
 
