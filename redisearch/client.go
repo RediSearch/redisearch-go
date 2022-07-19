@@ -516,14 +516,14 @@ func (info *IndexInfo) loadSchema(values []interface{}, options []string) {
 		}
 
 		var options []string
-		if len(spec) > 2 {
-			options = spec[2:]
+		if len(spec) > 3 {
+			options = spec[3:]
 		} else {
 			options = []string{}
 		}
 
 		f := Field{Name: spec[sliceIndex(spec, "identifier")+1]}
-		switch strings.ToUpper(options[3]) {
+		switch strings.ToUpper(options[2]) {
 		case "TAG":
 			f.Type = TagField
 			tfOptions := TagFieldOptions{
