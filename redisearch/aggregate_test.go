@@ -132,7 +132,8 @@ func AddValues(c *Client) {
 	}
 
 }
-func Init() {
+
+func _init() {
 	/* load test data */
 	c := createClient("docs-games-idx1")
 
@@ -149,13 +150,38 @@ func Init() {
 	AddValues(c)
 }
 
+func TestAggregateSortByMax(t *testing.T) {
+	_init()
+	c := createClient("docs-games-idx1")
+
+	q1 := NewAggregateQuery().SetQuery(NewQuery("sony")).
+		SetMax(60).
+		SortBy([]SortingKey{*NewSortingKeyDir("@price", false)})
+
+	res, _, err := c.Aggregate(q1)
+	assert.Nil(t, err)
+	f1, _ := strconv.ParseFloat(res[0][1], 64)
+	f2, _ := strconv.ParseFloat(res[1][1], 64)
+	assert.GreaterOrEqual(t, f1, f2)
+	assert.Less(t, f1, 696.0)
+
+	_, rep, err := c.AggregateQuery(q1)
+	assert.Nil(t, err)
+	f1, _ = strconv.ParseFloat(rep[0]["price"].(string), 64)
+	f2, _ = strconv.ParseFloat(rep[1]["price"].(string), 64)
+	assert.GreaterOrEqual(t, f1, f2)
+	assert.Less(t, f1, 696.0)
+}
+
 func TestAggregateGroupBy(t *testing.T) {
-	Init()
+	_init()
 	c := createClient("docs-games-idx1")
 
 	q1 := NewAggregateQuery().
 		GroupBy(*NewGroupBy().AddFields("@brand").
-			Reduce(*NewReducerAlias(GroupByReducerCount, []string{}, "count"))).
+			Reduce(*NewReducerAlias("", nil, "count").
+				SetName(GroupByReducerCount).
+				SetArgs([]string{}))).
 		SortBy([]SortingKey{*NewSortingKeyDir("@count", false)}).
 		Limit(0, 5)
 
@@ -169,7 +195,7 @@ func TestAggregateGroupBy(t *testing.T) {
 }
 
 func TestAggregateMinMax(t *testing.T) {
-	Init()
+	_init()
 	c := createClient("docs-games-idx1")
 
 	q1 := NewAggregateQuery().SetQuery(NewQuery("sony")).
@@ -214,7 +240,7 @@ func TestAggregateMinMax(t *testing.T) {
 }
 
 func TestAggregateCountDistinct(t *testing.T) {
-	Init()
+	_init()
 	c := createClient("docs-games-idx1")
 
 	q1 := NewAggregateQuery().
@@ -233,7 +259,7 @@ func TestAggregateCountDistinct(t *testing.T) {
 }
 
 func TestAggregateToList(t *testing.T) {
-	Init()
+	_init()
 	c := createClient("docs-games-idx1")
 
 	q1 := NewAggregateQuery().
@@ -250,7 +276,7 @@ func TestAggregateToList(t *testing.T) {
 }
 
 func TestAggregateFilter(t *testing.T) {
-	Init()
+	_init()
 	c := createClient("docs-games-idx1")
 
 	q1 := NewAggregateQuery().
@@ -271,6 +297,28 @@ func TestAggregateFilter(t *testing.T) {
 		f, _ := strconv.ParseFloat(row["count"].(string), 64)
 		assert.Greater(t, f, 5.0)
 	}
+}
+
+func TestAggregateApply(t *testing.T) {
+	_init()
+	c := createClient("docs-games-idx1")
+
+	q1 := NewAggregateQuery().
+		GroupBy(*NewGroupBy().AddFields("@brand").
+			Reduce(*NewReducerAlias(GroupByReducerCount, []string{}, "count"))).
+		Apply(*NewProjection("@count/2", "halfCount"))
+
+	res, _, err := c.Aggregate(q1)
+	assert.Nil(t, err)
+	count, _ := strconv.ParseFloat(res[0][3], 64)
+	halfCount, _ := strconv.ParseFloat(res[0][5], 64)
+	assert.Equal(t, halfCount*2, count)
+
+	_, rep, err := c.AggregateQuery(q1)
+	assert.Nil(t, err)
+	count, _ = strconv.ParseFloat(rep[0]["count"].(string), 64)
+	halfCount, _ = strconv.ParseFloat(rep[0]["halfCount"].(string), 64)
+	assert.Equal(t, halfCount*2, count)
 }
 
 func makeAggResponseInterface(seed int64, nElements int, responseSizes []int) (res []interface{}) {
@@ -326,24 +374,16 @@ func BenchmarkProcessAggResponseSS_100x4Elements(b *testing.B) {
 }
 
 func TestProjection_Serialize(t *testing.T) {
-	type fields struct {
-		Expression string
-		Alias      string
-	}
 	tests := []struct {
-		name   string
-		fields fields
-		want   redis.Args
+		name       string
+		projection Projection
+		want       redis.Args
 	}{
-		{"Test_Serialize_1", fields{"sqrt(log(foo) * floor(@bar/baz)) + (3^@qaz % 6)", "sqrt"}, redis.Args{"APPLY", "sqrt(log(foo) * floor(@bar/baz)) + (3^@qaz % 6)", "AS", "sqrt"}},
+		{"Test_Serialize_1", *NewProjection("sqrt(log(foo) * floor(@bar/baz)) + (3^@qaz % 6)", "sqrt"), redis.Args{"APPLY", "sqrt(log(foo) * floor(@bar/baz)) + (3^@qaz % 6)", "AS", "sqrt"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			p := Projection{
-				Expression: tt.fields.Expression,
-				Alias:      tt.fields.Alias,
-			}
-			if got := p.Serialize(); !reflect.DeepEqual(got, tt.want) {
+			if got := tt.projection.Serialize(); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("serialize() = %v, want %v", got, tt.want)
 			}
 		})
@@ -351,28 +391,59 @@ func TestProjection_Serialize(t *testing.T) {
 }
 
 func TestCursor_Serialize(t *testing.T) {
-	type fields struct {
-		Id      int
-		Count   int
-		MaxIdle int
-	}
 	tests := []struct {
 		name   string
-		fields fields
+		cursor Cursor
 		want   redis.Args
 	}{
-		{"TestCursor_Serialize_1", fields{1, 0, 0}, redis.Args{"WITHCURSOR"}},
-		{"TestCursor_Serialize_2_MAXIDLE", fields{1, 0, 30000}, redis.Args{"WITHCURSOR", "MAXIDLE", 30000}},
-		{"TestCursor_Serialize_3_COUNT_MAXIDLE", fields{1, 10, 30000}, redis.Args{"WITHCURSOR", "COUNT", 10, "MAXIDLE", 30000}},
+		{"TestCursor_Serialize_basic", *NewCursor().SetId(1), redis.Args{"WITHCURSOR"}},
+		{"TestCursor_Serialize_MAXIDLE", *NewCursor().SetId(1).SetMaxIdle(30000), redis.Args{"WITHCURSOR", "MAXIDLE", 30000}},
+		{"TestCursor_Serialize_COUNT_MAXIDLE", *NewCursor().SetId(1).SetMaxIdle(30000).SetCount(10), redis.Args{"WITHCURSOR", "COUNT", 10, "MAXIDLE", 30000}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := Cursor{
-				Id:      tt.fields.Id,
-				Count:   tt.fields.Count,
-				MaxIdle: tt.fields.MaxIdle,
+			if got := tt.cursor.Serialize(); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("serialize() = %v, want %v", got, tt.want)
 			}
-			if got := c.Serialize(); !reflect.DeepEqual(got, tt.want) {
+		})
+	}
+}
+
+func TestQuery_Serialize(t *testing.T) {
+	tests := []struct {
+		name  string
+		query AggregateQuery
+		want  redis.Args
+	}{
+		{"TestQuery_Serialize_basic", *NewAggregateQuery(), redis.Args{"*"}},
+		{"TestQuery_Serialize_WITHSCHEMA", *NewAggregateQuery().SetWithSchema(true), redis.Args{"*", "WITHSCHEMA"}},
+		{"TestQuery_Serialize_VERBATIM", *NewAggregateQuery().SetVerbatim(true), redis.Args{"*", "VERBATIM"}},
+		{"TestQuery_Serialize_WITHCURSOR", *NewAggregateQuery().SetCursor(NewCursor()), redis.Args{"*", "WITHCURSOR"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.query.Serialize(); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("serialize() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestGroupBy_Serialize(t *testing.T) {
+	testsSerialize := []struct {
+		name  string
+		group GroupBy
+		want  redis.Args
+	}{
+		{"TestGroupBy_Serialize_basic", *NewGroupBy(), redis.Args{"GROUPBY", 0}},
+		{"TestGroupBy_Serialize_FIELDS", *NewGroupBy().AddFields("a"), redis.Args{"GROUPBY", 1, "a"}},
+		{"TestGroupBy_Serialize_FIELDS_2", *NewGroupBy().AddFields([]string{"a", "b"}), redis.Args{"GROUPBY", 2, "a", "b"}},
+		{"TestGroupBy_Serialize_REDUCE", *NewGroupBy().Reduce(*NewReducerAlias(GroupByReducerCount, []string{}, "count")), redis.Args{"GROUPBY", 0, "REDUCE", "COUNT", 0, "AS", "count"}},
+		{"TestGroupBy_Serialize_LIMIT", *NewGroupBy().Limit(10, 20), redis.Args{"GROUPBY", 0, "LIMIT", 10, 20}},
+	}
+	for _, tt := range testsSerialize {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.group.Serialize(); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("serialize() = %v, want %v", got, tt.want)
 			}
 		})
@@ -394,10 +465,20 @@ func TestGroupBy_AddFields(t *testing.T) {
 		args   args
 		want   *GroupBy
 	}{
-		{"TestGroupBy_AddFields_1",
+		{"TestGroupBy_AddFields_single_field",
 			fields{[]string{}, nil, nil},
 			args{"a"},
 			&GroupBy{[]string{"a"}, nil, nil},
+		},
+		{"TestGroupBy_AddFields_multi_fields",
+			fields{[]string{}, nil, nil},
+			args{[]string{"a", "b", "c"}},
+			&GroupBy{[]string{"a", "b", "c"}, nil, nil},
+		},
+		{"TestGroupBy_AddFields_nil",
+			fields{[]string{}, nil, nil},
+			args{nil},
+			&GroupBy{[]string{}, nil, nil},
 		},
 	}
 	for _, tt := range tests {
@@ -721,6 +802,7 @@ func Test_processAggReply(t *testing.T) {
 		{"empty-reply", args{[]interface{}{}}, 0, [][]string{}, false},
 		{"1-element-reply", args{[]interface{}{1, []interface{}{"userFullName", "j", "count", "2"}}}, 1, [][]string{{"userFullName", "j", "count", "2"}}, false},
 		{"multi-element-reply", args{[]interface{}{2, []interface{}{"userFullName", "j"}, []interface{}{"userFullName", "a"}}}, 2, [][]string{{"userFullName", "j"}, {"userFullName", "a"}}, false},
+		{"invalid-parsing-type", args{[]interface{}{1, []interface{}{[]interface{}{nil, nil}}}}, 1, nil, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -732,8 +814,43 @@ func Test_processAggReply(t *testing.T) {
 			if gotTotal != tt.wantTotal {
 				t.Errorf("processAggReply() gotTotal = %v, want %v", gotTotal, tt.wantTotal)
 			}
-			if !reflect.DeepEqual(gotAggregateReply, tt.wantAggregateReply) {
+			if !tt.wantErr && !reflect.DeepEqual(gotAggregateReply, tt.wantAggregateReply) {
 				t.Errorf("processAggReply() gotAggregateReply = %v, want %v", gotAggregateReply, tt.wantAggregateReply)
+			}
+		})
+	}
+}
+
+func Test_processAggQueryReply(t *testing.T) {
+	type args struct {
+		res []interface{}
+	}
+	tests := []struct {
+		name               string
+		args               args
+		wantTotal          int
+		wantAggregateReply []map[string]interface{}
+		wantErr            bool
+	}{
+		{"empty-reply", args{[]interface{}{}}, 0, []map[string]interface{}{}, false},
+		{"1-element-reply", args{[]interface{}{1, []interface{}{"userFullName", "j", "count", "2"}}}, 1, []map[string]interface{}{{"userFullName": "j", "count": "2"}}, false},
+		{"multi-element-reply", args{[]interface{}{2, []interface{}{"userFullName", "j"}, []interface{}{"userFullName", "a"}}}, 2, []map[string]interface{}{{"userFullName": "j"}, {"userFullName": "a"}}, false},
+		{"odd-number-of-args", args{[]interface{}{1, []interface{}{"userFullName"}}}, 1, nil, true},
+		{"invalid-key", args{[]interface{}{1, []interface{}{nil, "j"}}}, 1, nil, true},
+		{"invalid-value", args{[]interface{}{1, []interface{}{"userFullName", fmt.Errorf("invalid value type")}}}, 1, nil, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotTotal, gotAggregateReply, err := processAggQueryReply(tt.args.res)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("processAggQueryReply() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if gotTotal != tt.wantTotal {
+				t.Errorf("processAggQueryReply() gotTotal = %v, want %v", gotTotal, tt.wantTotal)
+			}
+			if !tt.wantErr && !reflect.DeepEqual(gotAggregateReply, tt.wantAggregateReply) {
+				t.Errorf("processAggQueryReply() gotAggregateReply = %v, want %v", gotAggregateReply, tt.wantAggregateReply)
 			}
 		})
 	}

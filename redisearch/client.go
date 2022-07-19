@@ -267,7 +267,7 @@ func (i *Client) Aggregate(q *AggregateQuery) (aggregateReply [][]string, total 
 	return
 }
 
-// AggregateQuery - New version to Aggregate() function. The values in each map can be string or []string.
+// AggregateQuery replaces the Aggregate() function. The reply is slice of maps, with values of either string or []string.
 func (i *Client) AggregateQuery(q *AggregateQuery) (total int, aggregateReply []map[string]interface{}, err error) {
 	res, err := i.aggregate(q)
 
@@ -522,27 +522,60 @@ func (info *IndexInfo) loadSchema(values []interface{}, options []string) {
 			options = []string{}
 		}
 
-		f := Field{Name: spec[0]}
-		switch strings.ToUpper(spec[2]) {
+		f := Field{Name: spec[sliceIndex(spec, "identifier")+1]}
+		switch strings.ToUpper(options[2]) {
 		case "TAG":
 			f.Type = TagField
-			tfOptions := TagFieldOptions{}
+			tfOptions := TagFieldOptions{
+				As: options[0],
+			}
+			if sliceIndex(options, "NOINDEX") != -1 {
+				tfOptions.NoIndex = true
+			}
+			if sliceIndex(options, "SORTABLE") != -1 {
+				tfOptions.Sortable = true
+			}
+			if sliceIndex(options, "CASESENSITIVE") != -1 {
+				tfOptions.CaseSensitive = true
+			}
 			if wIdx := sliceIndex(options, "SEPARATOR"); wIdx != -1 {
 				tfOptions.Separator = options[wIdx+1][0]
 			}
 			f.Options = tfOptions
+			f.Sortable = tfOptions.Sortable
 		case "GEO":
 			f.Type = GeoField
+			gfOptions := GeoFieldOptions{
+				As: options[0],
+			}
+			if sliceIndex(options, "NOINDEX") != -1 {
+				gfOptions.NoIndex = true
+			}
+			f.Options = gfOptions
 		case "NUMERIC":
 			f.Type = NumericField
-			nfOptions := NumericFieldOptions{}
+			nfOptions := NumericFieldOptions{
+				As: options[0],
+			}
+			if sliceIndex(options, "NOINDEX") != -1 {
+				nfOptions.NoIndex = true
+			}
 			if sliceIndex(options, "SORTABLE") != -1 {
 				nfOptions.Sortable = true
 			}
 			f.Options = nfOptions
+			f.Sortable = nfOptions.Sortable
 		case "TEXT":
 			f.Type = TextField
-			tfOptions := TextFieldOptions{}
+			tfOptions := TextFieldOptions{
+				As: options[0],
+			}
+			if sliceIndex(options, "NOSTEM") != -1 {
+				tfOptions.NoStem = true
+			}
+			if sliceIndex(options, "NOINDEX") != -1 {
+				tfOptions.NoIndex = true
+			}
 			if sliceIndex(options, "SORTABLE") != -1 {
 				tfOptions.Sortable = true
 			}
@@ -552,6 +585,10 @@ func (info *IndexInfo) loadSchema(values []interface{}, options []string) {
 				tfOptions.Weight = float32(weight64)
 			}
 			f.Options = tfOptions
+			f.Sortable = tfOptions.Sortable
+		case "VECTOR":
+			f.Type = VectorField
+			f.Options = VectorFieldOptions{}
 		}
 		sc = sc.AddField(f)
 	}
