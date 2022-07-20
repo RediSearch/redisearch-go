@@ -1227,7 +1227,8 @@ func TestClient_InfoFieldsTest(t *testing.T) {
 		AddField(NewGeoField("geo")).
 		AddField(NewNumericField("numeric")).
 		AddField(NewTextFieldOptions("alias_type", TextFieldOptions{As: "type", Sortable: true, NoIndex: true, NoStem: true})).
-		AddField(NewTagFieldOptions("address_city", TagFieldOptions{As: "city"}))
+		AddField(NewTagFieldOptions("address_city", TagFieldOptions{As: "city"})).
+		AddField(NewTagFieldOptions("type", TagFieldOptions{As: "tag", Sortable: true, CaseSensitive: true, NoIndex: true}))
 	// In this example we will only index keys started by product:
 	indexDefinition := NewIndexDefinition().AddPrefix("ft-info-fields-test:")
 	// Add the Index Definition
@@ -1245,6 +1246,7 @@ func TestClient_InfoFieldsTest(t *testing.T) {
 				Field{Name: "numeric", Type: 1, Sortable: false, Options: NumericFieldOptions{Sortable: false, NoIndex: false, As: "numeric"}},
 				Field{Name: "alias_type", Type: 0, Sortable: true, Options: TextFieldOptions{Weight: 1, Sortable: true, NoStem: true, NoIndex: true, PhoneticMatcher: "", As: "type"}},
 				Field{Name: "address_city", Type: 3, Sortable: false, Options: TagFieldOptions{Separator: 44, NoIndex: false, Sortable: false, CaseSensitive: false, As: "city"}},
+				Field{Name: "type", Type: 3, Sortable: true, Options: TagFieldOptions{Separator: 44, NoIndex: true, Sortable: true, CaseSensitive: true, As: "tag"}},
 			}),
 		info.Schema.Fields)
 }
