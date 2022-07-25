@@ -9,7 +9,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/RediSearch/redisearch-go/redisearch"
+	"github.com/RediSearch/redisearch-go/v2/redisearch"
 	"github.com/gomodule/redigo/redis"
 )
 

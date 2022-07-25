@@ -5,7 +5,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/RediSearch/redisearch-go/redisearch"
+	"github.com/RediSearch/redisearch-go/v2/redisearch"
 )
 
 /**
