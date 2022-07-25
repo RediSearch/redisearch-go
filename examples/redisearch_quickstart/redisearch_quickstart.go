@@ -2,9 +2,10 @@ package main
 
 import (
 	"fmt"
-	"github.com/RediSearch/redisearch-go/redisearch"
 	"log"
 	"time"
+
+	"github.com/RediSearch/redisearch-go/v2/redisearch"
 )
 
 /**
