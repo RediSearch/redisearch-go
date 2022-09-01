@@ -422,14 +422,14 @@ func serializeField(f Field, args redis.Args) (argsOut redis.Args, err error) {
 			if opts.Separator != 0 {
 				argsOut = append(argsOut, "SEPARATOR", fmt.Sprintf("%c", opts.Separator))
 			}
+			if opts.CaseSensitive {
+				argsOut = append(argsOut, "CASESENSITIVE")
+			}
 			if opts.Sortable {
 				argsOut = append(argsOut, "SORTABLE")
 			}
 			if opts.NoIndex {
 				argsOut = append(argsOut, "NOINDEX")
-			}
-			if opts.CaseSensitive {
-				argsOut = append(argsOut, "CASESENSITIVE")
 			}
 		}
 	case GeoField:
