@@ -445,6 +445,18 @@ func (i *Client) IndexOptions(opts IndexingOptions, docs ...Document) error {
 
 			return merr
 		}
+		if doc.TTL > 0 {
+			argsttl := make(redis.Args, 0, 2)
+			argsttl = append(argsttl, doc.Id, doc.TTL)
+			if err := conn.Send("EXPIRE", argsttl...); err != nil {
+				if merr == nil {
+					merr = NewMultiError(len(docs))
+				}
+				merr[ii] = err
+
+				return merr
+			}
+		}
 		n++
 	}
 
