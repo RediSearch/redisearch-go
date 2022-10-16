@@ -2,9 +2,10 @@ package redisearch
 
 import (
 	"fmt"
-	"github.com/gomodule/redigo/redis"
 	"log"
 	"reflect"
+
+	"github.com/gomodule/redigo/redis"
 )
 
 // Projection - Apply a 1-to-1 transformation on one or more properties,
@@ -319,7 +320,10 @@ func processAggQueryReply(res []interface{}) (total int, aggregateReply []map[st
 	total = 0
 	aggregateResults := len(res) - 1
 	if aggregateResults > 0 {
-		total = aggregateResults
+		t, ok := res[0].(int64)
+		if ok {
+			total = int(t)
+		}
 		aggregateReply = make([]map[string]interface{}, aggregateResults)
 		for i := 0; i < aggregateResults; i++ {
 			if d, e := mapToStrings(res[i+1], nil); e == nil {
