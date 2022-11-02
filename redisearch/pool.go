@@ -2,10 +2,11 @@ package redisearch
 
 import (
 	"fmt"
-	"github.com/gomodule/redigo/redis"
 	"math/rand"
 	"sync"
 	"time"
+
+	"github.com/gomodule/redigo/redis"
 )
 
 type ConnPool interface {
@@ -17,9 +18,9 @@ type SingleHostPool struct {
 	*redis.Pool
 }
 
-func NewSingleHostPool(host string) *SingleHostPool {
+func NewSingleHostPool(host string, options ...redis.DialOption) *SingleHostPool {
 	pool := &redis.Pool{Dial: func() (redis.Conn, error) {
-		return redis.Dial("tcp", host)
+		return redis.Dial("tcp", host, options...)
 	}, MaxIdle: maxConns}
 	pool.TestOnBorrow = func(c redis.Conn, t time.Time) (err error) {
 		if time.Since(t) > time.Second {
@@ -32,15 +33,17 @@ func NewSingleHostPool(host string) *SingleHostPool {
 
 type MultiHostPool struct {
 	sync.Mutex
-	pools map[string]*redis.Pool
-	hosts []string
+	pools   map[string]*redis.Pool
+	hosts   []string
+	options []redis.DialOption
 }
 
-func NewMultiHostPool(hosts []string) *MultiHostPool {
+func NewMultiHostPool(hosts []string, options ...redis.DialOption) *MultiHostPool {
 
 	return &MultiHostPool{
-		pools: make(map[string]*redis.Pool, len(hosts)),
-		hosts: hosts,
+		pools:   make(map[string]*redis.Pool, len(hosts)),
+		hosts:   hosts,
+		options: options,
 	}
 }
 
@@ -50,15 +53,17 @@ func (p *MultiHostPool) Get() redis.Conn {
 	host := p.hosts[rand.Intn(len(p.hosts))]
 	pool, found := p.pools[host]
 	if !found {
-		pool = redis.NewPool(func() (redis.Conn, error) {
-			// TODO: Add timeouts. and 2 separate pools for indexing and querying, with different timeouts
-			return redis.Dial("tcp", host)
-		}, maxConns)
-		pool.TestOnBorrow = func(c redis.Conn, t time.Time) (err error) {
-			if time.Since(t) > time.Second {
-				_, err = c.Do("PING")
-			}
-			return err
+		pool = &redis.Pool{
+			Dial: func() (redis.Conn, error) {
+				return redis.Dial("tcp", host, p.options...)
+			},
+			TestOnBorrow: func(c redis.Conn, t time.Time) error {
+				if time.Since(t) < time.Minute {
+					return nil
+				}
+				_, err := c.Do("PING")
+				return err
+			},
 		}
 
 		p.pools[host] = pool
