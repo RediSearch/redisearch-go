@@ -2,10 +2,11 @@ package main
 
 import (
 	"fmt"
-	"github.com/RediSearch/redisearch-go/redisearch"
-	"github.com/gomodule/redigo/redis"
 	"log"
 	"time"
+
+	"github.com/RediSearch/redisearch-go/v2/redisearch"
+	"github.com/gomodule/redigo/redis"
 )
 
 // exemplifies the NewClientFromPool function

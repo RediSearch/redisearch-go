@@ -1203,7 +1203,7 @@ func TestClient_InfoSchemaFields(t *testing.T) {
 		Options: NumericFieldOptions{
 			Sortable: false,
 			NoIndex:  false,
-			As:       "",
+			As:       "age",
 		},
 	}
 	assert.True(t, reflect.DeepEqual(expNumericField, info.Schema.Fields[0]))
@@ -1225,7 +1225,10 @@ func TestClient_InfoFieldsTest(t *testing.T) {
 	schema := NewSchema(DefaultOptions).
 		AddField(NewTextFieldOptions("text", TextFieldOptions{Sortable: true, PhoneticMatcher: PhoneticDoubleMetaphoneEnglish})).
 		AddField(NewGeoField("geo")).
-		AddField(NewNumericField("numeric"))
+		AddField(NewNumericField("numeric")).
+		AddField(NewTextFieldOptions("alias_type", TextFieldOptions{As: "type", Sortable: true, NoIndex: true, NoStem: true})).
+		AddField(NewTagFieldOptions("address_city", TagFieldOptions{As: "city"})).
+		AddField(NewTagFieldOptions("type", TagFieldOptions{As: "tag", Sortable: true, CaseSensitive: true, NoIndex: true}))
 	// In this example we will only index keys started by product:
 	indexDefinition := NewIndexDefinition().AddPrefix("ft-info-fields-test:")
 	// Add the Index Definition
@@ -1238,8 +1241,12 @@ func TestClient_InfoFieldsTest(t *testing.T) {
 	assert.Equal(t,
 		[]Field(
 			[]Field{
-				Field{Name: "text", Type: 0, Sortable: false, Options: TextFieldOptions{Weight: 1, Sortable: true, NoStem: false, NoIndex: false, PhoneticMatcher: "", As: ""}},
-				Field{Name: "geo", Type: 2, Sortable: false, Options: interface{}(nil)},
-				Field{Name: "numeric", Type: 1, Sortable: false, Options: NumericFieldOptions{Sortable: false, NoIndex: false, As: ""}}}),
+				Field{Name: "text", Type: 0, Sortable: true, Options: TextFieldOptions{Weight: 1, Sortable: true, NoStem: false, NoIndex: false, PhoneticMatcher: "", As: "text"}},
+				Field{Name: "geo", Type: 2, Sortable: false, Options: GeoFieldOptions{As: "geo", NoIndex: false}},
+				Field{Name: "numeric", Type: 1, Sortable: false, Options: NumericFieldOptions{Sortable: false, NoIndex: false, As: "numeric"}},
+				Field{Name: "alias_type", Type: 0, Sortable: true, Options: TextFieldOptions{Weight: 1, Sortable: true, NoStem: true, NoIndex: true, PhoneticMatcher: "", As: "type"}},
+				Field{Name: "address_city", Type: 3, Sortable: false, Options: TagFieldOptions{Separator: 44, NoIndex: false, Sortable: false, CaseSensitive: false, As: "city"}},
+				Field{Name: "type", Type: 3, Sortable: true, Options: TagFieldOptions{Separator: 44, NoIndex: true, Sortable: true, CaseSensitive: true, As: "tag"}},
+			}),
 		info.Schema.Fields)
 }
