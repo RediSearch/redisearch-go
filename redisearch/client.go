@@ -39,7 +39,7 @@ func NewClient(addr, name string) *Client {
 }
 
 // NewClientFromPool creates a new Client with the given pool and index name
-func NewClientFromPool(pool *redis.Pool, name string) *Client {
+func NewClientFromPool(pool ConnPool, name string) *Client {
 	ret := &Client{
 		pool: pool,
 		name: name,
