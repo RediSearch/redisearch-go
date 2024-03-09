@@ -177,6 +177,10 @@ func (q Query) serialize() redis.Args {
 		args = args.AddFlat(q.ReturnFields)
 	}
 
+	if q.Payload != nil {
+		args = args.Add("PAYLOAD", q.Payload)
+	}
+
 	if q.Scorer != "" {
 		args = args.Add("SCORER", q.Scorer)
 	}
